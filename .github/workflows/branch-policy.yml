@@ -1,0 +1,43 @@
+name: Branch policy
+
+on:
+  pull_request_target:
+    branches: [development, qa, staging, prod, main]
+    types: [opened, reopened, synchronize, edited, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  branch-policy:
+    name: Branch policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      # Metadata only. Do not check out or execute code from the PR head.
+      - name: Validate branch naming and promotion order
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import sys
+
+          with open(os.environ['GITHUB_EVENT_PATH'], encoding='utf-8') as event_file:
+              pr = json.load(event_file)['pull_request']
+          head = pr['head']['ref']
+          base = pr['base']['ref']
+          repository = os.environ['GITHUB_REPOSITORY']
+          head_repository = (pr['head'].get('repo') or {}).get('full_name')
+          base_repository = (pr['base'].get('repo') or {}).get('full_name')
+          if head_repository != repository or base_repository != repository:
+              sys.exit('Branch policy: source and target must belong to this repository.')
+          if base == 'development':
+              allowed = re.fullmatch(r'feature/[a-z0-9]+(?:-[a-z0-9]+)*', head) is not None
+          else:
+              allowed = {'qa': 'development', 'staging': 'qa', 'prod': 'staging'}.get(base) == head
+          if not allowed:
+              sys.exit('Branch policy: use feature/<kebab-case> -> development -> qa -> staging -> prod. No PRs into main.')
+          print('Branch naming and promotion order are valid.')
+          PY

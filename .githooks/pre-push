@@ -1,0 +1,22 @@
+#!/bin/sh
+# Local guard; GitHub required PRs and checks provide server enforcement.
+set -eu
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/development|refs/heads/qa|refs/heads/staging|refs/heads/prod|refs/heads/main)
+      printf '%s\n' 'Direct pushes to environment/bootstrap branches are blocked. Push feature/<description> and use the approved PR promotion order.' >&2
+      exit 1
+      ;;
+    refs/heads/feature/*)
+      branch=${remote_ref#refs/heads/}
+      if ! printf '%s\n' "$branch" | LC_ALL=C grep -Eq '^feature/[a-z0-9]+(-[a-z0-9]+)*$'; then
+        printf '%s\n' 'Feature branches must use feature/<short-kebab-case-description>.' >&2
+        exit 1
+      fi
+      ;;
+    *)
+      printf '%s\n' 'Only feature/<description> branches may be pushed directly under this workflow.' >&2
+      exit 1
+      ;;
+  esac
+done
