@@ -1,0 +1,71 @@
+# Dependencies and package-manager caches (keep lockfiles tracked)
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Node.js / React / TypeScript build output and caches
+dist/
+build/
+out/
+.next/
+.nuxt/
+.output/
+.react-router/
+.vite/
+.cache/
+.turbo/
+*.tsbuildinfo
+*.eslintcache
+
+# Test output
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Local environment and credentials (keep example templates tracked)
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.sample
+*.pem
+*.key
+.aws/
+
+# Shopify CLI local state; keep shopify.app*.toml and extensions tracked
+.shopify/
+.shopify-cli/
+
+# Local databases and logs
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+logs/
+*.log
+
+# Editor and operating-system files
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Local agent state
+.codex/
