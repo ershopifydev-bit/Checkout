@@ -1,0 +1,233 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Checkout foundation API",
+    "version": "0.1.0",
+    "description": "Process health only. Merchant and checkout operations are not implemented."
+  },
+  "paths": {
+    "/health/live": {
+      "get": {
+        "operationId": "getLiveness",
+        "responses": {
+          "200": {
+            "description": "Process is alive.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "enum": ["alive", "ready"] },
+                    "scope": { "type": "string", "const": "foundation" }
+                  },
+                  "required": ["status", "scope"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "getReadiness",
+        "responses": {
+          "200": {
+            "description": "Foundation process is ready; no commerce dependencies are configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "enum": ["alive", "ready"] },
+                    "scope": { "type": "string", "const": "foundation" }
+                  },
+                  "required": ["status", "scope"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Money": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+          "amountMinor": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": ["currency", "amountMinor"],
+        "additionalProperties": false
+      },
+      "ErrorResponse": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "INVALID_REQUEST",
+                  "UNAUTHENTICATED",
+                  "FORBIDDEN",
+                  "NOT_FOUND",
+                  "CONFLICT",
+                  "PAYLOAD_TOO_LARGE",
+                  "UNSUPPORTED_MEDIA_TYPE",
+                  "RATE_LIMITED",
+                  "NOT_READY",
+                  "INTERNAL_ERROR"
+                ]
+              },
+              "message": { "type": "string", "minLength": 1, "maxLength": 200 }
+            },
+            "required": ["code", "message"],
+            "additionalProperties": false
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": ["error", "correlationId"],
+        "additionalProperties": false
+      },
+      "Capabilities": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "tier": { "type": "string", "enum": ["unavailable", "standard"] },
+          "shopifyCheckoutHandoff": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "enabled": { "type": "boolean", "const": true },
+                  "reason": { "type": "string", "const": "ELIGIBLE" }
+                },
+                "required": ["enabled", "reason"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "enabled": { "type": "boolean", "const": false },
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "MERCHANT_INACTIVE",
+                      "FEATURE_DISABLED",
+                      "NOT_ENTITLED",
+                      "ELIGIBILITY_UNVERIFIED",
+                      "ELIGIBILITY_EXPIRED",
+                      "NOT_ELIGIBLE",
+                      "APPROVAL_REQUIRED",
+                      "NOT_IMPLEMENTED"
+                    ]
+                  }
+                },
+                "required": ["enabled", "reason"],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "checkoutUiExtension": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "enabled": { "type": "boolean", "const": true },
+                  "reason": { "type": "string", "const": "ELIGIBLE" }
+                },
+                "required": ["enabled", "reason"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "enabled": { "type": "boolean", "const": false },
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "MERCHANT_INACTIVE",
+                      "FEATURE_DISABLED",
+                      "NOT_ENTITLED",
+                      "ELIGIBILITY_UNVERIFIED",
+                      "ELIGIBILITY_EXPIRED",
+                      "NOT_ELIGIBLE",
+                      "APPROVAL_REQUIRED",
+                      "NOT_IMPLEMENTED"
+                    ]
+                  }
+                },
+                "required": ["enabled", "reason"],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "customPayment": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "enabled": { "type": "boolean", "const": true },
+                  "reason": { "type": "string", "const": "ELIGIBLE" }
+                },
+                "required": ["enabled", "reason"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "enabled": { "type": "boolean", "const": false },
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "MERCHANT_INACTIVE",
+                      "FEATURE_DISABLED",
+                      "NOT_ENTITLED",
+                      "ELIGIBILITY_UNVERIFIED",
+                      "ELIGIBILITY_EXPIRED",
+                      "NOT_ELIGIBLE",
+                      "APPROVAL_REQUIRED",
+                      "NOT_IMPLEMENTED"
+                    ]
+                  }
+                },
+                "required": ["enabled", "reason"],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "required": ["tier", "shopifyCheckoutHandoff", "checkoutUiExtension", "customPayment"],
+        "additionalProperties": false
+      },
+      "HealthResponse": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "enum": ["alive", "ready"] },
+          "scope": { "type": "string", "const": "foundation" }
+        },
+        "required": ["status", "scope"],
+        "additionalProperties": false
+      }
+    }
+  }
+}

@@ -2,6 +2,40 @@
 
 Shopify checkout platform repository.
 
+## Current implementation
+
+The first increment provides a TypeScript/pnpm workspace, shared Zod contracts, a conservative merchant capability resolver, and a runnable Fastify process. The API exposes `GET /health/live`, `GET /health/ready`, and `GET /openapi.json`.
+
+This is a foundation, not a working shopper checkout. OAuth, tenant persistence, MongoDB/outbox, storefront handoff, and the customer UI remain upcoming. Health readiness describes this process only. Live merchant eligibility and Gate 0 require test-store evidence. Custom payments remain disabled.
+
+## Local setup
+
+Use Node **24.22.0** (`.nvmrc` / `.node-version`) and pnpm **12.11.2**:
+
+```sh
+nvm install
+nvm use
+npm install --global pnpm@12.11.2 --ignore-scripts
+pnpm install --frozen-lockfile
+pnpm check
+pnpm start:api
+```
+
+The API listens on `127.0.0.1:3000`. It needs no merchant credentials or external services for this increment. `.env.example` lists the optional environment variables; environment files are not loaded automatically. For example, run `PORT=3001 pnpm start:api`. To load a local file explicitly after building, use `node --env-file=.env apps/api/dist/server.js`.
+
+For development, run `pnpm exec tsc -b tsconfig.build.json --watch` in one terminal and `pnpm dev:api` in another. The API watcher restarts when compiled files change.
+
+| Command                             | Verification                                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------------------ |
+| `pnpm check`                        | Formatting, lint, strict types, unit/API coverage, build, and compiled-process tests |
+| `pnpm test`                         | Unit and Fastify injection tests                                                     |
+| `pnpm test:runtime`                 | Build and real loopback HTTP/startup/shutdown checks                                 |
+| `pnpm build`                        | Compile package references and application                                           |
+| `pnpm api:spec`                     | Build and regenerate `docs/api/openapi.json`                                         |
+| `pnpm audit --audit-level=moderate` | Check locked dependencies for known advisories                                       |
+
+See [foundation decisions](docs/architecture/0001-platform-foundation.md), [API contracts](docs/api/README.md), and [local operations](docs/runbooks/local-development.md). The local implementation tracker remains in ignored `tasks/` and must not be committed.
+
 ## Branch workflow
 
 ```text
