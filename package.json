@@ -1,0 +1,32 @@
+{
+  "name": "checkout-platform",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": "24.22.0"
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm build",
+    "dev:api": "pnpm build && node --watch apps/api/dist/server.js",
+    "start:api": "node apps/api/dist/server.js"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.2",
+    "@vitest/coverage-v8": "5.0.4",
+    "eslint": "10.12.0",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.2",
+    "vitest": "5.0.4"
+  }
+}

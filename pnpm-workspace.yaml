@@ -1,0 +1,8 @@
+packages:
+  - apps/*
+  - packages/*
+  - packages/adapters/*
+  - extensions/*
+
+strictPeerDependencies: true
+blockExoticSubdeps: true
