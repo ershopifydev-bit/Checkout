@@ -50,6 +50,7 @@ for (const signal of ['SIGTERM', 'SIGINT']) {
     assert.deepEqual(await response.json(), { status: 'ready', scope: 'foundation' });
     running.child.kill(signal);
     assert.deepEqual(await running.exited, [0, null], running.output());
+    assert(!running.output().includes('FastifyDeprecation'), running.output());
     await assert.rejects(globalThis.fetch(`http://127.0.0.1:${port}/health/ready`));
   });
 }

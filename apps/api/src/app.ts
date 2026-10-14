@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import Fastify from 'fastify';
+import Fastify, { LogController } from 'fastify';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import { contractSchemas } from '@checkout/contracts';
@@ -21,9 +21,11 @@ export function buildApp(options: AppOptions = {}) {
     keepAliveTimeout: 5_000,
     trustProxy: false,
     requestIdHeader: false,
-    requestIdLogLabel: 'correlationId',
     genReqId: () => randomUUID(),
-    disableRequestLogging: true,
+    logController: new LogController({
+      requestIdLogLabel: 'correlationId',
+      disableRequestLogging: true,
+    }),
     logger: {
       level: options.logLevel ?? 'info',
       ...(options.logStream ? { stream: options.logStream } : {}),
@@ -65,7 +67,8 @@ export function buildApp(options: AppOptions = {}) {
       request.log.error({ statusCode: safe.statusCode }, 'Request failed');
     return reply.code(safe.statusCode).send(safe.body);
   });
-  app.after(() => {
+  app.after((error) => {
+    if (error) throw error;
     app.setNotFoundHandler({ preHandler: app.rateLimit() }, (request, reply) => {
       const safe = publicError(404, request.id);
       return reply.code(safe.statusCode).send(safe.body);
