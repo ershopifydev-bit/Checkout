@@ -15,7 +15,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm build",
+    "test:runtime": "pnpm build && node --test tests/integration/runtime.test.mjs",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm test:runtime",
     "dev:api": "pnpm build && node --watch apps/api/dist/server.js",
     "start:api": "node apps/api/dist/server.js"
   },

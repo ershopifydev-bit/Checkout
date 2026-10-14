@@ -6,3 +6,4 @@ packages:
 
 strictPeerDependencies: true
 blockExoticSubdeps: true
+minimumReleaseAgeStrict: true
