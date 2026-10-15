@@ -2,6 +2,8 @@
 
 The Shopify app lives in `apps/shopify-admin`. The Fastify API on port 3000 is a separate service; opening it does not install the Shopify app. This increment supports the app installation shell, authenticated merchant home, and session revocation. Shopper checkout, merchant settings, billing, and production rollout remain upcoming.
 
+The tracked development app is Checkout Development in EasyRewardz Software Services Private Limited (130952356), linked to `codemadi.myshopify.com`. Live installation verification is still pending.
+
 ## First-time setup
 
 1. Use the Node and pnpm versions pinned in the repository, then run `pnpm install --frozen-lockfile`.
@@ -25,7 +27,7 @@ npm run dev
 # Equivalent: pnpm dev
 ```
 
-This invokes Shopify CLI, starts the React Router app, and manages the development tunnel. Use the CLI preview URL (or press `p`) to install/open the app on the development store. Shopify CLI supplies the app URL and Shopify credentials. A running MongoDB service and the app-local `.env` are required. No separate TypeScript watcher is needed for this app.
+This invokes Shopify CLI, starts the React Router app, and manages the development tunnel. Use the CLI preview URL (or press `p`) to install/open the app on the development store. Shopify CLI supplies the app URL and Shopify credentials. The Vite configuration accepts CLI versions that supply the tunnel URL as `HOST`, normalizing it to `SHOPIFY_APP_URL`. A running MongoDB service and the app-local `.env` are required. No separate TypeScript watcher is needed for this app.
 
 A bare `http://127.0.0.1:3000/` is still the separate API, not the Shopify app. Use the CLI preview for embedded authentication. The app home displays only the verified shop domain and development status; it does not expose session tokens or enable checkout.
 

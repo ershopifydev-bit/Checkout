@@ -186,10 +186,20 @@ describe('compiled Shopify app over real HTTP', () => {
       expect(await response.text()).not.toContain('Store connection');
     }
   });
-  it('does not log sensitive query parameters', async () => {
+  it('logs authentication status without sensitive query parameters or credentials', async () => {
+    await fetch(base + '/app', {
+      headers: {
+        'user-agent': browserAgent,
+        authorization: `Bearer ${sessionToken('authenticated.myshopify.com', 'wrong-secret')}`,
+      },
+    });
+    await delay(25);
     await fetch(base + '/?private=private-query-secret', { redirect: 'manual' });
     expect(output).not.toContain('private-query-secret');
     expect(output).not.toContain(secret);
+    expect(output).toContain('Shopify admin authentication response: 401');
+    expect(output).not.toContain('Bearer ');
+    expect(output).not.toContain('private-token');
   });
   it('rejects forged uninstall webhooks without deleting sessions', async () => {
     const original = installed('forged.myshopify.com');

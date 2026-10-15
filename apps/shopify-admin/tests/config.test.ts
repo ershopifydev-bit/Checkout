@@ -16,6 +16,17 @@ describe('Shopify configuration', () => {
       readAdminConfig({ ...valid, SHOPIFY_APP_URL: 'http://localhost:3001' }).SHOPIFY_APP_URL,
     ).toBe('http://localhost:3001');
   });
+  it('accepts the tunnel URL supplied as HOST by Shopify CLI', () => {
+    const cliEnvironment: NodeJS.ProcessEnv = { ...valid };
+    delete cliEnvironment['SHOPIFY_APP_URL'];
+    expect(
+      readAdminConfig({ ...cliEnvironment, HOST: 'https://test-tunnel.example.com' })
+        .SHOPIFY_APP_URL,
+    ).toBe('https://test-tunnel.example.com');
+    expect(readAdminConfig({ ...valid, HOST: 'https://other.example.com' }).SHOPIFY_APP_URL).toBe(
+      valid.SHOPIFY_APP_URL,
+    );
+  });
   it('rejects insecure public URLs and embedded credentials', () => {
     for (const SHOPIFY_APP_URL of [
       'http://example.com',

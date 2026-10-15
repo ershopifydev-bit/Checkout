@@ -18,7 +18,10 @@ const schema = z.object({
   SESSION_ENCRYPTION_KEY: z.string(),
 });
 export function readAdminConfig(environment: NodeJS.ProcessEnv) {
-  const parsed = schema.safeParse(environment);
+  const parsed = schema.safeParse({
+    ...environment,
+    SHOPIFY_APP_URL: environment['SHOPIFY_APP_URL'] || environment['HOST'],
+  });
   if (!parsed.success) {
     throw new Error(
       `Invalid Shopify app configuration: ${[...new Set(parsed.error.issues.map((issue) => issue.path.join('.')))].join(', ')}`,

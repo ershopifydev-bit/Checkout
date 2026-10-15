@@ -1,5 +1,5 @@
-# Link a development app with npm run config:link before running npm run dev.
-client_id = ""
+# Development app linked to EasyRewardz; no production deployment is configured.
+client_id = "3e15bd78dccde89f7fafb75ce0ebd43a"
 name = "Checkout Development"
 application_url = "https://example.com"
 embedded = true

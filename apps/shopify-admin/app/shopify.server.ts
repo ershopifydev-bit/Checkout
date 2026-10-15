@@ -41,6 +41,19 @@ const shopify = shopifyApp({
     },
   },
 });
-export const authenticate = shopify.authenticate;
+export const authenticate = {
+  ...shopify.authenticate,
+  async admin(request: Request) {
+    try {
+      return await shopify.authenticate.admin(request);
+    } catch (error) {
+      if (error instanceof Response && error.status >= 400) {
+        // Never log URLs, query parameters, response bodies, or session credentials.
+        console.error('Shopify admin authentication response:', error.status);
+      }
+      throw error;
+    }
+  },
+};
 export const login = shopify.login;
 export const addDocumentResponseHeaders = shopify.addDocumentResponseHeaders;

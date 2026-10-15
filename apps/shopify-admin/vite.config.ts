@@ -1,6 +1,15 @@
 import { reactRouter } from '@react-router/dev/vite';
 import { defineConfig } from 'vite';
 
+// Compatibility with Shopify CLI versions that provide the tunnel URL as HOST.
+if (
+  process.env['HOST'] &&
+  (!process.env['SHOPIFY_APP_URL'] || process.env['SHOPIFY_APP_URL'] === process.env['HOST'])
+) {
+  process.env['SHOPIFY_APP_URL'] = process.env['HOST'];
+  delete process.env['HOST'];
+}
+
 // Shopify CLI supplies the tunnel URL and ports. Restrict host validation to that URL.
 const host = new URL(process.env['SHOPIFY_APP_URL'] ?? 'http://localhost').hostname;
 export default defineConfig({
