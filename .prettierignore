@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+pnpm-lock.yaml
+Doc/
+tasks/
+tools/
+AGENTS.md
+.github/workflows/branch-policy.yml
