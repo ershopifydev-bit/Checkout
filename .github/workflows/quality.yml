@@ -18,6 +18,16 @@ jobs:
     name: Quality
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    services:
+      mongodb:
+        image: mongo:8.0.19
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping:1}).ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -31,6 +41,10 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Format, lint, type check, test, and build
         run: pnpm check
+      - name: Shopify session and HTTP integration tests
+        run: pnpm test:admin:db
+        env:
+          MONGODB_TEST_URI: mongodb://127.0.0.1:27017
       - name: Verify generated API documentation
         run: |
           pnpm api:spec

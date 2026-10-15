@@ -7,3 +7,4 @@ tasks/
 tools/
 AGENTS.md
 .github/workflows/branch-policy.yml
+.react-router/
