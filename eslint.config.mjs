@@ -3,14 +3,29 @@ import tseslint from 'typescript-eslint';
 
 export default [
   {
-    ignores: ['**/dist/**', '**/node_modules/**', 'coverage/**', 'tasks/**', 'tools/**', 'Doc/**'],
+    ignores: [
+      '**/dist/**',
+      '**/node_modules/**',
+      'coverage/**',
+      'tasks/**',
+      'tools/**',
+      'Doc/**',
+      '**/.react-router/**',
+      '**/build/**',
+    ],
   },
   js.configs.recommended,
-  ...tseslint.configs.recommendedTypeChecked.map((config) => ({ ...config, files: ['**/*.ts'] })),
+  ...tseslint.configs.recommendedTypeChecked.map((config) => ({
+    ...config,
+    files: ['**/*.{ts,tsx}'],
+  })),
   {
-    files: ['**/*.ts'],
+    files: ['**/*.{ts,tsx}'],
     languageOptions: {
-      parserOptions: { project: './tsconfig.json', tsconfigRootDir: import.meta.dirname },
+      parserOptions: {
+        project: ['./tsconfig.json', './apps/shopify-admin/tsconfig.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
     rules: {
       '@typescript-eslint/consistent-type-imports': 'error',

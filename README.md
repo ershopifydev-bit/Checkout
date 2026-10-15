@@ -6,9 +6,22 @@ Shopify checkout platform repository.
 
 The first increment provides a TypeScript/pnpm workspace, shared Zod contracts, a conservative merchant capability resolver, and a runnable Fastify process. The API exposes `GET /health/live`, `GET /health/ready`, and `GET /openapi.json`.
 
-This is a foundation, not a working shopper checkout. OAuth, tenant persistence, MongoDB/outbox, storefront handoff, and the customer UI remain upcoming. Health readiness describes this process only. Live merchant eligibility and Gate 0 require test-store evidence. Custom payments remain disabled.
+The Shopify admin installation shell now lives in `apps/shopify-admin`, with official Shopify authentication, encrypted MongoDB sessions, and signed lifecycle webhooks. Live development-store installation still requires app linking and verification. This is not a working shopper checkout: commerce persistence/outbox, storefront handoff, and the customer UI remain upcoming. Health readiness describes this process only. Live merchant eligibility and Gate 0 require test-store evidence. Custom payments remain disabled.
 
-## Local setup
+## Shopify app development
+
+After configuring MongoDB and linking the intended development app, run one command:
+
+```sh
+npm run dev
+# Or: pnpm dev
+```
+
+Both launch Shopify CLI for `codemadi.myshopify.com`. Use the CLI preview URL to install/open the app. Follow the [first-time Shopify setup](docs/runbooks/shopify-development.md) for the database, encrypted session key, and app linking. The API URL on port 3000 is a separate backend and has no storefront page.
+
+The local todo dashboard at `tasks/index.html` is generated from ignored task files; refresh it to see recorded progress.
+
+## API foundation setup
 
 Use Node **24.22.0** (`.nvmrc` / `.node-version`) and pnpm **12.11.2**:
 
@@ -34,7 +47,7 @@ For development, run `pnpm exec tsc -b tsconfig.build.json --watch` in one termi
 | `pnpm api:spec`                     | Build and regenerate `docs/api/openapi.json`                                         |
 | `pnpm audit --audit-level=moderate` | Check locked dependencies for known advisories                                       |
 
-See [foundation decisions](docs/architecture/0001-platform-foundation.md), [API contracts](docs/api/README.md), and [local operations](docs/runbooks/local-development.md). The local implementation tracker remains in ignored `tasks/` and must not be committed.
+See [foundation decisions](docs/architecture/0001-platform-foundation.md), [API contracts](docs/api/README.md), and [local operations](docs/runbooks/local-development.md). See also [Shopify development](docs/runbooks/shopify-development.md). The local implementation tracker remains in ignored `tasks/` and must not be committed.
 
 ## Branch workflow
 

@@ -1,0 +1,86 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #202223;
+  background: #f6f6f7;
+  font-synthesis: none;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+.welcome {
+  max-width: 40rem;
+  margin: 4rem auto;
+  padding: 2rem;
+  background: white;
+  border: 1px solid #d2d5d8;
+  border-radius: 0.5rem;
+}
+.eyebrow {
+  font-size: 0.875rem;
+  color: #51565b;
+}
+h1 {
+  font-size: 2rem;
+  line-height: 1.2;
+  margin: 1rem 0;
+}
+h2 {
+  font-size: 1.25rem;
+}
+p {
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+section {
+  border-top: 1px solid #d2d5d8;
+  margin-top: 2rem;
+  padding-top: 1rem;
+}
+label {
+  display: block;
+  margin: 1.5rem 0 0.5rem;
+  font-weight: 600;
+}
+input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #777;
+  border-radius: 0.25rem;
+  font: inherit;
+}
+button,
+.button {
+  display: inline-block;
+  padding: 0.75rem 1rem;
+  background: #242424;
+  border: 1px solid #242424;
+  color: white;
+  border-radius: 0.25rem;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+:focus-visible {
+  outline: 3px solid #005bd3;
+  outline-offset: 3px;
+}
+#shop-help {
+  font-size: 0.875rem;
+  color: #51565b;
+}
+#shop-error {
+  color: #a51616;
+}
+@media (max-width: 44rem) {
+  .welcome {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+}
