@@ -1,5 +1,9 @@
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from 'react-router';
-import './styles.css';
+import stylesheet from './styles.css?url';
+
+export function links() {
+  return [{ rel: 'stylesheet', href: stylesheet }];
+}
 export default function Root() {
   return (
     <html lang="en">
