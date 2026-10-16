@@ -237,7 +237,7 @@
         "type": "object",
         "properties": {
           "tier": { "type": "string", "enum": ["unavailable", "standard"] },
-          "shopifyCheckoutHandoff": {
+          "standaloneCodCheckout": {
             "oneOf": [
               {
                 "type": "object",
@@ -340,7 +340,7 @@
             ]
           }
         },
-        "required": ["tier", "shopifyCheckoutHandoff", "checkoutUiExtension", "customPayment"],
+        "required": ["tier", "standaloneCodCheckout", "checkoutUiExtension", "customPayment"],
         "additionalProperties": false
       },
       "HealthResponse": {

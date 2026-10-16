@@ -2,7 +2,7 @@
 
 Reviewed: 16 October 2026 (Asia/Kolkata). Product direction: [ADR 0002](0002-standalone-cod-checkout.md). Supersedes the earlier “Standard = Shopify-hosted handoff” reading of checklist 1.1.1.2.1–1.1.1.2.4 for upcoming work.
 
-This is delivery policy for planned features. It does not certify any merchant, close Gate 0, or enable live order writes. Foundation capability code still speaks `shopifyCheckoutHandoff` until an implementation PR renames it; treat that name as legacy until then.
+This is delivery policy for planned features. It does not certify any merchant, close Gate 0, or enable live order writes. The resolver Standard capability is `standaloneCodCheckout`.
 
 ## Standard (v1): standalone one-page COD checkout
 
@@ -42,4 +42,4 @@ Re-evaluate before place-order. Evidence refresh and invalidation remain impleme
 
 ## Verification and remaining gates
 
-Capability unit tests still describe the legacy handoff field names; update them with the capability rename PR. Still open for Gate 0: distribution model, Admin COD order-write verification, Storefront/theme entry, live COD order on a test store, API version pin, and sign-off.
+Capability unit tests cover `standaloneCodCheckout` eligibility and denial reasons. Still open for Gate 0: distribution model, Admin COD order-write verification, Storefront/theme entry, live COD order on a test store, API version pin, and sign-off.

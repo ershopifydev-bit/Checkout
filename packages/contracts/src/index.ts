@@ -41,8 +41,10 @@ export const CapabilityDecisionSchema = z.discriminatedUnion('enabled', [
 ]);
 export const CapabilitiesSchema = z.strictObject({
   tier: z.enum(['unavailable', 'standard']),
-  shopifyCheckoutHandoff: CapabilityDecisionSchema,
+  /** Standard v1 path: own one-page COD checkout (ADR 0002). */
+  standaloneCodCheckout: CapabilityDecisionSchema,
   checkoutUiExtension: CapabilityDecisionSchema,
+  /** Prepaid/card capture — not COD Admin order write. */
   customPayment: CapabilityDecisionSchema,
 });
 export type CapabilityDecision = z.infer<typeof CapabilityDecisionSchema>;

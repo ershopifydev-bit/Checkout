@@ -19,7 +19,7 @@ The resolver accepts a context assembled from authenticated server state. There 
 
 Capability allow decisions require an active installation, entitlement, enabled feature flag, and unexpired eligibility evidence for the same shop. Unknown, invalid, stale, or mismatched evidence denies access. The evidence issuer will set expiry according to its verified Shopify/provider source; this increment does not invent a validity period.
 
-Checkout extensions return `NOT_IMPLEMENTED`. Prepaid/custom card capture returns `APPROVAL_REQUIRED` and cannot be enabled by a flag. The resolver field `shopifyCheckoutHandoff` is legacy naming from the foundation increment; product Standard for upcoming work is **standalone COD checkout** per [ADR 0002](0002-standalone-cod-checkout.md). The resolver is a policy foundation, not proof that a merchant can place live COD orders.
+Checkout extensions return `NOT_IMPLEMENTED`. Prepaid/custom card capture returns `APPROVAL_REQUIRED` and cannot be enabled by a flag. Standard capability is `standaloneCodCheckout` per [ADR 0002](0002-standalone-cod-checkout.md). The resolver is a policy foundation, not proof that a merchant can place live COD orders.
 
 ## Threats and controls in this increment
 

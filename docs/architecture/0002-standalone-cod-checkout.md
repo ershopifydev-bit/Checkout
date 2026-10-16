@@ -39,7 +39,7 @@ Rejected; prepaid needs gateway, reconciliation, and a stronger compliance revie
 ## Consequences
 
 - Checklist leaves and local `tasks/` trackers that describe Shopify Checkout URL continuation must be rewritten to **COD place-order + Admin sync**.
-- Capability contracts currently expose `shopifyCheckoutHandoff` and hard-deny `customPayment`. A later implementation PR must rename/repurpose capabilities (e.g. standalone COD enabled) without silently treating Admin order write as “custom payment approved.”
+- Capability contracts expose `standaloneCodCheckout` for the Standard path and hard-deny `customPayment` (prepaid/card capture only). Admin COD order write is gated by `standaloneCodCheckout`, not by enabling `customPayment`.
 - Existing cart-preservation spike code remains useful for **reading cart lines** into our checkout; it is not deleted. It must not be treated as proof of Shopify Checkout handoff product delivery.
 - Gate 0 now includes: distribution model, verified Admin order-write model for COD, Storefront/theme entry, and live COD order evidence on a test store — not “retrieve checkoutUrl and complete Shopify Checkout.”
 
