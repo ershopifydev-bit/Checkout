@@ -34,6 +34,7 @@ Use the CLI preview URL for embedded Admin authentication. After the app is runn
 1. Keep `pnpm dev` running. Copy the host theme id from the CLI line **Setup your theme app extension in the host theme** into `SHOPIFY_THEME_EXTENSION_HOST_THEME_ID` in `apps/shopify-admin/.env` (embeds are not on the published theme during local preview).
 2. In the embedded app home, click **Enable COD Checkout on theme** (deep-links to that host theme’s App embeds panel with block handle `cod-checkout`).
 3. Turn the embed on, then **Save**. Preview the storefront via the CLI host theme / local preview (`http://127.0.0.1:9293`), not only the published Dawn theme, until the extension is deployed.
+4. With **Open COD checkout on Checkout / Buy now** enabled, Checkout and Buy now must open the COD overlay on the same page. Shopify accelerated checkout hosts are removed and replaced with our Buy now control; native `/checkout` navigation is blocked in-page.
 
 `http://127.0.0.1:3000/` remains an optional local API playground only.
 

@@ -1,3 +1,18 @@
+/* When hijack is on, Shopify accelerated / Buy it now must never be usable. */
+shopify-accelerated-checkout,
+shopify-accelerated-checkout-cart,
+[data-shopify='payment-button'],
+.shopify-payment-button,
+[data-ec-neutralized='1'] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.ec-buy-now {
+  margin-top: 0.75rem;
+}
+
 html.ec-lock,
 html.ec-lock body {
   overflow: hidden;
