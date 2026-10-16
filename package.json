@@ -16,10 +16,12 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:runtime": "pnpm build && node --test tests/integration/runtime.test.mjs",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm test:runtime",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm test:runtime && pnpm test:cart-spike",
     "dev:api": "pnpm build && node --watch apps/api/dist/server.js",
     "start:api": "node apps/api/dist/server.js",
-    "api:spec": "pnpm build && node scripts/export-openapi.mjs"
+    "api:spec": "pnpm build && node scripts/export-openapi.mjs",
+    "test:cart-spike": "node --test tests/integration/cart-spike.test.mjs",
+    "spike:cart": "node --env-file-if-exists=.env.cart-spike scripts/shopify-cart-spike.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
