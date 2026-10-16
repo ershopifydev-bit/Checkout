@@ -2,9 +2,15 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { LogController } from 'fastify';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
-import { contractSchemas } from '@checkout/contracts';
+import {
+  PlaceCodOrderRequestSchema,
+  PlaceCodOrderResponseSchema,
+  contractSchemas,
+} from '@checkout/contracts';
+import { createDemoCheckoutSession, placeDemoCodOrder } from './demo-checkout.js';
 import { publicError } from './errors.js';
 import { openapiDocument } from './openapi.js';
+import { readCheckoutAsset } from './static-assets.js';
 import type { readConfig } from './config.js';
 
 interface AppOptions {
@@ -38,7 +44,22 @@ export function buildApp(options: AppOptions = {}) {
       redact: ['authorization', 'cookie', 'token', 'password'],
     },
   });
-  app.register(helmet);
+  app.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        scriptSrc: ["'self'"],
+        connectSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:'],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        frameAncestors: ["'none'"],
+      },
+    },
+  });
   app.register(rateLimit, { max: 100, timeWindow: '1 minute' });
   app.addHook('onRequest', async (request, reply) => {
     reply.header('x-correlation-id', request.id).header('cache-control', 'no-store');
@@ -88,5 +109,48 @@ export function buildApp(options: AppOptions = {}) {
     );
   }
   app.get('/openapi.json', (_request, reply) => reply.send(openapiDocument));
+
+  app.get(
+    '/v1/demo/checkout',
+    { schema: { response: { 200: contractSchemas.DemoCheckoutSession } } },
+    (_request, reply) => reply.send(createDemoCheckoutSession()),
+  );
+
+  app.post('/v1/demo/cod-orders', async (request, reply) => {
+    const parsed = PlaceCodOrderRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
+      const safe = publicError(400, request.id);
+      return reply.code(safe.statusCode).send(safe.body);
+    }
+    try {
+      return reply.send(PlaceCodOrderResponseSchema.parse(placeDemoCodOrder(parsed.data)));
+    } catch (error) {
+      if (error instanceof Error && error.message === 'SESSION_NOT_FOUND') {
+        const safe = publicError(404, request.id);
+        return reply.code(safe.statusCode).send(safe.body);
+      }
+      throw error;
+    }
+  });
+
+  app.get('/checkout', async (_request, reply) => {
+    const asset = await readCheckoutAsset('checkout/index.html');
+    if (!asset) {
+      const safe = publicError(404, _request.id);
+      return reply.code(safe.statusCode).send(safe.body);
+    }
+    return reply.type(asset.contentType).send(asset.body);
+  });
+
+  app.get('/checkout/*', async (request, reply) => {
+    const suffix = request.url.replace(/^\/checkout\/?/, '').split('?')[0] ?? '';
+    const asset = await readCheckoutAsset(`checkout/${suffix}`);
+    if (!asset) {
+      const safe = publicError(404, request.id);
+      return reply.code(safe.statusCode).send(safe.body);
+    }
+    return reply.type(asset.contentType).header('cache-control', 'no-store').send(asset.body);
+  });
+
   return app;
 }

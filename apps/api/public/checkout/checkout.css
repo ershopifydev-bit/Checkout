@@ -1,0 +1,253 @@
+:root {
+  --ink: #14212b;
+  --muted: #5b6b76;
+  --paper: #f3f6f4;
+  --card: #ffffff;
+  --line: #d5dde2;
+  --accent: #0b6e4f;
+  --accent-ink: #073b2b;
+  --danger: #9b1c1c;
+  --shadow: 0 18px 40px rgba(20, 33, 43, 0.08);
+  --radius: 18px;
+  font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at top left, rgba(11, 110, 79, 0.12), transparent 36%),
+    linear-gradient(180deg, #e8eef0 0%, var(--paper) 48%, #eef3f1 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.skip {
+  position: absolute;
+  left: -999px;
+  top: 0;
+  background: var(--ink);
+  color: white;
+  padding: 0.5rem 1rem;
+  z-index: 2;
+}
+
+.skip:focus {
+  left: 0.75rem;
+  top: 0.75rem;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem 0.5rem;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.brand {
+  margin: 0;
+  font-family: Fraunces, Georgia, serif;
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  letter-spacing: -0.03em;
+}
+
+.mode {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.layout {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 3rem;
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 860px) {
+  .layout {
+    grid-template-columns: 0.95fr 1.05fr;
+    align-items: start;
+  }
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.35rem 1.4rem 1.5rem;
+}
+
+h1,
+h2 {
+  margin: 0 0 0.35rem;
+  font-family: Fraunces, Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.lede,
+.pay-option small,
+.success p {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.lines {
+  list-style: none;
+  margin: 1.25rem 0;
+  padding: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.lines strong {
+  display: block;
+}
+
+.lines span {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.total strong {
+  font-family: Fraunces, Georgia, serif;
+  font-size: 1.55rem;
+}
+
+form {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
+.row {
+  display: grid;
+  gap: 0.9rem;
+}
+
+@media (min-width: 560px) {
+  .row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+label,
+legend {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+input[type='tel'],
+input[type='text'],
+input:not([type]) {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.8rem 0.9rem;
+  font: inherit;
+  background: #fbfcfc;
+}
+
+input:focus {
+  outline: 2px solid rgba(11, 110, 79, 0.35);
+  border-color: var(--accent);
+  background: white;
+}
+
+.pay {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #f4faf7;
+}
+
+.pay-option {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.pay-option strong {
+  display: block;
+}
+
+.pay-option small {
+  display: block;
+  margin-top: 0.2rem;
+}
+
+.form-error {
+  margin: 0;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+button {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: white;
+  font: inherit;
+  font-weight: 700;
+  padding: 0.95rem 1.2rem;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--accent-ink);
+}
+
+button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.success {
+  margin-top: 1rem;
+}
+
+.order-id code {
+  font-size: 1rem;
+  background: #eef5f1;
+  padding: 0.2rem 0.45rem;
+  border-radius: 8px;
+}
+
+#again {
+  margin-top: 0.75rem;
+  background: transparent;
+  color: var(--accent-ink);
+  border: 1px solid var(--accent);
+}

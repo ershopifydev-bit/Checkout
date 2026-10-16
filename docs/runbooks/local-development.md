@@ -4,7 +4,8 @@
 2. Run `pnpm install --frozen-lockfile`; a lockfile mismatch is a failure to fix, not a reason to bypass the check.
 3. Run `pnpm check`, `pnpm api:spec`, and `pnpm audit --audit-level=moderate`.
 4. Run `pnpm start:api`; request `http://127.0.0.1:3000/health/ready`.
-5. Stop with Ctrl+C or SIGTERM. Fastify drains connections; a ten-second shutdown deadline prevents a hung process from waiting indefinitely.
+5. Open the fixture COD checkout at `http://127.0.0.1:3000/checkout`. Place a demo order; it stays local (`accepted_demo`) and does not create a Shopify order.
+6. Stop with Ctrl+C or SIGTERM. Fastify drains connections; a ten-second shutdown deadline prevents a hung process from waiting indefinitely.
 
 If startup exits with an error, check HOST (IP address), PORT (integer 1–65535), LOG_LEVEL, and port availability. Configuration values are not echoed to logs. `.env` is optional and ignored; use Node's explicit `--env-file` option if needed.
 

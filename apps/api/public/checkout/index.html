@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en-IN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Checkout · Cash on Delivery</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Source+Sans+3:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/checkout/checkout.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to checkout</a>
+    <header class="top">
+      <p class="brand">Checkout</p>
+      <p class="mode" id="modeBadge">Fixture demo · COD only</p>
+    </header>
+    <main id="main" class="layout">
+      <section class="panel" aria-labelledby="summary-heading">
+        <h1 id="summary-heading">Order summary</h1>
+        <p class="lede">Review your bag, then place a Cash on Delivery order.</p>
+        <ul class="lines" id="lines" aria-live="polite"></ul>
+        <p class="total">
+          <span>Total</span>
+          <strong id="total">—</strong>
+        </p>
+      </section>
+      <section class="panel" aria-labelledby="details-heading">
+        <h2 id="details-heading">Delivery details</h2>
+        <form id="codForm" novalidate>
+          <input type="hidden" name="sessionId" id="sessionId" />
+          <div class="field">
+            <label for="phone">Mobile number</label>
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              inputmode="numeric"
+              autocomplete="tel-national"
+              maxlength="10"
+              pattern="[6-9][0-9]{9}"
+              required
+              placeholder="10-digit mobile"
+            />
+          </div>
+          <div class="field">
+            <label for="fullName">Full name</label>
+            <input
+              id="fullName"
+              name="fullName"
+              type="text"
+              autocomplete="name"
+              required
+              maxlength="80"
+            />
+          </div>
+          <div class="field">
+            <label for="addressLine1">Address</label>
+            <input
+              id="addressLine1"
+              name="addressLine1"
+              type="text"
+              autocomplete="address-line1"
+              required
+              maxlength="120"
+            />
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="locality">City</label>
+              <input
+                id="locality"
+                name="locality"
+                type="text"
+                autocomplete="address-level2"
+                required
+                maxlength="80"
+              />
+            </div>
+            <div class="field">
+              <label for="region">State</label>
+              <input
+                id="region"
+                name="region"
+                type="text"
+                autocomplete="address-level1"
+                required
+                maxlength="40"
+              />
+            </div>
+          </div>
+          <div class="field">
+            <label for="postalCode">PIN code</label>
+            <input
+              id="postalCode"
+              name="postalCode"
+              type="text"
+              inputmode="numeric"
+              autocomplete="postal-code"
+              maxlength="6"
+              pattern="[0-9]{6}"
+              required
+            />
+          </div>
+          <fieldset class="pay">
+            <legend>Payment</legend>
+            <label class="pay-option">
+              <input type="radio" name="payment" value="cod" checked disabled />
+              <span>
+                <strong>Cash on Delivery</strong>
+                <small>Pay when your order arrives. Cards and UPI are not enabled yet.</small>
+              </span>
+            </label>
+          </fieldset>
+          <p class="form-error" id="formError" role="alert" hidden></p>
+          <button type="submit" id="submit">Place COD order</button>
+        </form>
+        <div class="success" id="success" hidden>
+          <h2>Order received</h2>
+          <p id="successMessage"></p>
+          <p class="order-id">Reference <code id="orderId"></code></p>
+          <button type="button" id="again">Start another demo order</button>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/checkout/checkout.js"></script>
+  </body>
+</html>

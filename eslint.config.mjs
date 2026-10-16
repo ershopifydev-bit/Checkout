@@ -3,7 +3,17 @@ import tseslint from 'typescript-eslint';
 
 export default [
   {
-    ignores: ['**/dist/**', '**/node_modules/**', 'coverage/**', 'tasks/**', 'tools/**', 'Doc/**'],
+    ignores: [
+      '**/dist/**',
+      '**/build/**',
+      '**/node_modules/**',
+      '**/.shopify/**',
+      '**/.react-router/**',
+      'coverage/**',
+      'tasks/**',
+      'tools/**',
+      'Doc/**',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked.map((config) => ({ ...config, files: ['**/*.ts'] })),
@@ -22,6 +32,17 @@ export default [
           ],
         },
       ],
+    },
+  },
+  {
+    files: ['apps/api/public/**/*.js'],
+    languageOptions: {
+      globals: {
+        document: 'readonly',
+        fetch: 'readonly',
+        FormData: 'readonly',
+        Intl: 'readonly',
+      },
     },
   },
 ];
