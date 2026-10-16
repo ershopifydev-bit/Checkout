@@ -133,14 +133,27 @@ export function buildApp(options: AppOptions = {}) {
     }
   });
 
-  app.get('/checkout', async (_request, reply) => {
-    const asset = await readCheckoutAsset('checkout/index.html');
+  app.get('/', async (request, reply) => {
+    const asset = await readCheckoutAsset('storefront/index.html');
     if (!asset) {
-      const safe = publicError(404, _request.id);
+      const safe = publicError(404, request.id);
       return reply.code(safe.statusCode).send(safe.body);
     }
     return reply.type(asset.contentType).send(asset.body);
   });
+
+  app.get('/storefront/*', async (request, reply) => {
+    const suffix = request.url.replace(/^\/storefront\/?/, '').split('?')[0] ?? '';
+    const asset = await readCheckoutAsset(`storefront/${suffix}`);
+    if (!asset) {
+      const safe = publicError(404, request.id);
+      return reply.code(safe.statusCode).send(safe.body);
+    }
+    return reply.type(asset.contentType).send(asset.body);
+  });
+
+  // Deep link opens the same-origin storefront and auto-launches the in-page overlay.
+  app.get('/checkout', async (_request, reply) => reply.redirect('/?checkout=open'));
 
   app.get('/checkout/*', async (request, reply) => {
     const suffix = request.url.replace(/^\/checkout\/?/, '').split('?')[0] ?? '';
@@ -149,7 +162,7 @@ export function buildApp(options: AppOptions = {}) {
       const safe = publicError(404, request.id);
       return reply.code(safe.statusCode).send(safe.body);
     }
-    return reply.type(asset.contentType).header('cache-control', 'no-store').send(asset.body);
+    return reply.type(asset.contentType).send(asset.body);
   });
 
   return app;

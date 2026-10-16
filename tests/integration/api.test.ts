@@ -55,12 +55,22 @@ describe('API foundation', () => {
     expect((await app.inject('/v1/merchant/capabilities?shopId=other-shop')).statusCode).toBe(404);
   });
 
-  it('serves the fixture COD checkout page and places a demo order', async () => {
+  it('serves the storefront and opens checkout as a same-origin overlay asset', async () => {
     const app = createApp();
-    const page = await app.inject('/checkout');
-    expect(page.statusCode).toBe(200);
-    expect(page.headers['content-type']).toContain('text/html');
-    expect(page.body).toContain('Cash on Delivery');
+    const store = await app.inject('/');
+    expect(store.statusCode).toBe(200);
+    expect(store.headers['content-type']).toContain('text/html');
+    expect(store.body).toContain('/checkout/embed.js');
+    expect(store.body).toContain('Buy now');
+
+    const redirect = await app.inject({ url: '/checkout', method: 'GET' });
+    expect(redirect.statusCode).toBe(302);
+    expect(redirect.headers.location).toBe('/?checkout=open');
+
+    const panel = await app.inject('/checkout/panel.html');
+    expect(panel.statusCode).toBe(200);
+    expect(panel.body).toContain('Cash on Delivery');
+    expect(panel.body).toContain('Delivery Address');
 
     const css = await app.inject('/checkout/checkout.css');
     expect(css.statusCode).toBe(200);

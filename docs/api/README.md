@@ -2,13 +2,15 @@
 
 `openapi.json` is generated with `pnpm api:spec` from the implemented routes and shared Zod schemas. It is also served at `/openapi.json`. CI rejects generated-file drift. Live Shopify session/order routes from the master plan are not present yet.
 
-| Route                      | Meaning                                                               |
-| -------------------------- | --------------------------------------------------------------------- |
-| `GET /health/live`         | Process can serve a request; `status: alive`, `scope: foundation`     |
-| `GET /health/ready`        | Foundation is initialized; `status: ready`, `scope: foundation`       |
-| `GET /v1/demo/checkout`    | Creates a fixture COD checkout session (demo line items, INR)         |
-| `POST /v1/demo/cod-orders` | Accepts a demo COD order locally; does **not** write to Shopify       |
-| `GET /checkout`            | Shopper UI for the fixture COD demo (HTML/CSS/JS under `/checkout/*`) |
+| Route                      | Meaning                                                           |
+| -------------------------- | ----------------------------------------------------------------- |
+| `GET /health/live`         | Process can serve a request; `status: alive`, `scope: foundation` |
+| `GET /health/ready`        | Foundation is initialized; `status: ready`, `scope: foundation`   |
+| `GET /v1/demo/checkout`    | Creates a fixture COD checkout session (demo line items, INR)     |
+| `POST /v1/demo/cod-orders` | Accepts a demo COD order locally; does **not** write to Shopify   |
+| `GET /`                    | Demo storefront; Buy now opens the in-page COD checkout overlay   |
+| `GET /checkout`            | Redirects to `/?checkout=open` (same-origin overlay)              |
+| `GET /checkout/*`          | Overlay assets (`embed.js`, `panel.html`, CSS/JS)                 |
 
 Readiness does not certify MongoDB, RabbitMQ, Redis, Shopify, or checkout availability. Register dependency-aware readiness when those integrations are introduced. These probes are exempt from the process-local rate limit.
 

@@ -10,16 +10,10 @@ const activeSessions = new Map<string, DemoCheckoutSession>();
 
 const FIXTURE_LINES = [
   {
-    title: 'Everyday Cotton Tee',
-    variantTitle: 'M / Indigo',
+    title: 'Oversized Hoodie',
+    variantTitle: 'Black / XL',
     quantity: 1,
-    unitAmount: { currency: 'INR' as const, amountMinor: 79900 },
-  },
-  {
-    title: 'Canvas Tote',
-    variantTitle: 'Natural',
-    quantity: 1,
-    unitAmount: { currency: 'INR' as const, amountMinor: 49900 },
+    unitAmount: { currency: 'INR' as const, amountMinor: 109900 },
   },
 ];
 

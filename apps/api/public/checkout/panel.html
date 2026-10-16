@@ -1,0 +1,179 @@
+<div class="ec-shell" role="dialog" aria-modal="true" aria-labelledby="ec-title">
+  <header class="ec-top">
+    <button type="button" class="ec-back" data-ec-close aria-label="Close checkout">←</button>
+    <p class="ec-brand" id="ec-title">RARE</p>
+    <p class="ec-secure">
+      <span aria-hidden="true">🔒</span>
+      Secure Checkout
+    </p>
+  </header>
+
+  <div class="ec-body">
+    <div class="ec-main">
+      <section class="ec-card" aria-labelledby="ec-address-heading">
+        <div class="ec-card-head">
+          <h2 id="ec-address-heading">Delivery Address</h2>
+          <button type="button" class="ec-link" id="ec-address-toggle">Change</button>
+        </div>
+        <div id="ec-address-summary" class="ec-address-summary" hidden></div>
+        <div id="ec-address-form" class="ec-address-form">
+          <div class="ec-field">
+            <label for="ec-phone">Mobile number</label>
+            <input
+              id="ec-phone"
+              name="phone"
+              type="tel"
+              inputmode="numeric"
+              maxlength="10"
+              required
+            />
+          </div>
+          <div class="ec-field">
+            <label for="ec-fullName">Full name</label>
+            <input id="ec-fullName" name="fullName" type="text" maxlength="80" required />
+          </div>
+          <div class="ec-field">
+            <label for="ec-addressLine1">Address</label>
+            <input id="ec-addressLine1" name="addressLine1" type="text" maxlength="120" required />
+          </div>
+          <div class="ec-grid-2">
+            <div class="ec-field">
+              <label for="ec-locality">City</label>
+              <input id="ec-locality" name="locality" type="text" maxlength="80" required />
+            </div>
+            <div class="ec-field">
+              <label for="ec-region">State</label>
+              <input id="ec-region" name="region" type="text" maxlength="40" required />
+            </div>
+          </div>
+          <div class="ec-field">
+            <label for="ec-postalCode">PIN code</label>
+            <input
+              id="ec-postalCode"
+              name="postalCode"
+              type="text"
+              inputmode="numeric"
+              maxlength="6"
+              required
+            />
+          </div>
+          <button type="button" class="ec-secondary-btn" id="ec-save-address">Save address</button>
+        </div>
+      </section>
+
+      <section class="ec-card ec-offers" aria-labelledby="ec-offers-heading">
+        <div class="ec-card-head">
+          <h2 id="ec-offers-heading">Offers &amp; Rewards</h2>
+          <button type="button" class="ec-link" id="ec-offers-toggle" aria-expanded="false">
+            View all
+          </button>
+        </div>
+        <div id="ec-offers-panel" class="ec-offers-panel" hidden>
+          <div class="ec-offer-rail">
+            <article class="ec-offer">
+              <p class="ec-offer-code">EQUITH400</p>
+              <p>Flat ₹400 Off</p>
+              <span class="ec-badge">Recommended</span>
+            </article>
+            <article class="ec-offer">
+              <p class="ec-offer-code">Loyalty</p>
+              <p>1,250 points</p>
+            </article>
+            <article class="ec-offer">
+              <p class="ec-offer-code">Gift card</p>
+              <p>Balance ₹500</p>
+            </article>
+          </div>
+          <label class="ec-coupon">
+            <span>Have a coupon code?</span>
+            <input type="text" placeholder="Apply and save more" disabled />
+          </label>
+          <p class="ec-hint">
+            Offers are preview-only in this demo. COD checkout does not apply them yet.
+          </p>
+        </div>
+      </section>
+
+      <section class="ec-card" aria-labelledby="ec-pay-heading">
+        <div class="ec-card-head">
+          <div>
+            <h2 id="ec-pay-heading">Payment Method</h2>
+            <p class="ec-sub">Cash on Delivery is enabled for this demo.</p>
+          </div>
+        </div>
+        <label class="ec-pay-row is-selected">
+          <input type="radio" name="ec-payment" value="cod" checked />
+          <span>
+            <strong>Cash on Delivery</strong>
+            <small>Amount non-refundable · Pay when your order arrives</small>
+          </span>
+        </label>
+      </section>
+
+      <p class="ec-error" id="ec-error" role="alert" hidden></p>
+      <div class="ec-success" id="ec-success" hidden>
+        <h2>Order received</h2>
+        <p id="ec-success-message"></p>
+        <p>Reference <code id="ec-order-id"></code></p>
+        <button type="button" class="ec-secondary-btn" data-ec-close>Back to store</button>
+      </div>
+    </div>
+
+    <aside class="ec-summary" aria-labelledby="ec-summary-heading">
+      <h2 id="ec-summary-heading">Order summary</h2>
+      <div class="ec-line" id="ec-line">
+        <div class="ec-thumb" aria-hidden="true"></div>
+        <div class="ec-line-meta">
+          <strong id="ec-line-title">Oversized Hoodie</strong>
+          <span id="ec-line-variant">Black / XL</span>
+          <div class="ec-qty" aria-label="Quantity">
+            <button type="button" id="ec-qty-dec" aria-label="Decrease quantity">−</button>
+            <span id="ec-qty">1</span>
+            <button type="button" id="ec-qty-inc" aria-label="Increase quantity">+</button>
+          </div>
+        </div>
+        <strong id="ec-line-price">—</strong>
+      </div>
+      <button type="button" class="ec-link ec-summary-coupon" id="ec-summary-coupon">
+        Apply coupon
+      </button>
+      <dl class="ec-totals">
+        <div>
+          <dt>Subtotal</dt>
+          <dd id="ec-subtotal">—</dd>
+        </div>
+        <div>
+          <dt>Discount</dt>
+          <dd class="ec-green">—</dd>
+        </div>
+        <div>
+          <dt>Shipping</dt>
+          <dd class="ec-green">FREE</dd>
+        </div>
+        <div class="ec-total-row">
+          <dt>Total</dt>
+          <dd id="ec-total">—</dd>
+        </div>
+      </dl>
+      <p class="ec-save-note">Pay on delivery · No prepaid methods in this demo</p>
+      <ul class="ec-trust">
+        <li>Secure payment</li>
+        <li>Easy returns</li>
+        <li>100% authentic</li>
+      </ul>
+      <button type="button" class="ec-place desktop-only" id="ec-place-desktop">
+        Place COD order
+      </button>
+    </aside>
+  </div>
+
+  <footer class="ec-sticky-mobile">
+    <div>
+      <span>Total</span>
+      <strong id="ec-total-mobile">—</strong>
+    </div>
+    <button type="button" id="ec-place-mobile">Place COD order →</button>
+  </footer>
+
+  <input type="hidden" id="ec-sessionId" />
+</div>

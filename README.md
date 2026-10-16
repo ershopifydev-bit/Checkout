@@ -6,7 +6,7 @@ Shopify checkout platform repository.
 
 The first increment provides a TypeScript/pnpm workspace, shared Zod contracts, a conservative merchant capability resolver, and a runnable Fastify process. The API exposes `GET /health/live`, `GET /health/ready`, and `GET /openapi.json`.
 
-Product direction is a **standalone one-page COD checkout** (see [ADR 0002](docs/architecture/0002-standalone-cod-checkout.md)). A **fixture demo** is available at `http://127.0.0.1:3000/checkout` after starting the API: phone, address, Cash on Delivery, and a local place-order stub (no Shopify Admin write yet). Shopify Checkout URL handoff is not the v1 happy path. Prepaid/card capture remains disabled. Health readiness describes this process only. Live merchant eligibility and Gate 0 require test-store evidence.
+Product direction is a **standalone one-page COD checkout** (see [ADR 0002](docs/architecture/0002-standalone-cod-checkout.md)). After starting the API, open the demo storefront at `http://127.0.0.1:3000/` and click **Buy now** / **Checkout** — the checkout opens as an **in-page overlay** on the same origin (GoKwik-style), not a separate checkout site. Cash on Delivery only; local place-order stub (no Shopify Admin write yet). Prepaid/card capture remains disabled. Health readiness describes this process only. Live merchant eligibility and Gate 0 require test-store evidence.
 
 ## Local setup
 
