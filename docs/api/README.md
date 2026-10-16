@@ -12,6 +12,18 @@
 | `GET /checkout`            | Redirects to `/?checkout=open` (same-origin overlay)              |
 | `GET /checkout/*`          | Overlay assets (`embed.js`, `panel.html`, CSS/JS)                 |
 
+### Planned storefront session APIs (ADR 0004 — not implemented yet)
+
+App-proxy paths under `/apps/easy-checkout` (mirror on Fastify when the API owns traffic):
+
+| Route | Meaning |
+| ----- | ------- |
+| `POST /v1/sessions` | Create session from `buy_now` (variant+qty) or `cart`; returns lines/totals. **No Shopify order.** |
+| `GET /v1/sessions/:id` | Load session for overlay |
+| `PATCH /v1/sessions/:id` | Phone, address, pincode, optional coupon |
+| `POST /v1/sessions/:id/quote` | Shipping/EDD/totals after pincode or discount (async-friendly) |
+| `POST /v1/sessions/:id/place-cod` | Revalidate → Shopify COD `orderCreate` → `{ orderId, orderName }` |
+
 Readiness does not certify MongoDB, RabbitMQ, Redis, Shopify, or checkout availability. Register dependency-aware readiness when those integrations are introduced. These probes are exempt from the process-local rate limit.
 
 All application responses carry a server-generated `x-correlation-id` and `Cache-Control: no-store`. Handled errors contain `{ error: { code, message }, correlationId }`. Messages are deliberately generic; internal exception messages, request contents, credentials, and stack traces are not exposed. Transport failures before Fastify creates a request can use Node's native HTTP errors.

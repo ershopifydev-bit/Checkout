@@ -20,7 +20,8 @@ ADR 0001 remains valid for workspace boundaries, Fastify foundation, and conserv
    - Durable webhook ack p95 ≤ **200ms** after persistence.
    - Shell must paint before provider fan-out; quotes and serviceability load asynchronously with explicit timeouts and safe fallbacks.
    - Stateless API replicas, no sticky sessions; workers scale on queue age; Redis cache for serviceability/capabilities with tenant-safe keys; edge/CDN for static checkout assets when deployed.
-6. **Out of v1:** Prepaid incentives that require a PG, partial COD collection, RTO intelligence networks, and Shopify Checkout Extensibility as the primary UX.
+   - **Session-first, order-on-confirm** (see [ADR 0004](0004-fast-cod-checkout-path.md)): Buy now creates our checkout session only — never a Shopify order. Shopify `orderCreate` runs on Place COD. Overlay stays on the merchant storefront (Shopflo-like speed); hijack matches GoKwik hardness.
+6. **Out of v1:** Prepaid incentives that require a PG, bank/card offers, partial COD collection, RTO intelligence networks, and Shopify Checkout Extensibility as the primary UX.
 
 ## Alternatives considered
 

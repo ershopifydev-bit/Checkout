@@ -10,11 +10,12 @@ Eligible merchants use **our** single-page checkout for Buy Now and existing-car
 
 Delivery requirements:
 
-1. **Buy Now:** preserve selected variant, quantity, and selling plan into the platform session and cart reference.
-2. **Existing cart:** preserve every line, quantity, attribute, and supported buyer context; never silently replace the cart.
-3. **One-page UI:** phone-first contact, address, delivery when ready, order summary, **Cash on Delivery** as the only payment method in v1.
-4. **Place order:** server revalidates quote/session, then creates a **COD/pending** order in Shopify via the reviewed Admin mutation (pin API version at implementation). Browser success is not order truth until Shopify confirms.
-5. **Performance:** first usable shell p95 ≤2s; lightweight API p95 ≤300ms excluding providers; paint shell before async quotes; bounded timeouts and fail-closed eligibility.
+1. **Buy Now:** preserve selected variant, quantity, and selling plan into the platform **checkout session** (not a Shopify order). See [ADR 0004](0004-fast-cod-checkout-path.md).
+2. **Existing cart:** preserve every line, quantity, attribute, and supported buyer context into that session; never silently replace the cart.
+3. **One-page UI:** phone-first contact, address, pincode → shipping/EDD when ready, order summary with discount line, **Cash on Delivery** as the only payment method in v1. Overlay on the storefront (no third-party checkout hostname).
+4. **Place order:** server revalidates session, then creates a **COD/pending** order in Shopify via the reviewed Admin mutation (pin API version at implementation). Browser success is not order truth until Shopify confirms. Do not `orderCreate` on Buy now.
+5. **Performance:** first usable shell p95 ≤2s; session create p95 ≤500ms; lightweight API p95 ≤300ms excluding Shopify Admin; paint shell before async quotes; prefetch overlay assets on idle; bounded timeouts and fail-closed eligibility.
+6. **Discounts (v1):** honor Shopify cart discounts in session totals; optional single coupon apply (stack length 1). Bank/card offers deferred with prepaid.
 
 Standard requires active installation, entitlement, enabled standalone-COD flag, and unexpired eligible evidence for the shop — including a verified theme/cart entry path when going live.
 
