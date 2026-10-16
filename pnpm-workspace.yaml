@@ -7,3 +7,7 @@ packages:
 strictPeerDependencies: true
 blockExoticSubdeps: true
 minimumReleaseAgeStrict: true
+
+# Vite's compiler verifies/installs its platform binary during installation.
+allowBuilds:
+  esbuild: true

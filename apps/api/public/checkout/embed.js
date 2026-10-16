@@ -1,5 +1,7 @@
 (function () {
   const ROOT_ID = 'easy-checkout-root';
+  const config = window.EasyCheckoutConfig || {};
+  const apiBase = (config.apiBase || '').replace(/\/$/, '');
   let root = null;
   let loaded = false;
 
@@ -8,7 +10,7 @@
     const link = document.createElement('link');
     link.id = 'easy-checkout-css';
     link.rel = 'stylesheet';
-    link.href = '/checkout/checkout.css';
+    link.href = config.cssUrl || '/checkout/checkout.css';
     document.head.appendChild(link);
   }
 
@@ -23,14 +25,15 @@
       root.hidden = true;
       document.body.appendChild(root);
     }
-    const response = await fetch('/checkout/panel.html', { headers: { accept: 'text/html' } });
+    const panelUrl = config.panelUrl || '/checkout/panel.html';
+    const response = await fetch(panelUrl, { headers: { accept: 'text/html' } });
     if (!response.ok) throw new Error('checkout_panel_failed');
     root.innerHTML = await response.text();
     if (!document.getElementById('easy-checkout-js')) {
       await new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.id = 'easy-checkout-js';
-        script.src = '/checkout/checkout.js';
+        script.src = config.jsUrl || '/checkout/checkout.js';
         script.onload = resolve;
         script.onerror = reject;
         document.body.appendChild(script);
@@ -45,7 +48,7 @@
     panel.hidden = false;
     document.documentElement.classList.add('ec-lock');
     if (window.EasyCheckoutApp && typeof window.EasyCheckoutApp.mount === 'function') {
-      await window.EasyCheckoutApp.mount(panel);
+      await window.EasyCheckoutApp.mount(panel, { apiBase });
     }
   }
 
@@ -55,5 +58,5 @@
     document.documentElement.classList.remove('ec-lock');
   }
 
-  window.EasyCheckout = { open, close };
+  window.EasyCheckout = { open, close, apiBase };
 })();

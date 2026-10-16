@@ -1,0 +1,26 @@
+<script>
+  window.EasyCheckoutConfig = {
+    apiBase: '/apps/easy-checkout',
+    panelUrl: '/apps/easy-checkout/panel.html',
+    cssUrl: {{ 'checkout.css' | asset_url | json }},
+    jsUrl: {{ 'checkout.js' | asset_url | json }},
+    hijackCheckout: {{ block.settings.hijack_checkout | json }},
+  };
+</script>
+<script src="{{ 'embed.js' | asset_url }}" defer></script>
+
+{% schema %}
+{
+  "name": "COD Checkout",
+  "target": "body",
+  "stylesheet": "checkout.css",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "hijack_checkout",
+      "label": "Open COD checkout on Checkout / Buy now",
+      "default": true
+    }
+  ]
+}
+{% endschema %}

@@ -2,6 +2,7 @@
   let quantity = 1;
   let unitMinor = 0;
   let mounted = false;
+  let apiBase = '';
 
   function $(id) {
     return document.getElementById(id);
@@ -82,7 +83,9 @@
   async function loadSession() {
     showError('');
     $('ec-success').hidden = true;
-    const response = await fetch('/v1/demo/checkout', { headers: { accept: 'application/json' } });
+    const response = await fetch(`${apiBase}/v1/demo/checkout`, {
+      headers: { accept: 'application/json' },
+    });
     if (!response.ok) {
       showError('Could not load checkout. Try again.');
       return;
@@ -108,7 +111,7 @@
     renderAddressSummary(address);
     const buttons = [$('ec-place-desktop'), $('ec-place-mobile')];
     for (const button of buttons) if (button) button.disabled = true;
-    const response = await fetch('/v1/demo/cod-orders', {
+    const response = await fetch(`${apiBase}/v1/demo/cod-orders`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', accept: 'application/json' },
       body: JSON.stringify({
@@ -182,7 +185,8 @@
   }
 
   window.EasyCheckoutApp = {
-    async mount(root) {
+    async mount(root, options = {}) {
+      apiBase = (options.apiBase || window.EasyCheckout?.apiBase || '').replace(/\/$/, '');
       bindOnce(root);
       showAddressForm();
       $('ec-address-toggle').textContent = 'Change';
