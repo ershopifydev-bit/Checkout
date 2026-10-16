@@ -31,9 +31,9 @@ This invokes Shopify CLI, starts the React Router app, and manages the developme
 
 Use the CLI preview URL for embedded Admin authentication. After the app is running:
 
-1. In the embedded app home, click **Enable COD Checkout on theme** (deep-links to the theme editor App embeds panel).
-2. Turn the embed on if needed, then **Save** the theme.
-3. On the storefront, add a product to cart and click **Checkout** (or Buy now). The one-page COD overlay should open on the same page.
+1. Keep `pnpm dev` running. Copy the host theme id from the CLI line **Setup your theme app extension in the host theme** into `SHOPIFY_THEME_EXTENSION_HOST_THEME_ID` in `apps/shopify-admin/.env` (embeds are not on the published theme during local preview).
+2. In the embedded app home, click **Enable COD Checkout on theme** (deep-links to that host theme’s App embeds panel with block handle `cod-checkout`).
+3. Turn the embed on, then **Save**. Preview the storefront via the CLI host theme / local preview (`http://127.0.0.1:9293`), not only the published Dawn theme, until the extension is deployed.
 
 `http://127.0.0.1:3000/` remains an optional local API playground only.
 
