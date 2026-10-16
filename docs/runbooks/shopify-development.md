@@ -31,8 +31,8 @@ This invokes Shopify CLI, starts the React Router app, and manages the developme
 
 Use the CLI preview URL for embedded Admin authentication. After the app is running:
 
-1. In Shopify Admin → Online Store → Themes → Customize → **App embeds**, enable **COD Checkout**.
-2. Save the theme.
+1. In the embedded app home, click **Enable COD Checkout on theme** (deep-links to the theme editor App embeds panel).
+2. Turn the embed on if needed, then **Save** the theme.
 3. On the storefront, add a product to cart and click **Checkout** (or Buy now). The one-page COD overlay should open on the same page.
 
 `http://127.0.0.1:3000/` remains an optional local API playground only.
