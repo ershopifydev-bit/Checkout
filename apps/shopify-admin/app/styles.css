@@ -85,6 +85,36 @@ button:disabled {
 #shop-error {
   color: #a51616;
 }
+.settings-form {
+  margin-top: 0.75rem;
+}
+.settings-fieldset {
+  border: 1px solid #d2d5d8;
+  border-radius: 0.35rem;
+  padding: 0.75rem 1rem 1rem;
+  margin: 0 0 0.25rem;
+}
+.settings-fieldset legend {
+  padding: 0 0.35rem;
+  font-weight: 600;
+}
+.settings-radio,
+.settings-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  margin: 0.55rem 0 0;
+}
+.settings-radio input,
+.settings-check input {
+  width: auto;
+  margin: 0;
+}
+.settings-ok {
+  color: #0d7a3f;
+  font-weight: 600;
+}
 @media (max-width: 44rem) {
   .welcome {
     margin: 1rem;

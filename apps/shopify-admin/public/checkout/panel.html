@@ -1,179 +1,671 @@
-<div class="ec-shell" role="dialog" aria-modal="true" aria-labelledby="ec-title">
+<div class="ec-shell" role="dialog" aria-modal="true" aria-labelledby="ec-title" data-ec-ui="login-otp-v3">
   <header class="ec-top">
-    <button type="button" class="ec-back" data-ec-close aria-label="Close checkout">←</button>
-    <p class="ec-brand" id="ec-title">RARE</p>
-    <p class="ec-secure">
-      <span aria-hidden="true">🔒</span>
-      Secure Checkout
-    </p>
-  </header>
-
-  <div class="ec-body">
-    <div class="ec-main">
-      <section class="ec-card" aria-labelledby="ec-address-heading">
-        <div class="ec-card-head">
-          <h2 id="ec-address-heading">Delivery Address</h2>
-          <button type="button" class="ec-link" id="ec-address-toggle">Change</button>
-        </div>
-        <div id="ec-address-summary" class="ec-address-summary" hidden></div>
-        <div id="ec-address-form" class="ec-address-form">
-          <div class="ec-field">
-            <label for="ec-phone">Mobile number</label>
-            <input
-              id="ec-phone"
-              name="phone"
-              type="tel"
-              inputmode="numeric"
-              maxlength="10"
-              required
-            />
-          </div>
-          <div class="ec-field">
-            <label for="ec-fullName">Full name</label>
-            <input id="ec-fullName" name="fullName" type="text" maxlength="80" required />
-          </div>
-          <div class="ec-field">
-            <label for="ec-addressLine1">Address</label>
-            <input id="ec-addressLine1" name="addressLine1" type="text" maxlength="120" required />
-          </div>
-          <div class="ec-grid-2">
-            <div class="ec-field">
-              <label for="ec-locality">City</label>
-              <input id="ec-locality" name="locality" type="text" maxlength="80" required />
-            </div>
-            <div class="ec-field">
-              <label for="ec-region">State</label>
-              <input id="ec-region" name="region" type="text" maxlength="40" required />
-            </div>
-          </div>
-          <div class="ec-field">
-            <label for="ec-postalCode">PIN code</label>
-            <input
-              id="ec-postalCode"
-              name="postalCode"
-              type="text"
-              inputmode="numeric"
-              maxlength="6"
-              required
-            />
-          </div>
-          <button type="button" class="ec-secondary-btn" id="ec-save-address">Save address</button>
-        </div>
-      </section>
-
-      <section class="ec-card ec-offers" aria-labelledby="ec-offers-heading">
-        <div class="ec-card-head">
-          <h2 id="ec-offers-heading">Offers &amp; Rewards</h2>
-          <button type="button" class="ec-link" id="ec-offers-toggle" aria-expanded="false">
-            View all
-          </button>
-        </div>
-        <div id="ec-offers-panel" class="ec-offers-panel" hidden>
-          <div class="ec-offer-rail">
-            <article class="ec-offer">
-              <p class="ec-offer-code">EQUITH400</p>
-              <p>Flat ₹400 Off</p>
-              <span class="ec-badge">Recommended</span>
-            </article>
-            <article class="ec-offer">
-              <p class="ec-offer-code">Loyalty</p>
-              <p>1,250 points</p>
-            </article>
-            <article class="ec-offer">
-              <p class="ec-offer-code">Gift card</p>
-              <p>Balance ₹500</p>
-            </article>
-          </div>
-          <label class="ec-coupon">
-            <span>Have a coupon code?</span>
-            <input type="text" placeholder="Apply and save more" disabled />
-          </label>
-          <p class="ec-hint">
-            Offers are preview-only in this demo. COD checkout does not apply them yet.
-          </p>
-        </div>
-      </section>
-
-      <section class="ec-card" aria-labelledby="ec-pay-heading">
-        <div class="ec-card-head">
-          <div>
-            <h2 id="ec-pay-heading">Payment Method</h2>
-            <p class="ec-sub">Cash on Delivery is enabled for this demo.</p>
-          </div>
-        </div>
-        <label class="ec-pay-row is-selected">
-          <input type="radio" name="ec-payment" value="cod" checked />
-          <span>
-            <strong>Cash on Delivery</strong>
-            <small>Amount non-refundable · Pay when your order arrives</small>
-          </span>
-        </label>
-      </section>
-
-      <p class="ec-error" id="ec-error" role="alert" hidden></p>
-      <div class="ec-success" id="ec-success" hidden>
-        <h2>Order received</h2>
-        <p id="ec-success-message"></p>
-        <p>Reference <code id="ec-order-id"></code></p>
-        <button type="button" class="ec-secondary-btn" data-ec-close>Back to store</button>
+    <div class="ec-top-row">
+      <button type="button" class="ec-back" id="ec-back" data-ec-exit aria-label="Back">←</button>
+      <p class="ec-brand" id="ec-title">RARE</p>
+      <div class="ec-account" id="ec-account" hidden>
+        <button type="button" class="ec-link ec-logout" id="ec-logout">
+          <svg class="ec-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <circle cx="12" cy="8" r="3.5" />
+            <path d="M5.5 19.5c1.5-3.2 3.8-4.8 6.5-4.8s5 1.6 6.5 4.8" />
+          </svg>
+          Logout
+        </button>
+        <span class="ec-account-phone" id="ec-account-phone"></span>
       </div>
+      <button type="button" class="ec-close" id="ec-close" data-ec-exit aria-label="Close checkout">✕</button>
     </div>
-
-    <aside class="ec-summary" aria-labelledby="ec-summary-heading">
-      <h2 id="ec-summary-heading">Order summary</h2>
-      <div class="ec-line" id="ec-line">
-        <div class="ec-thumb" aria-hidden="true"></div>
-        <div class="ec-line-meta">
-          <strong id="ec-line-title">Oversized Hoodie</strong>
-          <span id="ec-line-variant">Black / XL</span>
-          <div class="ec-qty" aria-label="Quantity">
-            <button type="button" id="ec-qty-dec" aria-label="Decrease quantity">−</button>
-            <span id="ec-qty">1</span>
-            <button type="button" id="ec-qty-inc" aria-label="Increase quantity">+</button>
-          </div>
-        </div>
-        <strong id="ec-line-price">—</strong>
-      </div>
-      <button type="button" class="ec-link ec-summary-coupon" id="ec-summary-coupon">
-        Apply coupon
-      </button>
+    <button
+      type="button"
+      class="ec-summary-bar"
+      id="ec-summary-toggle"
+      aria-expanded="false"
+      aria-controls="ec-summary-panel"
+    >
+      <span class="ec-summary-save">
+        <span class="ec-save-pill" id="ec-save-pill" hidden>
+          <svg class="ec-ico" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M10.5 3.5 3.8 10.2a2 2 0 0 0 0 2.8l7.2 7.2a2 2 0 0 0 2.8 0l6.7-6.7V3.5H10.5z" />
+            <circle cx="15.2" cy="8.8" r="1.4" fill="#fff" />
+          </svg>
+          <span id="ec-save-pill-text"></span>
+        </span>
+      </span>
+      <span class="ec-summary-cart">
+        <svg class="ec-bag" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 8h12l-1 13H7L6 8z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/><path d="M9 12h6"/></svg>
+        <span id="ec-item-count">0 items</span>
+        <span class="ec-chevron" aria-hidden="true">▾</span>
+      </span>
+      <span class="ec-summary-pay">
+        <span class="ec-compare" id="ec-header-compare" hidden></span>
+        <strong id="ec-total-header">—</strong>
+      </span>
+    </button>
+    <div class="ec-summary-panel" id="ec-summary-panel" hidden>
+      <div class="ec-lines" id="ec-lines"></div>
       <dl class="ec-totals">
+        <div id="ec-mrp-row" hidden>
+          <dt>MRP total</dt>
+          <dd id="ec-mrp">—</dd>
+        </div>
+        <div id="ec-mrp-discount-row" hidden>
+          <dt>Discount on MRP</dt>
+          <dd class="ec-green" id="ec-mrp-discount">—</dd>
+        </div>
         <div>
           <dt>Subtotal</dt>
           <dd id="ec-subtotal">—</dd>
         </div>
         <div>
-          <dt>Discount</dt>
-          <dd class="ec-green">—</dd>
+          <dt>Extra discount</dt>
+          <dd class="ec-green" id="ec-discount">—</dd>
         </div>
         <div>
           <dt>Shipping</dt>
-          <dd class="ec-green">FREE</dd>
+          <dd class="ec-green" id="ec-shipping">FREE</dd>
         </div>
         <div class="ec-total-row">
-          <dt>Total</dt>
+          <dt>To pay</dt>
           <dd id="ec-total">—</dd>
         </div>
       </dl>
-      <p class="ec-save-note">Pay on delivery · No prepaid methods in this demo</p>
-      <ul class="ec-trust">
-        <li>Secure payment</li>
-        <li>Easy returns</li>
-        <li>100% authentic</li>
-      </ul>
-      <button type="button" class="ec-place desktop-only" id="ec-place-desktop">
-        Place COD order
-      </button>
-    </aside>
+    </div>
+  </header>
+  <!-- Closes item preview only; does not close checkout -->
+  <button type="button" class="ec-summary-scrim" id="ec-summary-scrim" hidden aria-label="Close order preview"></button>
+
+  <div class="ec-body">
+    <!-- Step: login + OTP -->
+    <section class="ec-step" id="ec-step-login" aria-labelledby="ec-login-heading">
+      <div class="ec-card ec-login-card">
+        <p class="ec-login-banner">
+          <span class="ec-banner-icon" aria-hidden="true">🎁</span>
+          <span class="ec-banner-text">Login to redeem offers &amp; place COD</span>
+        </p>
+        <h2 id="ec-login-heading">Login to continue</h2>
+        <p class="ec-sub" id="ec-login-hint">
+          Enter your mobile number to continue checkout and unlock COD/offers.
+        </p>
+
+        <div class="ec-field" id="ec-phone-field">
+          <label for="ec-login-phone">Mobile number</label>
+          <div class="ec-phone-input">
+            <span class="ec-cc">+91 <span aria-hidden="true">⌄</span></span>
+            <input
+              id="ec-login-phone"
+              type="tel"
+              inputmode="numeric"
+              maxlength="10"
+              autocomplete="tel-national"
+              placeholder="10-digit mobile number"
+            />
+          </div>
+        </div>
+
+        <div class="ec-otp-block" id="ec-otp-field" hidden>
+          <div class="ec-otp-boxes" role="group" aria-label="One-time password">
+            <input class="ec-otp-digit" data-ec-otp="0" type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code" aria-label="Digit 1" />
+            <input class="ec-otp-digit" data-ec-otp="1" type="text" inputmode="numeric" maxlength="1" aria-label="Digit 2" />
+            <input class="ec-otp-digit" data-ec-otp="2" type="text" inputmode="numeric" maxlength="1" aria-label="Digit 3" />
+            <input class="ec-otp-digit" data-ec-otp="3" type="text" inputmode="numeric" maxlength="1" aria-label="Digit 4" />
+          </div>
+          <button type="button" class="ec-link ec-change-number" id="ec-phone-edit">Change number</button>
+          <button type="button" class="ec-resend-btn" id="ec-resend" disabled>Resend OTP in 00:30</button>
+          <p class="ec-hint" id="ec-otp-hint" hidden></p>
+        </div>
+
+        <label class="ec-consent" id="ec-consent-row">
+          <input type="checkbox" id="ec-consent" checked />
+          <span>I agree to receive order updates, offers and important communications on WhatsApp/SMS.</span>
+        </label>
+
+        <p class="ec-error" id="ec-login-error" role="alert" hidden></p>
+
+        <button type="button" class="ec-cta" id="ec-login-submit" disabled>
+          <span class="ec-spinner" aria-hidden="true"></span>
+          <span class="ec-cta-label">Send OTP</span>
+          <span class="ec-cta-arrow" aria-hidden="true">→</span>
+        </button>
+
+        <p class="ec-sub ec-otp-note" id="ec-otp-note" hidden>Returning numbers can continue with saved addresses.</p>
+
+        <p class="ec-legal">
+          By proceeding, you agree to continue with COD checkout for this number and accept our
+          <a href="/policies/terms-of-service" target="_blank" rel="noopener">Terms &amp; Privacy Policy</a>.
+        </p>
+      </div>
+
+      <div class="ec-trust-row" aria-label="Trust">
+        <span><i aria-hidden="true">🛡</i><b>PCI DSS<small>Compliant</small></b></span>
+        <span><i aria-hidden="true">🔒</i><b>Secure<small>Checkout</small></b></span>
+        <span><i aria-hidden="true">✔</i><b>Verified<small>Merchant</small></b></span>
+      </div>
+    </section>
+
+    <!-- Step: address only when none on file (new customer) -->
+    <section class="ec-step" id="ec-step-address" hidden aria-labelledby="ec-address-heading">
+      <div class="ec-card" id="ec-new-address-card">
+        <div class="ec-card-head">
+          <div>
+            <h2 id="ec-address-heading">Delivery address</h2>
+            <p class="ec-sub" id="ec-address-sub">Add where we should deliver this order.</p>
+          </div>
+          <span class="ec-ship-free-badge" id="ec-ship-free-badge-address" hidden>
+            <svg class="ec-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M3 7h11v10H3z" />
+              <path d="M14 10h4l3 3v4h-7V10z" />
+              <circle cx="7.5" cy="18.5" r="1.5" />
+              <circle cx="17.5" cy="18.5" r="1.5" />
+            </svg>
+            Free shipping
+          </span>
+        </div>
+        <div class="ec-field">
+          <label for="ec-fullName">Full name</label>
+          <input id="ec-fullName" name="fullName" type="text" maxlength="80" required />
+        </div>
+        <div class="ec-field">
+          <label for="ec-phone">Mobile number</label>
+          <input id="ec-phone" name="phone" type="tel" maxlength="10" required readonly />
+        </div>
+        <div class="ec-field">
+          <label for="ec-addressLine1">Address</label>
+          <input id="ec-addressLine1" name="addressLine1" type="text" maxlength="120" required />
+        </div>
+        <div class="ec-grid-2">
+          <div class="ec-field">
+            <label for="ec-locality">City</label>
+            <input id="ec-locality" name="locality" type="text" maxlength="80" required />
+          </div>
+          <div class="ec-field">
+            <label for="ec-region">State</label>
+            <input id="ec-region" name="region" type="text" maxlength="40" required />
+          </div>
+        </div>
+        <div class="ec-field">
+          <label for="ec-postalCode">PIN code</label>
+          <input
+            id="ec-postalCode"
+            name="postalCode"
+            type="text"
+            inputmode="numeric"
+            maxlength="6"
+            required
+          />
+        </div>
+        <p class="ec-hint" id="ec-shipping-hint" hidden></p>
+      </div>
+      <p class="ec-error" id="ec-address-error" role="alert" hidden></p>
+      <button type="button" class="ec-place" id="ec-address-continue">Save &amp; continue</button>
+    </section>
+
+    <!-- Step: checkout -->
+    <section class="ec-step" id="ec-step-checkout" hidden>
+      <div class="ec-main">
+        <section class="ec-card ec-address" aria-labelledby="ec-deliver-heading">
+          <div class="ec-card-head">
+            <div class="ec-deliver-title">
+              <h2 id="ec-deliver-heading" class="ec-section-title">
+                <svg class="ec-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                  <path d="M12 21s7-5.4 7-11a7 7 0 1 0-14 0c0 5.6 7 11 7 11z" />
+                  <circle cx="12" cy="10" r="2.4" />
+                </svg>
+                Delivery details
+              </h2>
+              <span class="ec-ship-free-badge" id="ec-ship-free-badge" hidden>
+                <svg class="ec-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                  <path d="M3 7h11v10H3z" />
+                  <path d="M14 10h4l3 3v4h-7V10z" />
+                  <circle cx="7.5" cy="18.5" r="1.5" />
+                  <circle cx="17.5" cy="18.5" r="1.5" />
+                </svg>
+                Free shipping
+              </span>
+            </div>
+            <button type="button" class="ec-link" id="ec-address-toggle">Change</button>
+          </div>
+          <div id="ec-address-summary" class="ec-address-summary"></div>
+          <div id="ec-address-picker" class="ec-address-picker" hidden>
+            <div class="ec-address-picker-head">
+              <p class="ec-sub">Choose a delivery address</p>
+              <div class="ec-address-icon-actions">
+                <button
+                  type="button"
+                  class="ec-icon-btn"
+                  id="ec-address-add"
+                  aria-label="Add new address"
+                  title="Add address"
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                    <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div id="ec-address-list" class="ec-address-list" role="listbox" aria-label="Saved addresses"></div>
+          </div>
+          <div id="ec-address-form" class="ec-address-form" hidden>
+            <p class="ec-sub" id="ec-address-form-title">Edit address</p>
+            <div class="ec-field">
+              <label for="ec-edit-fullName">Full name</label>
+              <input id="ec-edit-fullName" type="text" maxlength="80" />
+            </div>
+            <div class="ec-field">
+              <label for="ec-edit-addressLine1">Address</label>
+              <input id="ec-edit-addressLine1" type="text" maxlength="120" />
+            </div>
+            <div class="ec-grid-2">
+              <div class="ec-field">
+                <label for="ec-edit-locality">City</label>
+                <input id="ec-edit-locality" type="text" maxlength="80" />
+              </div>
+              <div class="ec-field">
+                <label for="ec-edit-region">State</label>
+                <input id="ec-edit-region" type="text" maxlength="40" />
+              </div>
+            </div>
+            <div class="ec-field">
+              <label for="ec-edit-postalCode">PIN code</label>
+              <input id="ec-edit-postalCode" type="text" inputmode="numeric" maxlength="6" />
+            </div>
+            <div class="ec-address-form-actions">
+              <button type="button" class="ec-secondary-btn" id="ec-address-cancel">Cancel</button>
+              <button type="button" class="ec-place" id="ec-save-address">Save</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="ec-card ec-offers" aria-labelledby="ec-offers-heading">
+          <div class="ec-offers-head">
+            <h2 id="ec-offers-heading" class="ec-section-title">
+              <svg class="ec-ico ec-ico-offer" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                <circle cx="12" cy="12" r="8" stroke-dasharray="2.1 1.5" />
+                <circle cx="9.2" cy="9.2" r="1.35" fill="currentColor" stroke="none" />
+                <circle cx="14.8" cy="14.8" r="1.35" fill="currentColor" stroke="none" />
+                <path d="M15.2 8.5 8.8 15.5" />
+              </svg>
+              Offers &amp; Rewards
+            </h2>
+            <button type="button" class="ec-link" id="ec-coupons-view-all">View all</button>
+          </div>
+
+          <div class="ec-coupon-field" id="ec-coupon-form">
+            <svg class="ec-ico ec-coupon-tag" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M10.5 3.5 3.8 10.2a2 2 0 0 0 0 2.8l7.2 7.2a2 2 0 0 0 2.8 0l6.7-6.7V3.5H10.5z" />
+              <circle cx="15.2" cy="8.8" r="1.4" fill="#fff" />
+            </svg>
+            <input
+              id="ec-coupon-input"
+              type="text"
+              maxlength="40"
+              autocomplete="off"
+              autocapitalize="characters"
+              placeholder="Enter coupon code"
+              aria-label="Coupon code"
+            />
+            <button type="button" class="ec-coupon-apply" id="ec-coupon-apply" hidden>Apply</button>
+          </div>
+          <p class="ec-error" id="ec-coupon-error" role="alert" hidden></p>
+
+          <div class="ec-loyalty-block" id="ec-loyalty-row">
+            <div class="ec-loyalty-top">
+              <div class="ec-loyalty-brand">
+                <span class="ec-loyalty-gift" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8">
+                    <path d="M4 12h16v9H4z" />
+                    <path d="M3 8h18v4H3z" />
+                    <path d="M12 8v13" />
+                    <path d="M12 8c-2.2 0-4-1.3-4-3s1.8-2.5 4-1c2.2-1.5 4-.2 4 1.5s-1.8 2.5-4 2.5z" />
+                  </svg>
+                </span>
+                <span>
+                  <strong id="ec-loyalty-partner">EasyRewardz</strong>
+                  <small>Redeem loyalty points on this order</small>
+                </span>
+              </div>
+              <div class="ec-loyalty-balance">
+                <strong id="ec-loyalty-points">1,250 points</strong>
+                <span class="ec-loyalty-worth" id="ec-loyalty-value">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <ellipse cx="12" cy="8" rx="7" ry="3" />
+                    <path d="M5 8v4c0 1.7 3.1 3 7 3s7-1.3 7-3V8" />
+                    <path d="M5 12v4c0 1.7 3.1 3 7 3s7-1.3 7-3v-4" />
+                  </svg>
+                  Worth ₹125.00
+                </span>
+                <button type="button" class="ec-loyalty-apply is-remove" id="ec-loyalty-remove" hidden>Remove</button>
+              </div>
+            </div>
+
+            <div class="ec-loyalty-redeem" id="ec-loyalty-redeem">
+              <div class="ec-loyalty-redeem-row">
+                <div class="ec-loyalty-input-wrap">
+                  <input
+                    id="ec-loyalty-points-input"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    placeholder=" "
+                    aria-label="Points to redeem"
+                  />
+                  <label class="ec-loyalty-float-label" for="ec-loyalty-points-input">Points to redeem</label>
+                  <span class="ec-loyalty-eq" id="ec-loyalty-input-worth" aria-live="polite" hidden></span>
+                </div>
+                <div class="ec-loyalty-presets" role="group" aria-label="Quick points">
+                  <button type="button" class="ec-loyalty-preset" data-ec-loyalty-preset="250">250</button>
+                  <button type="button" class="ec-loyalty-preset" data-ec-loyalty-preset="500">500</button>
+                  <button type="button" class="ec-loyalty-preset" data-ec-loyalty-preset="max">Max</button>
+                </div>
+                <button type="button" class="ec-loyalty-apply" id="ec-loyalty-open">Apply</button>
+              </div>
+              <p class="ec-error" id="ec-loyalty-inline-error" role="alert" hidden></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="ec-card ec-upsell" aria-labelledby="ec-upsell-heading">
+          <div class="ec-card-head">
+            <div>
+              <h2 id="ec-upsell-heading">You may also like</h2>
+              <p class="ec-sub">Add more before you place the order</p>
+            </div>
+          </div>
+          <div class="ec-upsell-rail" id="ec-upsell-rail" role="list"></div>
+        </section>
+
+        <section class="ec-card" aria-labelledby="ec-pay-heading">
+          <div class="ec-card-head">
+            <div>
+              <h2 id="ec-pay-heading" class="ec-section-title">
+                <svg class="ec-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                  <rect x="3" y="6" width="18" height="12" rx="2" />
+                  <path d="M3 10h18" />
+                  <path d="M7 15h4" />
+                </svg>
+                Payment
+              </h2>
+              <p class="ec-sub">Choose how you want to pay</p>
+            </div>
+          </div>
+          <div class="ec-pay-list" id="ec-pay-list" role="radiogroup" aria-label="Payment methods">
+            <button
+              type="button"
+              class="ec-pay-row is-selected"
+              role="radio"
+              aria-checked="true"
+              data-ec-pay="cod"
+              data-ec-pay-enabled="1"
+            >
+              <span class="ec-pay-dot" aria-hidden="true"></span>
+              <span class="ec-pay-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <rect x="3" y="7" width="14" height="10" rx="1.5" />
+                  <path d="M17 10h2.5L21 12v5h-4v-7z" />
+                  <circle cx="7.5" cy="18.5" r="1.4" />
+                  <circle cx="16.5" cy="18.5" r="1.4" />
+                  <path d="M8 12h4" />
+                </svg>
+              </span>
+              <span class="ec-pay-main">
+                <strong>Cash on Delivery</strong>
+                <small>Pay when your order arrives</small>
+              </span>
+              <span class="ec-pay-side">
+                <span class="ec-pay-amount" data-ec-pay-amount>—</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              class="ec-pay-row"
+              role="radio"
+              aria-checked="false"
+              data-ec-pay="bropay"
+              data-ec-pay-discount-pct="25"
+              data-ec-pay-enabled="1"
+            >
+              <span class="ec-pay-dot" aria-hidden="true"></span>
+              <span class="ec-pay-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <path d="M4 8.5h16v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-10z" />
+                  <path d="M8 8.5V7a4 4 0 0 1 8 0v1.5" />
+                  <circle cx="12" cy="14" r="1.6" />
+                </svg>
+              </span>
+              <span class="ec-pay-main">
+                <strong>Bro Pay</strong>
+                <small>25% off with Bro Pay (demo)</small>
+              </span>
+              <span class="ec-pay-side">
+                <span class="ec-pay-badge ec-pay-badge-save">−25%</span>
+                <span class="ec-pay-amount" data-ec-pay-amount>—</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              class="ec-pay-row"
+              role="radio"
+              aria-checked="false"
+              data-ec-pay="upi"
+              data-ec-pay-enabled="1"
+            >
+              <span class="ec-pay-dot" aria-hidden="true"></span>
+              <span class="ec-pay-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <rect x="7" y="2.5" width="10" height="19" rx="2" />
+                  <path d="M10 5.5h4" />
+                  <circle cx="12" cy="18" r="0.9" fill="currentColor" stroke="none" />
+                  <path d="M9.5 10.5h5v4h-5z" />
+                </svg>
+              </span>
+              <span class="ec-pay-main">
+                <strong>UPI</strong>
+                <small>Scan QR or open UPI app</small>
+              </span>
+              <span class="ec-pay-side">
+                <span class="ec-pay-amount" data-ec-pay-amount>—</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              class="ec-pay-row"
+              role="radio"
+              aria-checked="false"
+              data-ec-pay="card"
+              data-ec-pay-enabled="1"
+            >
+              <span class="ec-pay-dot" aria-hidden="true"></span>
+              <span class="ec-pay-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <rect x="2.5" y="5.5" width="19" height="13" rx="2" />
+                  <path d="M2.5 10h19" />
+                  <path d="M6.5 15h4" />
+                </svg>
+              </span>
+              <span class="ec-pay-main">
+                <strong>Cards</strong>
+                <small>Credit / Debit</small>
+              </span>
+              <span class="ec-pay-side">
+                <span class="ec-pay-amount" data-ec-pay-amount>—</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              class="ec-pay-row"
+              role="radio"
+              aria-checked="false"
+              data-ec-pay="netbanking"
+              data-ec-pay-surcharge-pct="2"
+              data-ec-pay-enabled="1"
+            >
+              <span class="ec-pay-dot" aria-hidden="true"></span>
+              <span class="ec-pay-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <path d="M3 10.5 12 5l9 5.5" />
+                  <path d="M5 10.5V18h14v-7.5" />
+                  <path d="M3 18h18" />
+                  <path d="M9 14v4M12 14v4M15 14v4" />
+                </svg>
+              </span>
+              <span class="ec-pay-main">
+                <strong>Net banking</strong>
+                <small>+2% processing (demo)</small>
+              </span>
+              <span class="ec-pay-side">
+                <span class="ec-pay-badge ec-pay-badge-extra">+2%</span>
+                <span class="ec-pay-amount" data-ec-pay-amount>—</span>
+              </span>
+            </button>
+          </div>
+        </section>
+
+        <footer class="ec-trust-footer" id="ec-trust-footer">
+          <div class="ec-powered">
+            <span class="ec-powered-label">Powered by</span>
+            <div class="ec-powered-brand">
+              <span class="ec-powered-mark" aria-hidden="true">✓</span>
+              <strong>EasyRewardz</strong>
+            </div>
+          </div>
+          <ul class="ec-trust-badges" aria-label="Trust and security">
+            <li>
+              <span class="ec-trust-icon" aria-hidden="true">
+                <svg viewBox="0 0 32 32" width="28" height="28"><path fill="currentColor" d="M16 2l10 4v8c0 7.2-4.4 13.4-10 15-5.6-1.6-10-7.8-10-15V6l10-4zm0 4.2L8 9.1v5c0 5.3 3.1 10 8 11.5 4.9-1.5 8-6.2 8-11.5v-5l-8-2.9zm-1.2 13.3l-3.5-3.5 1.4-1.4 2.1 2.1 4.6-4.6 1.4 1.4-6 6z"/></svg>
+              </span>
+              <span>PCI DSS Certified</span>
+            </li>
+            <li>
+              <span class="ec-trust-icon ec-trust-secure" aria-hidden="true">100% SECURE</span>
+              <span>Secured Payments</span>
+            </li>
+            <li>
+              <span class="ec-trust-icon" aria-hidden="true">
+                <svg viewBox="0 0 32 32" width="28" height="28"><path fill="currentColor" d="M16 2l11 5v7c0 6.6-4.2 12.5-11 15C9.2 26.5 5 20.6 5 14V7l11-5zm0 3.1L7.5 9v5c0 5.2 3.2 10 8.5 12.1C21.3 24 24.5 19.2 24.5 14V9L16 5.1zm-.2 14.6l-3.8-3.8 1.4-1.4 2.4 2.4 5-5 1.4 1.4-6.4 6.4z"/></svg>
+              </span>
+              <span>Verified Merchant</span>
+            </li>
+          </ul>
+          <p class="ec-trust-ref" id="ec-trust-ref" aria-label="Checkout reference"></p>
+          <p class="ec-trust-legal">
+            By proceeding, I agree to EasyRewardz’s
+            <a href="https://www.easyrewardz.com/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+            and
+            <a href="https://www.easyrewardz.com/terms" target="_blank" rel="noopener noreferrer">T&amp;C</a>
+          </p>
+          <span class="ec-sr-only">
+            Total <span class="ec-compare" id="ec-mobile-compare" hidden></span>
+            <strong id="ec-total-mobile">—</strong>
+          </span>
+        </footer>
+
+        <p class="ec-error" id="ec-error" role="alert" hidden></p>
+        <div class="ec-success" id="ec-success" hidden>
+          <div class="ec-success-mark" aria-hidden="true">✓</div>
+          <h2>Order placed</h2>
+          <p class="ec-success-order" id="ec-order-name">—</p>
+          <p id="ec-success-message">Pay cash on delivery when your order arrives.</p>
+          <p class="ec-hint">Reference <code id="ec-order-id"></code></p>
+          <button type="button" class="ec-place" data-ec-close>Back to store</button>
+        </div>
+      </div>
+    </section>
   </div>
 
-  <footer class="ec-sticky-mobile">
-    <div>
-      <span>Total</span>
-      <strong id="ec-total-mobile">—</strong>
+  <!-- Pay / COD confirmation sheet -->
+  <div class="ec-pay-overlay" id="ec-pay-overlay" hidden>
+    <div class="ec-pay-sheet" role="dialog" aria-modal="true" aria-labelledby="ec-pay-sheet-title">
+      <div class="ec-card-head">
+        <h2 id="ec-pay-sheet-title">Confirm order</h2>
+        <button type="button" class="ec-link" id="ec-pay-sheet-close">Close</button>
+      </div>
+      <div id="ec-pay-sheet-body"></div>
+      <button type="button" class="ec-place" id="ec-pay-sheet-confirm">Confirm &amp; place</button>
     </div>
-    <button type="button" id="ec-place-mobile">Place COD order →</button>
-  </footer>
+  </div>
+
+  <!-- Offers sheet (coupons list / gift voucher / loyalty) -->
+  <div class="ec-pay-overlay" id="ec-offers-overlay" hidden>
+    <div
+      class="ec-pay-sheet"
+      id="ec-offers-sheet"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ec-offers-sheet-title"
+    >
+      <div class="ec-card-head ec-offers-sheet-head">
+        <h2 id="ec-offers-sheet-title">Offers</h2>
+        <button type="button" class="ec-link" id="ec-offers-sheet-close" aria-label="Close">Close</button>
+      </div>
+      <div id="ec-offers-sheet-body" class="ec-offers-sheet-body"></div>
+      <button type="button" class="ec-place" id="ec-offers-sheet-confirm" hidden>Confirm</button>
+    </div>
+  </div>
+
+  <!-- Exit feedback -->
+  <div class="ec-exit-overlay" id="ec-exit-overlay" hidden>
+    <div class="ec-exit-sheet" role="dialog" aria-modal="true" aria-labelledby="ec-exit-heading">
+      <h2 id="ec-exit-heading">Leaving already?</h2>
+      <p class="ec-sub">Quick feedback helps us improve checkout.</p>
+      <div class="ec-exit-reasons" role="group" aria-label="Why are you leaving?">
+        <label class="ec-exit-reason">
+          <input type="radio" name="ec-exit-reason" value="just_browsing" />
+          <span>Just browsing</span>
+        </label>
+        <label class="ec-exit-reason">
+          <input type="radio" name="ec-exit-reason" value="price_high" />
+          <span>Price feels high</span>
+        </label>
+        <label class="ec-exit-reason">
+          <input type="radio" name="ec-exit-reason" value="payment" />
+          <span>Preferred payment missing</span>
+        </label>
+        <label class="ec-exit-reason">
+          <input type="radio" name="ec-exit-reason" value="address" />
+          <span>Delivery / address issue</span>
+        </label>
+        <label class="ec-exit-reason">
+          <input type="radio" name="ec-exit-reason" value="other" />
+          <span>Something else</span>
+        </label>
+      </div>
+      <label class="ec-field">
+        <span class="ec-exit-note-label">Anything else? (optional)</span>
+        <textarea id="ec-exit-note" rows="2" maxlength="200" placeholder="Tell us more…"></textarea>
+      </label>
+      <div class="ec-exit-actions">
+        <button type="button" class="ec-place" id="ec-exit-stay">Continue checkout</button>
+        <button type="button" class="ec-secondary-btn" id="ec-exit-leave">Leave checkout</button>
+      </div>
+    </div>
+  </div>
 
   <input type="hidden" id="ec-sessionId" />
+
+  <!-- Dimmed backdrop while picking/editing address — tap to confirm selection -->
+  <button
+    type="button"
+    class="ec-address-focus-scrim"
+    id="ec-address-focus-scrim"
+    hidden
+    aria-label="Confirm selected delivery address"
+  ></button>
+
+  <!-- Session / open loading (shown until cart session is ready) -->
+  <div class="ec-loading" id="ec-loading" hidden aria-live="polite" aria-busy="true">
+    <div class="ec-loading-card">
+      <div class="ec-loading-stage" id="ec-loading-stage" data-ec-anim="orbit" aria-hidden="true">
+        <div class="ec-loading-orbit">
+          <span></span><span></span><span></span>
+        </div>
+        <div class="ec-loading-bags">
+          <i></i><i></i><i></i>
+        </div>
+        <div class="ec-loading-spark">✦</div>
+        <div class="ec-loading-pulse"></div>
+      </div>
+      <p class="ec-loading-brand">RARE</p>
+      <p class="ec-loading-text" id="ec-loading-text">Getting checkout ready…</p>
+      <p class="ec-loading-sub" id="ec-loading-sub">Hang tight — this only takes a moment</p>
+    </div>
+  </div>
 </div>

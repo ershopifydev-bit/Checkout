@@ -14,7 +14,7 @@ const client = new MongoClient(uri, { serverSelectionTimeoutMS: 3000 });
 const database = `checkout_http_test_${randomUUID().replaceAll('-', '')}`;
 const key = randomBytes(32);
 const secret = randomBytes(32).toString('hex');
-const store = new EncryptedMongoSessionStorage(client.db(database), key);
+const store = new EncryptedMongoSessionStorage(() => client.db(database), key);
 let child: ReturnType<typeof spawn> | undefined;
 let base = '';
 let output = '';

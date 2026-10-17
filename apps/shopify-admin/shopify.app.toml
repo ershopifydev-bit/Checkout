@@ -9,7 +9,8 @@ automatically_update_urls_on_dev = true
 dev_store_url = "codemadi.myshopify.com"
 
 [access_scopes]
-scopes = ""
+# Customer lookup + COD orderCreate on place. Re-auth / reinstall after changing scopes.
+scopes = "read_customers,write_customers,write_orders,read_orders,read_discounts"
 
 [auth]
 redirect_urls = ["https://example.com/auth/callback"]

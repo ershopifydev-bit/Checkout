@@ -12,17 +12,21 @@
 | `GET /checkout`            | Redirects to `/?checkout=open` (same-origin overlay)              |
 | `GET /checkout/*`          | Overlay assets (`embed.js`, `panel.html`, CSS/JS)                 |
 
-### Planned storefront session APIs (ADR 0004 — not implemented yet)
+### Storefront session APIs (ADR 0004 — app proxy)
 
-App-proxy paths under `/apps/easy-checkout` (mirror on Fastify when the API owns traffic):
+Under `/apps/easy-checkout` via `apps/shopify-admin` proxy routes:
 
 | Route | Meaning |
 | ----- | ------- |
-| `POST /v1/sessions` | Create session from `buy_now` (variant+qty) or `cart`; returns lines/totals. **No Shopify order.** |
+| `POST /v1/sessions` | Create session from `buy_now` or `cart` lines; returns lines/totals. **No Shopify order.** |
 | `GET /v1/sessions/:id` | Load session for overlay |
-| `PATCH /v1/sessions/:id` | Phone, address, pincode, optional coupon |
-| `POST /v1/sessions/:id/quote` | Shipping/EDD/totals after pincode or discount (async-friendly) |
-| `POST /v1/sessions/:id/place-cod` | Revalidate → Shopify COD `orderCreate` → `{ orderId, orderName }` |
+| `PATCH /v1/sessions/:id` | Address / coupon apply-remove (`couponCode`; validates via Shopify `read_discounts`) |
+| `POST /v1/sessions/:id/quote` | PIN → shipping handle + EDD text |
+| `POST /v1/sessions/:id/place-cod` | Create Shopify COD/`pending` order via Admin `orderCreate`; returns `{ orderId, orderName }` |
+| `GET /v1/settings` | Public shop branding + COD confirmation flag (from Admin app settings) |
+| `GET /v1/sessions/:id/offers` | Ranked coupons (best 3 + full list), loyalty points, gift-voucher flag |
+
+Demo routes (`/v1/demo/*`) remain for the local playground only.
 
 Readiness does not certify MongoDB, RabbitMQ, Redis, Shopify, or checkout availability. Register dependency-aware readiness when those integrations are introduced. These probes are exempt from the process-local rate limit.
 

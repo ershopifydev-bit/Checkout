@@ -13,16 +13,17 @@ const properties = z.array(z.tuple([z.string(), z.union([z.string(), z.number(),
 
 /** Used only by Shopify's verified authentication flow; never expose session IDs as a public API. */
 export class EncryptedMongoSessionStorage implements SessionStorage {
-  private readonly collection: Collection<SessionDocument>;
   private ready: Promise<string> | undefined;
   constructor(
-    database: Db,
+    private readonly getDatabase: () => Db,
     private readonly key: Buffer,
-  ) {
-    this.collection = database.collection<SessionDocument>('shopifySessions');
+  ) {}
+  private collection(): Collection<SessionDocument> {
+    return this.getDatabase().collection<SessionDocument>('shopifySessions');
   }
   private async ensureIndex() {
-    this.ready ??= this.collection.createIndex({ shop: 1 }).catch((error: unknown) => {
+    const col = this.collection();
+    this.ready ??= col.createIndex({ shop: 1 }).catch((error: unknown) => {
       this.ready = undefined;
       throw error;
     });
@@ -35,7 +36,7 @@ export class EncryptedMongoSessionStorage implements SessionStorage {
       session,
       this.key,
     );
-    const result = await this.collection.replaceOne(
+    const result = await this.collection().replaceOne(
       { _id: session.id },
       { shop: session.shop, ...encrypted },
       { upsert: true },
@@ -50,22 +51,22 @@ export class EncryptedMongoSessionStorage implements SessionStorage {
     return session;
   }
   async loadSession(id: string): Promise<Session | undefined> {
-    const document = await this.collection.findOne({ _id: id });
+    const document = await this.collection().findOne({ _id: id });
     return document ? this.decode(document) : undefined;
   }
   async deleteSession(id: string): Promise<boolean> {
-    return (await this.collection.deleteOne({ _id: id })).acknowledged;
+    return (await this.collection().deleteOne({ _id: id })).acknowledged;
   }
   async deleteSessions(ids: string[]): Promise<boolean> {
-    return (await this.collection.deleteMany({ _id: { $in: ids } })).acknowledged;
+    return (await this.collection().deleteMany({ _id: { $in: ids } })).acknowledged;
   }
   async findSessionsByShop(shop: string): Promise<Session[]> {
     await this.ensureIndex();
-    const documents = await this.collection.find({ shop }).toArray();
+    const documents = await this.collection().find({ shop }).toArray();
     return documents.map((document) => this.decode(document));
   }
   async deleteShopSessions(shop: string): Promise<void> {
-    const result = await this.collection.deleteMany({ shop });
+    const result = await this.collection().deleteMany({ shop });
     if (!result.acknowledged) throw new Error('Session revocation was not acknowledged');
   }
 }

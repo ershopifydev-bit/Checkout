@@ -7,8 +7,8 @@ import { isbot } from 'isbot';
 import { addDocumentResponseHeaders } from './shopify.server';
 
 export const streamTimeout = 5000;
-export function handleError() {
-  console.error('Shopify app request failed.');
+export function handleError(error?: unknown) {
+  console.error('Shopify app request failed.', error);
 }
 export default function handleRequest(
   request: Request,
@@ -36,13 +36,14 @@ export default function handleRequest(
           );
           pipe(body);
         },
-        onShellError: () => {
+        onShellError: (error) => {
           clearTimeout(timeout);
-          reject(new Error('Unable to render the application.'));
+          handleError(error);
+          reject(error instanceof Error ? error : new Error('Unable to render the application.'));
         },
-        onError: () => {
+        onError: (error) => {
           responseStatusCode = 500;
-          handleError();
+          handleError(error);
         },
       },
     );
