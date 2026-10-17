@@ -1,0 +1,27 @@
+import { index, route, type RouteConfig } from '@react-router/dev/routes';
+export default [
+  index('routes/home.tsx'),
+  route('json/version', 'routes/json.version.ts'),
+  route('auth/login', 'routes/login.tsx'),
+  route('auth/*', 'routes/auth.tsx'),
+  route('app', 'routes/app.tsx', [index('routes/app-home.tsx')]),
+  route('webhooks/app/uninstalled', 'routes/uninstalled.tsx'),
+  route('webhooks/app/scopes_update', 'routes/scopes-update.tsx'),
+  route('proxy/v1/demo/checkout', 'routes/proxy.v1.demo.checkout.ts'),
+  route('proxy/v1/demo/cod-orders', 'routes/proxy.v1.demo.cod-orders.ts'),
+  route('proxy/v1/sessions', 'routes/proxy.v1.sessions.ts'),
+  route('proxy/v1/sessions/:sessionId', 'routes/proxy.v1.sessions.$sessionId.ts'),
+  route('proxy/v1/sessions/:sessionId/quote', 'routes/proxy.v1.sessions.$sessionId.quote.ts'),
+  route('proxy/v1/sessions/:sessionId/offers', 'routes/proxy.v1.sessions.$sessionId.offers.ts'),
+  route(
+    'proxy/v1/sessions/:sessionId/place-cod',
+    'routes/proxy.v1.sessions.$sessionId.place-cod.ts',
+  ),
+  route('proxy/v1/auth/otp/request', 'routes/proxy.v1.auth.otp.request.ts'),
+  route('proxy/v1/auth/otp/verify', 'routes/proxy.v1.auth.otp.verify.ts'),
+  route('proxy/v1/auth/customer', 'routes/proxy.v1.auth.customer.ts'),
+  route('proxy/v1/settings', 'routes/proxy.v1.settings.ts'),
+  route('proxy/panel.html', 'routes/proxy.panel[.]html.ts'),
+  route('proxy/checkout.js', 'routes/proxy.checkout[.]js.ts'),
+  route('proxy/checkout.css', 'routes/proxy.checkout[.]css.ts'),
+] satisfies RouteConfig;

@@ -1,0 +1,32 @@
+{
+  "name": "@checkout/shopify-admin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "react-router dev",
+    "build": "react-router build",
+    "start": "node --env-file-if-exists=.env server.mjs",
+    "typecheck": "react-router typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-router/node": "7.18.2",
+    "@shopify/shopify-app-react-router": "3.0.2",
+    "@shopify/shopify-api": "15.0.1",
+    "@shopify/shopify-app-session-storage": "7.0.1",
+    "mongodb": "7.7.0",
+    "isbot": "5.2.2",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-router": "7.18.2",
+    "zod": "4.6.7",
+    "@react-router/express": "7.18.2",
+    "express": "4.22.3"
+  },
+  "devDependencies": {
+    "@react-router/dev": "7.18.2",
+    "@types/react": "18.3.25",
+    "@types/react-dom": "18.3.7",
+    "vite": "7.3.7"
+  }
+}

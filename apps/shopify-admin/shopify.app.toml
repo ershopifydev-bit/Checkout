@@ -1,0 +1,32 @@
+# Development app linked to EasyRewardz; no production deployment is configured.
+client_id = "3e15bd78dccde89f7fafb75ce0ebd43a"
+name = "Checkout Development"
+application_url = "https://example.com"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "codemadi.myshopify.com"
+
+[access_scopes]
+# Customer lookup + COD orderCreate on place. Re-auth / reinstall after changing scopes.
+scopes = "read_customers,write_customers,write_orders,read_orders,read_discounts"
+
+[auth]
+redirect_urls = ["https://example.com/auth/callback"]
+
+[webhooks]
+api_version = "2026-10"
+
+[[webhooks.subscriptions]]
+topics = ["app/uninstalled"]
+uri = "/webhooks/app/uninstalled"
+
+[[webhooks.subscriptions]]
+topics = ["app/scopes_update"]
+uri = "/webhooks/app/scopes_update"
+
+[app_proxy]
+url = "https://example.com/proxy"
+subpath = "easy-checkout"
+prefix = "apps"

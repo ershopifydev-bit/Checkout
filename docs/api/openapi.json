@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Checkout foundation API",
+    "title": "Checkout API",
     "version": "0.1.0",
-    "description": "Process health only. Merchant and checkout operations are not implemented."
+    "description": "Foundation health plus fixture demo routes for standalone COD checkout. Live Shopify order sync is not implemented."
   },
   "paths": {
     "/health/live": {
@@ -46,6 +46,131 @@
                     "scope": { "type": "string", "const": "foundation" }
                   },
                   "required": ["status", "scope"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/demo/checkout": {
+      "get": {
+        "operationId": "getDemoCheckout",
+        "summary": "Create a fixture COD checkout session",
+        "responses": {
+          "200": {
+            "description": "Fixture session with demo line items.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "sessionId": { "type": "string", "minLength": 8, "maxLength": 64 },
+                    "mode": { "type": "string", "const": "fixture" },
+                    "currency": { "type": "string", "const": "INR" },
+                    "paymentMethod": { "type": "string", "const": "cod" },
+                    "lines": {
+                      "minItems": 1,
+                      "maxItems": 20,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+                          "variantTitle": { "type": "string", "minLength": 1, "maxLength": 80 },
+                          "quantity": { "type": "integer", "exclusiveMinimum": 0, "maximum": 99 },
+                          "unitAmount": {
+                            "type": "object",
+                            "properties": {
+                              "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+                              "amountMinor": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": ["currency", "amountMinor"],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": ["title", "variantTitle", "quantity", "unitAmount"],
+                        "additionalProperties": false
+                      }
+                    },
+                    "totals": {
+                      "type": "object",
+                      "properties": {
+                        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+                        "amountMinor": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": ["currency", "amountMinor"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["sessionId", "mode", "currency", "paymentMethod", "lines", "totals"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/demo/cod-orders": {
+      "post": {
+        "operationId": "placeDemoCodOrder",
+        "summary": "Accept a demo COD order (no Shopify write)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "type": "object",
+                "properties": {
+                  "sessionId": { "type": "string", "minLength": 8, "maxLength": 64 },
+                  "phone": { "type": "string", "pattern": "^[6-9]\\d{9}$" },
+                  "fullName": { "type": "string", "minLength": 1, "maxLength": 80 },
+                  "addressLine1": { "type": "string", "minLength": 1, "maxLength": 120 },
+                  "locality": { "type": "string", "minLength": 1, "maxLength": 80 },
+                  "region": { "type": "string", "minLength": 1, "maxLength": 40 },
+                  "postalCode": { "type": "string", "pattern": "^\\d{6}$" }
+                },
+                "required": [
+                  "sessionId",
+                  "phone",
+                  "fullName",
+                  "addressLine1",
+                  "locality",
+                  "region",
+                  "postalCode"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Demo order accepted locally.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "orderId": { "type": "string", "minLength": 8, "maxLength": 64 },
+                    "status": { "type": "string", "const": "accepted_demo" },
+                    "paymentMethod": { "type": "string", "const": "cod" },
+                    "message": { "type": "string", "minLength": 1, "maxLength": 200 }
+                  },
+                  "required": ["orderId", "status", "paymentMethod", "message"],
                   "additionalProperties": false
                 }
               }
@@ -112,7 +237,7 @@
         "type": "object",
         "properties": {
           "tier": { "type": "string", "enum": ["unavailable", "standard"] },
-          "shopifyCheckoutHandoff": {
+          "standaloneCodCheckout": {
             "oneOf": [
               {
                 "type": "object",
@@ -215,7 +340,7 @@
             ]
           }
         },
-        "required": ["tier", "shopifyCheckoutHandoff", "checkoutUiExtension", "customPayment"],
+        "required": ["tier", "standaloneCodCheckout", "checkoutUiExtension", "customPayment"],
         "additionalProperties": false
       },
       "HealthResponse": {
@@ -226,6 +351,94 @@
           "scope": { "type": "string", "const": "foundation" }
         },
         "required": ["status", "scope"],
+        "additionalProperties": false
+      },
+      "DemoCheckoutSession": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "sessionId": { "type": "string", "minLength": 8, "maxLength": 64 },
+          "mode": { "type": "string", "const": "fixture" },
+          "currency": { "type": "string", "const": "INR" },
+          "paymentMethod": { "type": "string", "const": "cod" },
+          "lines": {
+            "minItems": 1,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+                "variantTitle": { "type": "string", "minLength": 1, "maxLength": 80 },
+                "quantity": { "type": "integer", "exclusiveMinimum": 0, "maximum": 99 },
+                "unitAmount": {
+                  "type": "object",
+                  "properties": {
+                    "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+                    "amountMinor": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": ["currency", "amountMinor"],
+                  "additionalProperties": false
+                }
+              },
+              "required": ["title", "variantTitle", "quantity", "unitAmount"],
+              "additionalProperties": false
+            }
+          },
+          "totals": {
+            "type": "object",
+            "properties": {
+              "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+              "amountMinor": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": ["currency", "amountMinor"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["sessionId", "mode", "currency", "paymentMethod", "lines", "totals"],
+        "additionalProperties": false
+      },
+      "PlaceCodOrderRequest": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "sessionId": { "type": "string", "minLength": 8, "maxLength": 64 },
+          "phone": { "type": "string", "pattern": "^[6-9]\\d{9}$" },
+          "fullName": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "addressLine1": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "locality": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "region": { "type": "string", "minLength": 1, "maxLength": 40 },
+          "postalCode": { "type": "string", "pattern": "^\\d{6}$" }
+        },
+        "required": [
+          "sessionId",
+          "phone",
+          "fullName",
+          "addressLine1",
+          "locality",
+          "region",
+          "postalCode"
+        ],
+        "additionalProperties": false
+      },
+      "PlaceCodOrderResponse": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "orderId": { "type": "string", "minLength": 8, "maxLength": 64 },
+          "status": { "type": "string", "const": "accepted_demo" },
+          "paymentMethod": { "type": "string", "const": "cod" },
+          "message": { "type": "string", "minLength": 1, "maxLength": 200 }
+        },
+        "required": ["orderId", "status", "paymentMethod", "message"],
         "additionalProperties": false
       }
     }
