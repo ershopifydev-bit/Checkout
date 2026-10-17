@@ -1,8 +1,5 @@
 import type { ActionFunctionArgs } from 'react-router';
-import {
-  createCheckoutSession,
-  publicSessionView,
-} from '../checkout-session.server';
+import { createCheckoutSession, publicSessionView } from '../checkout-session.server';
 import { authenticate } from '../shopify.server';
 
 function shopFromRequest(request: Request): string {
@@ -20,7 +17,8 @@ export async function action({ request }: ActionFunctionArgs) {
   const shop = shopFromRequest(request);
   if (!shop) return errorResponse('INVALID_REQUEST', 'Missing shop.', 400);
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
-  if (!body || typeof body !== 'object') return errorResponse('INVALID_REQUEST', 'Invalid body.', 400);
+  if (!body || typeof body !== 'object')
+    return errorResponse('INVALID_REQUEST', 'Invalid body.', 400);
   const source = body['source'] === 'buy_now' ? 'buy_now' : 'cart';
   const lines = Array.isArray(body['lines']) ? body['lines'] : [];
   const discountMinor =

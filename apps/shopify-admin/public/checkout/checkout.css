@@ -691,7 +691,9 @@ html.ec-lock body {
   border-radius: 10px;
   background: #fff;
   overflow: hidden;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .ec-phone-input:focus-within {
@@ -777,7 +779,9 @@ html.ec-lock body {
   font-size: 1.25em;
   font-weight: 700;
   padding: 0;
-  transition: border-color 0.15s, opacity 0.15s;
+  transition:
+    border-color 0.15s,
+    opacity 0.15s;
 }
 
 .ec-otp-digit:focus {
@@ -841,7 +845,9 @@ html.ec-lock body {
   font-size: 1.1em;
   padding: 1.05em 1em;
   cursor: pointer;
-  transition: opacity 0.15s, transform 0.1s;
+  transition:
+    opacity 0.15s,
+    transform 0.1s;
 }
 
 .ec-cta:active:not(:disabled) {
@@ -1223,7 +1229,6 @@ html.ec-lock body {
     max-height: calc(100vh - 11em);
   }
 }
-
 
 .ec-phone {
   color: #4b5563;

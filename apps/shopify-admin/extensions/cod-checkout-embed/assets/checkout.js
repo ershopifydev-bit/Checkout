@@ -121,7 +121,8 @@
   function formatPhoneDisplay(phone) {
     const digits = String(phone || '').replace(/\D/g, '');
     if (digits.length === 10) return `+91 ${digits}`;
-    if (digits.length === 12 && digits.startsWith('91')) return `+${digits.slice(0, 2)} ${digits.slice(2)}`;
+    if (digits.length === 12 && digits.startsWith('91'))
+      return `+${digits.slice(0, 2)} ${digits.slice(2)}`;
     return phone ? String(phone) : '';
   }
 
@@ -140,7 +141,8 @@
   }
 
   function syncUpsellVisibility() {
-    const section = boundRoot?.querySelector?.('.ec-upsell') || document.querySelector('.ec-upsell');
+    const section =
+      boundRoot?.querySelector?.('.ec-upsell') || document.querySelector('.ec-upsell');
     if (section) section.hidden = !showUpsell;
   }
 
@@ -171,7 +173,9 @@
     const name = String(settings.brandName || 'RARE').trim() || 'RARE';
     const logoUrl = String(settings.logoUrl || '').trim();
     const title = $('ec-title');
-    const loadingBrand = boundRoot?.querySelector?.('.ec-loading-brand') || document.querySelector('.ec-loading-brand');
+    const loadingBrand =
+      boundRoot?.querySelector?.('.ec-loading-brand') ||
+      document.querySelector('.ec-loading-brand');
     const useLogo = mode === 'logo' && /^https?:\/\//i.test(logoUrl);
 
     if (title) {
@@ -333,7 +337,10 @@
   }
 
   function fillOtp(code) {
-    const digits = String(code || '').replace(/\D/g, '').slice(0, 4).split('');
+    const digits = String(code || '')
+      .replace(/\D/g, '')
+      .slice(0, 4)
+      .split('');
     otpInputs().forEach((input, index) => {
       input.value = digits[index] || '';
     });
@@ -533,8 +540,7 @@
       if (lineHasDeal(line)) {
         const disc = document.createElement('span');
         disc.className = 'ec-line-discount';
-        const saveLine =
-          (line.compareAtAmountMinor - lineUnitMinor(line)) * (line.quantity || 1);
+        const saveLine = (line.compareAtAmountMinor - lineUnitMinor(line)) * (line.quantity || 1);
         disc.textContent = `−${formatInr(saveLine)} off`;
         foot.appendChild(disc);
       } else if (line.lineDiscountMinor > 0) {
@@ -659,7 +665,9 @@
 
   function openPaymentDetailsOrConfirm() {
     const payableEl = document.querySelector(`[data-ec-pay="${selectedPay}"]`);
-    const amount = formatInr(payableEl ? payAmountForMethod(payableEl, basePayMinor) : basePayMinor);
+    const amount = formatInr(
+      payableEl ? payAmountForMethod(payableEl, basePayMinor) : basePayMinor,
+    );
     if (selectedPay === 'cod' || selectedPay === 'bropay') {
       showPaySheet(
         selectedPay === 'cod' ? 'Confirm COD order' : 'Confirm Bro Pay',
@@ -798,7 +806,13 @@
       savePill.hidden = true;
     }
     const compareMinor =
-      mrpMinor > amount ? mrpMinor : discount > 0 ? amount + discount : subtotal > amount ? subtotal : 0;
+      mrpMinor > amount
+        ? mrpMinor
+        : discount > 0
+          ? amount + discount
+          : subtotal > amount
+            ? subtotal
+            : 0;
     setCompareDisplay(compareMinor, amount);
     refreshPaymentAmounts();
   }
@@ -864,9 +878,7 @@
       return;
     }
     const inCart = new Set(
-      (sessionLines || [])
-        .map((line) => String(line.variantId || ''))
-        .filter(Boolean),
+      (sessionLines || []).map((line) => String(line.variantId || '')).filter(Boolean),
     );
     try {
       const response = await fetch('/products.json?limit=50', {
@@ -1034,7 +1046,9 @@
           const err = await addRes.json().catch(() => null);
           const message = err?.description || err?.message || 'Could not add item';
           if (/sold out|unavailable|not available/i.test(message)) {
-            upsellItems = upsellItems.filter((item) => String(item.variantId) !== String(variantId));
+            upsellItems = upsellItems.filter(
+              (item) => String(item.variantId) !== String(variantId),
+            );
             paintUpsellRail(upsellItems);
           }
           throw new Error(message);
@@ -1193,8 +1207,7 @@
     for (const btn of document.querySelectorAll('[data-ec-loyalty-preset]')) {
       const key = btn.getAttribute('data-ec-loyalty-preset');
       const max = loyaltyData(offersCache?.loyalty).points || 0;
-      const matched =
-        key === 'max' ? amount === max : Number(key) === amount;
+      const matched = key === 'max' ? amount === max : Number(key) === amount;
       btn.classList.toggle('is-active', matched);
     }
   }
@@ -1634,7 +1647,8 @@
     const previous = addressBook.slice();
     addressBook = [];
     // Keep session addresses first so selecting never drops earlier ones.
-    for (const item of previous) upsertAddressInBook(item, { id: item.id, label: item.label, isDemo: item.isDemo });
+    for (const item of previous)
+      upsertAddressInBook(item, { id: item.id, label: item.label, isDemo: item.isDemo });
     if (shopper?.address) {
       upsertAddressInBook(shopper.address, { label: 'Default' });
     }

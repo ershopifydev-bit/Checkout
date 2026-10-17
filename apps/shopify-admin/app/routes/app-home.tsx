@@ -1,9 +1,6 @@
 import { Form, useActionData, useLoaderData, useNavigation } from 'react-router';
 import type { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router';
-import {
-  getCheckoutSettings,
-  saveCheckoutSettings,
-} from '../checkout-settings.server';
+import { getCheckoutSettings, saveCheckoutSettings } from '../checkout-settings.server';
 import { authenticate, publicApiKey } from '../shopify.server';
 
 /** Liquid filename under extensions/.../blocks/ (not the extension handle). */
@@ -90,7 +87,9 @@ export default function Overview() {
       </section>
       <section>
         <h2>Checkout branding</h2>
-        <p>Choose what shoppers see in the center of the checkout header — a brand name or a logo.</p>
+        <p>
+          Choose what shoppers see in the center of the checkout header — a brand name or a logo.
+        </p>
         <Form method="post" className="settings-form">
           <fieldset className="settings-fieldset">
             <legend>Center display</legend>
@@ -131,7 +130,9 @@ export default function Overview() {
             defaultValue={current.logoUrl}
             placeholder="https://cdn.example.com/logo.png"
           />
-          <p className="hint">Used when “Brand logo” is selected. Paste a direct image URL (https).</p>
+          <p className="hint">
+            Used when “Brand logo” is selected. Paste a direct image URL (https).
+          </p>
           <label className="settings-check">
             <input
               type="checkbox"
@@ -167,7 +168,9 @@ export default function Overview() {
             <option value="pin">PIN</option>
             <option value="otp">OTP</option>
           </select>
-          <p className="hint">Checkout asks for PIN or OTP after the shopper taps Redeem your GV.</p>
+          <p className="hint">
+            Checkout asks for PIN or OTP after the shopper taps Redeem your GV.
+          </p>
           <label className="settings-check">
             <input
               type="checkbox"

@@ -65,7 +65,8 @@ type AuthMemory = {
  * ponytail: process-local until Redis/Mongo. Survives Vite HMR via globalThis so OTP login
  * and saved addresses are not wiped on every public/checkout edit.
  */
-const authMemory = (globalThis as typeof globalThis & { __ecAuthMemory?: AuthMemory }).__ecAuthMemory ?? {
+const authMemory = (globalThis as typeof globalThis & { __ecAuthMemory?: AuthMemory })
+  .__ecAuthMemory ?? {
   otpByKey: new Map<string, OtpRecord>(),
   shoppers: new Map<string, Shopper>(),
   profilesByPhone: new Map<string, PhoneProfile>(),
@@ -614,9 +615,7 @@ export async function createCustomerWithAddress(
 
   const createdId = data?.customerCreate?.customer?.id;
   const errors = data?.customerCreate?.userErrors || [];
-  const alreadyExists = errors.some((error) =>
-    /already|taken|exist/i.test(error.message || ''),
-  );
+  const alreadyExists = errors.some((error) => /already|taken|exist/i.test(error.message || ''));
 
   if (createdId) {
     shopper.customerId = createdId;

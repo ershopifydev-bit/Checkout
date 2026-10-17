@@ -66,6 +66,7 @@ export function placeDemoCodOrder(input: PlaceCodOrderRequest) {
     orderId: `demo_${randomUUID().replaceAll('-', '').slice(0, 16)}`,
     status: 'accepted_demo' as const,
     paymentMethod: 'cod' as const,
-    message: 'Demo COD order accepted on the storefront. Shopify Admin order sync is not enabled yet.',
+    message:
+      'Demo COD order accepted on the storefront. Shopify Admin order sync is not enabled yet.',
   };
 }

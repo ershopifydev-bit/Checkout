@@ -51,9 +51,7 @@
     var name = ((settings && settings.brandName) || 'RARE').trim() || 'RARE';
     var logoUrl = (settings && settings.logoUrl) || '';
     var useLogo =
-      settings &&
-      settings.brandMode === 'logo' &&
-      /^https?:\/\//i.test(String(logoUrl));
+      settings && settings.brandMode === 'logo' && /^https?:\/\//i.test(String(logoUrl));
     if (useLogo) {
       return (
         '<img src="' +
@@ -140,7 +138,10 @@
   }
 
   function desiredCssUrl() {
-    return withCacheBust(config.cssUrl || apiBase + '/checkout.css', config.assetVersion || PANEL_V);
+    return withCacheBust(
+      config.cssUrl || apiBase + '/checkout.css',
+      config.assetVersion || PANEL_V,
+    );
   }
 
   function desiredJsUrl() {
@@ -185,7 +186,12 @@
   }
 
   function ensurePanel() {
-    if (loaded && root && window.EasyCheckoutApp && root.getAttribute('data-ec-panel-v') === PANEL_V) {
+    if (
+      loaded &&
+      root &&
+      window.EasyCheckoutApp &&
+      root.getAttribute('data-ec-panel-v') === PANEL_V
+    ) {
       return Promise.resolve(root);
     }
     ensureStyles();
@@ -203,18 +209,20 @@
       headers: { accept: 'text/html', 'cache-control': 'no-cache' },
       credentials: 'same-origin',
       cache: 'no-store',
-    }).then(function (response) {
-      if (!response.ok) throw new Error('checkout_panel_failed');
-      return response.text();
-    }).then(function (html) {
-      root.innerHTML = html;
-      root.setAttribute('data-ec-panel-v', PANEL_V);
-      // Handlers are delegated on root, so HTML refresh keeps working without re-bind.
-      return loadCheckoutScript(jsUrl).then(function () {
-        loaded = true;
-        return root;
+    })
+      .then(function (response) {
+        if (!response.ok) throw new Error('checkout_panel_failed');
+        return response.text();
+      })
+      .then(function (html) {
+        root.innerHTML = html;
+        root.setAttribute('data-ec-panel-v', PANEL_V);
+        // Handlers are delegated on root, so HTML refresh keeps working without re-bind.
+        return loadCheckoutScript(jsUrl).then(function () {
+          loaded = true;
+          return root;
+        });
       });
-    });
   }
 
   function parsePriceMajor(text) {
@@ -240,14 +248,18 @@
     var priceEl = document.querySelector(
       '.price__regular .price-item--regular, .price-item--sale, .price .money, [data-product-price]',
     );
-    var title = ((titleEl && titleEl.textContent) || 'Item').replace(/\s+/g, ' ').trim().slice(0, 200);
+    var title = ((titleEl && titleEl.textContent) || 'Item')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 200);
     var imgEl = document.querySelector(
       '.product__media img, .product-media-container img, .product__main-photos img, meta[property="og:image"]',
     );
     var imageUrl =
       (imgEl && (imgEl.getAttribute('content') || imgEl.currentSrc || imgEl.src)) || undefined;
     var skuEl = form.querySelector('[name="sku"], [data-product-sku], .sku');
-    var sku = (skuEl && (skuEl.value || skuEl.textContent) || '').trim().slice(0, 80) || undefined;
+    var sku =
+      ((skuEl && (skuEl.value || skuEl.textContent)) || '').trim().slice(0, 80) || undefined;
     return {
       source: 'buy_now',
       lines: [
@@ -268,53 +280,58 @@
     return fetch('/cart.js', {
       credentials: 'same-origin',
       headers: { accept: 'application/json' },
-    }).then(function (response) {
-      if (!response.ok) throw new Error('cart_failed');
-      return response.json();
-    }).then(function (cart) {
-      var lines = (cart.items || []).map(function (item) {
-        var qty = item.quantity || 1;
-        // cart.js: price / original_price / final_price are unit amounts in minor units.
-        var unitMinor = typeof item.price === 'number' ? item.price : item.final_price;
-        var finalUnit =
-          typeof item.final_price === 'number' ? item.final_price : unitMinor;
-        var lineDiscountMinor = 0;
-        if (Array.isArray(item.line_level_discount_allocations)) {
-          for (var i = 0; i < item.line_level_discount_allocations.length; i++) {
-            var alloc = item.line_level_discount_allocations[i];
-            if (alloc && typeof alloc.amount === 'number') lineDiscountMinor += alloc.amount;
+    })
+      .then(function (response) {
+        if (!response.ok) throw new Error('cart_failed');
+        return response.json();
+      })
+      .then(function (cart) {
+        var lines = (cart.items || []).map(function (item) {
+          var qty = item.quantity || 1;
+          // cart.js: price / original_price / final_price are unit amounts in minor units.
+          var unitMinor = typeof item.price === 'number' ? item.price : item.final_price;
+          var finalUnit = typeof item.final_price === 'number' ? item.final_price : unitMinor;
+          var lineDiscountMinor = 0;
+          if (Array.isArray(item.line_level_discount_allocations)) {
+            for (var i = 0; i < item.line_level_discount_allocations.length; i++) {
+              var alloc = item.line_level_discount_allocations[i];
+              if (alloc && typeof alloc.amount === 'number') lineDiscountMinor += alloc.amount;
+            }
           }
-        }
-        if (!lineDiscountMinor && typeof unitMinor === 'number' && typeof finalUnit === 'number') {
-          lineDiscountMinor = Math.max(0, (unitMinor - finalUnit) * qty);
-        }
-        // Prefer true compare-at; fall back to original_price only when it is higher than unit.
-        var compareAt;
-        if (typeof item.compare_at_price === 'number' && item.compare_at_price > unitMinor) {
-          compareAt = item.compare_at_price;
-        } else if (typeof item.original_price === 'number' && item.original_price > unitMinor) {
-          compareAt = item.original_price;
-        }
+          if (
+            !lineDiscountMinor &&
+            typeof unitMinor === 'number' &&
+            typeof finalUnit === 'number'
+          ) {
+            lineDiscountMinor = Math.max(0, (unitMinor - finalUnit) * qty);
+          }
+          // Prefer true compare-at; fall back to original_price only when it is higher than unit.
+          var compareAt;
+          if (typeof item.compare_at_price === 'number' && item.compare_at_price > unitMinor) {
+            compareAt = item.compare_at_price;
+          } else if (typeof item.original_price === 'number' && item.original_price > unitMinor) {
+            compareAt = item.original_price;
+          }
+          return {
+            variantId: item.variant_id != null ? String(item.variant_id) : undefined,
+            productId: item.product_id != null ? String(item.product_id) : undefined,
+            lineKey: item.key ? String(item.key) : undefined,
+            sku: item.sku ? String(item.sku) : undefined,
+            title: item.product_title || item.title || 'Item',
+            variantTitle: item.variant_title || '',
+            quantity: qty,
+            amountMinor: unitMinor,
+            imageUrl: item.image || undefined,
+            compareAtAmountMinor: compareAt,
+            lineDiscountMinor: lineDiscountMinor || undefined,
+          };
+        });
         return {
-          variantId: item.variant_id != null ? String(item.variant_id) : undefined,
-          productId: item.product_id != null ? String(item.product_id) : undefined,
-          lineKey: item.key ? String(item.key) : undefined,
-          sku: item.sku ? String(item.sku) : undefined,
-          title: item.product_title || item.title || 'Item',
-          variantTitle: item.variant_title || '',
-          quantity: qty,
-          amountMinor: unitMinor,
-          imageUrl: item.image || undefined,
-          compareAtAmountMinor: compareAt,
-          lineDiscountMinor: lineDiscountMinor || undefined,
+          source: 'cart',
+          discountMinor: typeof cart.total_discount === 'number' ? cart.total_discount : 0,
+          lines: lines,
         };
       });
-      return {
-        source: 'cart',
-        discountMinor: typeof cart.total_discount === 'number' ? cart.total_discount : 0,
-        lines: lines,
-      };
-    });
   }
 
   function resolveMerchandise(intent) {

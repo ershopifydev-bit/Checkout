@@ -24,7 +24,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
     return errorResponse('INVALID_REQUEST', 'PATCH required.', 405);
   }
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
-  if (!body || typeof body !== 'object') return errorResponse('INVALID_REQUEST', 'Invalid body.', 400);
+  if (!body || typeof body !== 'object')
+    return errorResponse('INVALID_REQUEST', 'Invalid body.', 400);
   const patch: {
     address?: CheckoutAddress;
     couponCode?: string;

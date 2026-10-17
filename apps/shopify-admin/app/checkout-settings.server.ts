@@ -125,7 +125,8 @@ export async function saveCheckoutSettings(
   if (!key) throw new Error('MISSING_SHOP');
 
   const brandMode: BrandMode = input.brandMode === 'logo' ? 'logo' : 'name';
-  const brandName = (input.brandName || DEFAULT_BRAND_NAME).trim().slice(0, 80) || DEFAULT_BRAND_NAME;
+  const brandName =
+    (input.brandName || DEFAULT_BRAND_NAME).trim().slice(0, 80) || DEFAULT_BRAND_NAME;
   const logoUrl = (input.logoUrl || '').trim().slice(0, 500);
   if (brandMode === 'logo' && logoUrl && !isHttpUrl(logoUrl)) {
     throw new Error('INVALID_LOGO_URL');
@@ -142,13 +143,15 @@ export async function saveCheckoutSettings(
     giftVouchersEnabled: input.giftVouchersEnabled !== false,
     giftVoucherVerifyMode: input.giftVoucherVerifyMode === 'otp' ? 'otp' : 'pin',
     loyaltyPartnerEnabled: input.loyaltyPartnerEnabled !== false,
-    loyaltyPartnerName: String(input.loyaltyPartnerName || 'EasyRewardz')
-      .trim()
-      .slice(0, 80) || 'EasyRewardz',
+    loyaltyPartnerName:
+      String(input.loyaltyPartnerName || 'EasyRewardz')
+        .trim()
+        .slice(0, 80) || 'EasyRewardz',
     loyaltyPointsBalance: Math.max(
       0,
       Math.round(
-        typeof input.loyaltyPointsBalance === 'number' && Number.isFinite(input.loyaltyPointsBalance)
+        typeof input.loyaltyPointsBalance === 'number' &&
+          Number.isFinite(input.loyaltyPointsBalance)
           ? input.loyaltyPointsBalance
           : 1250,
       ),

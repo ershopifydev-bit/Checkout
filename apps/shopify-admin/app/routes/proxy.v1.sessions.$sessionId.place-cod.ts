@@ -11,7 +11,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
   await authenticate.public.appProxy(request);
   if (request.method !== 'POST') return errorResponse('INVALID_REQUEST', 'POST required.', 405);
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
-  if (!body || typeof body !== 'object') return errorResponse('INVALID_REQUEST', 'Invalid body.', 400);
+  if (!body || typeof body !== 'object')
+    return errorResponse('INVALID_REQUEST', 'Invalid body.', 400);
   const address: CheckoutAddress = {
     phone: String(body['phone'] ?? ''),
     fullName: String(body['fullName'] ?? ''),
@@ -26,9 +27,14 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const shopper = getShopper(shopperToken);
 
   try {
-    const result = await placeCodFromSession(String(params['sessionId'] || ''), address, undefined, {
-      ...(shopper?.customerId ? { customerId: shopper.customerId } : {}),
-    });
+    const result = await placeCodFromSession(
+      String(params['sessionId'] || ''),
+      address,
+      undefined,
+      {
+        ...(shopper?.customerId ? { customerId: shopper.customerId } : {}),
+      },
+    );
     return Response.json(result);
   } catch (error) {
     const code = error instanceof Error ? error.message : 'INVALID_REQUEST';

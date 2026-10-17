@@ -59,20 +59,15 @@ describe('checkout sessions', () => {
       },
       store,
     );
-    const patched = await patchCheckoutSession(
-      created.sessionId,
-      { couponCode: 'SAVE10' },
-      store,
-      {
-        resolveCoupon: async () => ({
-          code: 'SAVE10',
-          kind: 'percentage',
-          value: 10,
-          discountMinor: 10000,
-          summary: '10% off',
-        }),
-      },
-    );
+    const patched = await patchCheckoutSession(created.sessionId, { couponCode: 'SAVE10' }, store, {
+      resolveCoupon: async () => ({
+        code: 'SAVE10',
+        kind: 'percentage',
+        value: 10,
+        discountMinor: 10000,
+        summary: '10% off',
+      }),
+    });
     expect(patched.coupon?.code).toBe('SAVE10');
     expect(patched.totals.discountMinor).toBe(20000);
     expect(patched.totals.amountMinor).toBe(80000);
