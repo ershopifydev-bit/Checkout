@@ -78,7 +78,9 @@ export const mongoDb = new Proxy({} as Db, {
   get(_target, property, _receiver) {
     const db = getMongoDb();
     const value = Reflect.get(db, property, db);
-    return typeof value === 'function' ? (value as (...args: unknown[]) => unknown).bind(db) : value;
+    return typeof value === 'function'
+      ? (value as (...args: unknown[]) => unknown).bind(db)
+      : value;
   },
 });
 

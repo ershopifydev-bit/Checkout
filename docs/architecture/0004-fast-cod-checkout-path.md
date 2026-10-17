@@ -10,17 +10,17 @@ We need a GoKwik/Shopflo-class COD checkout that feels **extremely fast**, while
 
 ## Finding: when is the Shopify order created?
 
-| Moment | GoKwik (Levi’s) | Shopflo (Sleep Co) |
-| ------ | --------------- | ------------------ |
-| Page load / hijack ready | SDK + embed warm | `bridge.shopflo.com` + Flo config warm |
-| Buy now / Checkout click | Opens **their checkout session** (cart/variant context). Does **not** finalize Shopify order. | Opens Flo checkout with `checkoutId` / session UUIDs. `is_buy_now` was false on the captured cart flow; Buy now can be enabled per merchant. Still **not** a completed Shopify order. |
-| During form fill | Session updates (phone OTP, address, quotes). GoKwik may hold an internal order row before merchant sync. | Session + address book; shipping handles; pricing. Optional draft concepts exist in platform; completed capture had `is_draft_order: false`. |
-| Place COD | Confirm → sync Shopify (`is_order_created_merchant`, `shopify_order_name`). | Confirm → **Shopify order** with `financial_status: pending`, gateways `Cash on Delivery (COD)`, tags `COD, Shopflo`. |
-| Thank you | Hosted `*.addons.gokwik.co/thank-you?token=…` | Merchant `/pages/order-status?tokenId=…&checkoutId=…` |
+| Moment                   | GoKwik (Levi’s)                                                                                           | Shopflo (Sleep Co)                                                                                                                                                                    |
+| ------------------------ | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Page load / hijack ready | SDK + embed warm                                                                                          | `bridge.shopflo.com` + Flo config warm                                                                                                                                                |
+| Buy now / Checkout click | Opens **their checkout session** (cart/variant context). Does **not** finalize Shopify order.             | Opens Flo checkout with `checkoutId` / session UUIDs. `is_buy_now` was false on the captured cart flow; Buy now can be enabled per merchant. Still **not** a completed Shopify order. |
+| During form fill         | Session updates (phone OTP, address, quotes). GoKwik may hold an internal order row before merchant sync. | Session + address book; shipping handles; pricing. Optional draft concepts exist in platform; completed capture had `is_draft_order: false`.                                          |
+| Place COD                | Confirm → sync Shopify (`is_order_created_merchant`, `shopify_order_name`).                               | Confirm → **Shopify order** with `financial_status: pending`, gateways `Cash on Delivery (COD)`, tags `COD, Shopflo`.                                                                 |
+| Thank you                | Hosted `*.addons.gokwik.co/thank-you?token=…`                                                             | Merchant `/pages/order-status?tokenId=…&checkoutId=…`                                                                                                                                 |
 
 **Conclusion:** Neither product creates the **final Shopify order on Buy now**. Speed comes from **warm assets + instant backend session + overlay paint**, not from pre-creating Shopify orders (which would spam Admin with abandoned drafts and confuse inventory).
 
-What they *do* early (the real speed tricks):
+What they _do_ early (the real speed tricks):
 
 1. Prefetch SDK/CSS/JS on the storefront.
 2. On intent/click, create a **checkout session** on their API with cart/variant lines (parallel with opening UI).
@@ -48,13 +48,13 @@ What they *do* early (the real speed tricks):
 
 ### 4. Performance budget (how we stay fast)
 
-| Phase | Target | Technique |
-| ----- | ------ | --------- |
-| Embed idle | Negligible main-thread | Small `hijack-core` + deferred `embed.js`; CSS hide accelerated checkout |
-| Click → shell visible | p95 ≤ **2s** (ADR 0002) | Prefetch panel HTML/CSS/JS after idle; `open()` does not wait on quotes |
-| Click → session bound | p95 ≤ **500ms** API | `POST /sessions` in parallel with panel mount; optimistic skeleton lines from theme DOM if needed |
-| Pincode → shipping/EDD | Async, non-blocking | Debounced quote; show shell totals first |
-| Place COD → success | Dominated by Shopify Admin | Persist local intent, then Admin write; surface Shopify name when confirmed |
+| Phase                  | Target                     | Technique                                                                                         |
+| ---------------------- | -------------------------- | ------------------------------------------------------------------------------------------------- |
+| Embed idle             | Negligible main-thread     | Small `hijack-core` + deferred `embed.js`; CSS hide accelerated checkout                          |
+| Click → shell visible  | p95 ≤ **2s** (ADR 0002)    | Prefetch panel HTML/CSS/JS after idle; `open()` does not wait on quotes                           |
+| Click → session bound  | p95 ≤ **500ms** API        | `POST /sessions` in parallel with panel mount; optimistic skeleton lines from theme DOM if needed |
+| Pincode → shipping/EDD | Async, non-blocking        | Debounced quote; show shell totals first                                                          |
+| Place COD → success    | Dominated by Shopify Admin | Persist local intent, then Admin write; surface Shopify name when confirmed                       |
 
 Warm path (implementation checklist):
 
@@ -66,26 +66,26 @@ Warm path (implementation checklist):
 
 ### 5. Shipping, discounts, bank offers
 
-| Capability | v1 | Notes |
-| ---------- | -- | ----- |
-| Shipping | One COD-capable handle + optional EDD string after pincode | Shopflo `available_shipping_handles` shape |
-| Discounts | Shopify cart auto-discounts in session totals + optional single coupon apply | Shopflo `discounts.mode: SHOPIFY`; stack length 1 |
-| Bank / card offers | **Out of v1** | Prepaid-only; defer with payment methods |
-| OTP / RTO | Out of v1 shell-critical path | May add post-COD verify later (`POST_COD`-style) without slowing first paint |
+| Capability         | v1                                                                           | Notes                                                                        |
+| ------------------ | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Shipping           | One COD-capable handle + optional EDD string after pincode                   | Shopflo `available_shipping_handles` shape                                   |
+| Discounts          | Shopify cart auto-discounts in session totals + optional single coupon apply | Shopflo `discounts.mode: SHOPIFY`; stack length 1                            |
+| Bank / card offers | **Out of v1**                                                                | Prepaid-only; defer with payment methods                                     |
+| OTP / RTO          | Out of v1 shell-critical path                                                | May add post-COD verify later (`POST_COD`-style) without slowing first paint |
 
 ### 6. Observability (track everything that matters)
 
 Emit correlation-id’d events (no PII in logs):
 
-| Event | When |
-| ----- | ---- |
-| `checkout.hijack` | Checkout/Buy now intercepted |
-| `checkout.shell_visible` | Overlay painted (mark TTFB/click→paint) |
-| `checkout.session_created` | Session API ok (+ duration_ms, source) |
-| `checkout.session_failed` | Session API error code |
-| `checkout.quote_updated` | Pincode/shipping/discount apply |
-| `checkout.place_started` / `place_succeeded` / `place_failed` | COD confirm |
-| `checkout.shopify_order_synced` | Admin order id/name stored |
+| Event                                                         | When                                    |
+| ------------------------------------------------------------- | --------------------------------------- |
+| `checkout.hijack`                                             | Checkout/Buy now intercepted            |
+| `checkout.shell_visible`                                      | Overlay painted (mark TTFB/click→paint) |
+| `checkout.session_created`                                    | Session API ok (+ duration_ms, source)  |
+| `checkout.session_failed`                                     | Session API error code                  |
+| `checkout.quote_updated`                                      | Pincode/shipping/discount apply         |
+| `checkout.place_started` / `place_succeeded` / `place_failed` | COD confirm                             |
+| `checkout.shopify_order_synced`                               | Admin order id/name stored              |
 
 Store timing histograms for click→shell, click→session, place→Shopify. Dashboards later; structured logs first.
 

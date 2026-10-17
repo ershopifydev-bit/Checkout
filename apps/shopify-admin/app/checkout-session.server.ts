@@ -156,7 +156,10 @@ function normalizeLines(raw: CreateSessionInput['lines']): CheckoutLine[] {
     if (item.lineKey) line.lineKey = String(item.lineKey).slice(0, 200);
     if (item.sku) line.sku = String(item.sku).slice(0, 80);
     if (item.imageUrl) line.imageUrl = String(item.imageUrl).slice(0, 500);
-    if (typeof item.compareAtAmountMinor === 'number' && Number.isFinite(item.compareAtAmountMinor)) {
+    if (
+      typeof item.compareAtAmountMinor === 'number' &&
+      Number.isFinite(item.compareAtAmountMinor)
+    ) {
       line.compareAtAmountMinor = Math.max(0, Math.round(item.compareAtAmountMinor));
     } else if (typeof item.compareAtPrice === 'number') {
       line.compareAtAmountMinor = toMinorFromMajor(item.compareAtPrice);
@@ -440,8 +443,7 @@ export async function placeCodFromSession(
   if (!session.shipping?.codEnabled) throw new Error('NOT_SERVICEABLE');
 
   const createOrder =
-    options.createOrder ||
-    (await import('./shopify-cod-order.server')).createCodOrderInShopify;
+    options.createOrder || (await import('./shopify-cod-order.server')).createCodOrderInShopify;
 
   let shopifyOrder;
   try {

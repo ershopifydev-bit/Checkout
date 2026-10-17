@@ -1,11 +1,26 @@
-<div class="ec-shell" role="dialog" aria-modal="true" aria-labelledby="ec-title" data-ec-ui="login-otp-v3">
+<div
+  class="ec-shell"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="ec-title"
+  data-ec-ui="login-otp-v3"
+>
   <header class="ec-top">
     <div class="ec-top-row">
       <button type="button" class="ec-back" id="ec-back" data-ec-exit aria-label="Back">←</button>
       <p class="ec-brand" id="ec-title">RARE</p>
       <div class="ec-account" id="ec-account" hidden>
         <button type="button" class="ec-link ec-logout" id="ec-logout">
-          <svg class="ec-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <svg
+            class="ec-ico"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            aria-hidden="true"
+          >
             <circle cx="12" cy="8" r="3.5" />
             <path d="M5.5 19.5c1.5-3.2 3.8-4.8 6.5-4.8s5 1.6 6.5 4.8" />
           </svg>
@@ -13,7 +28,9 @@
         </button>
         <span class="ec-account-phone" id="ec-account-phone"></span>
       </div>
-      <button type="button" class="ec-close" id="ec-close" data-ec-exit aria-label="Close checkout">✕</button>
+      <button type="button" class="ec-close" id="ec-close" data-ec-exit aria-label="Close checkout">
+        ✕
+      </button>
     </div>
     <button
       type="button"
@@ -24,15 +41,37 @@
     >
       <span class="ec-summary-save">
         <span class="ec-save-pill" id="ec-save-pill" hidden>
-          <svg class="ec-ico" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M10.5 3.5 3.8 10.2a2 2 0 0 0 0 2.8l7.2 7.2a2 2 0 0 0 2.8 0l6.7-6.7V3.5H10.5z" />
+          <svg
+            class="ec-ico"
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              d="M10.5 3.5 3.8 10.2a2 2 0 0 0 0 2.8l7.2 7.2a2 2 0 0 0 2.8 0l6.7-6.7V3.5H10.5z"
+            />
             <circle cx="15.2" cy="8.8" r="1.4" fill="#fff" />
           </svg>
           <span id="ec-save-pill-text"></span>
         </span>
       </span>
       <span class="ec-summary-cart">
-        <svg class="ec-bag" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 8h12l-1 13H7L6 8z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/><path d="M9 12h6"/></svg>
+        <svg
+          class="ec-bag"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.7"
+          aria-hidden="true"
+        >
+          <path d="M6 8h12l-1 13H7L6 8z" />
+          <path d="M9 8V6.5a3 3 0 0 1 6 0V8" />
+          <path d="M9 12h6" />
+        </svg>
         <span id="ec-item-count">0 items</span>
         <span class="ec-chevron" aria-hidden="true">▾</span>
       </span>
@@ -72,7 +111,13 @@
     </div>
   </header>
   <!-- Closes item preview only; does not close checkout -->
-  <button type="button" class="ec-summary-scrim" id="ec-summary-scrim" hidden aria-label="Close order preview"></button>
+  <button
+    type="button"
+    class="ec-summary-scrim"
+    id="ec-summary-scrim"
+    hidden
+    aria-label="Close order preview"
+  ></button>
 
   <div class="ec-body">
     <!-- Step: login + OTP -->
@@ -104,19 +149,55 @@
 
         <div class="ec-otp-block" id="ec-otp-field" hidden>
           <div class="ec-otp-boxes" role="group" aria-label="One-time password">
-            <input class="ec-otp-digit" data-ec-otp="0" type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code" aria-label="Digit 1" />
-            <input class="ec-otp-digit" data-ec-otp="1" type="text" inputmode="numeric" maxlength="1" aria-label="Digit 2" />
-            <input class="ec-otp-digit" data-ec-otp="2" type="text" inputmode="numeric" maxlength="1" aria-label="Digit 3" />
-            <input class="ec-otp-digit" data-ec-otp="3" type="text" inputmode="numeric" maxlength="1" aria-label="Digit 4" />
+            <input
+              class="ec-otp-digit"
+              data-ec-otp="0"
+              type="text"
+              inputmode="numeric"
+              maxlength="1"
+              autocomplete="one-time-code"
+              aria-label="Digit 1"
+            />
+            <input
+              class="ec-otp-digit"
+              data-ec-otp="1"
+              type="text"
+              inputmode="numeric"
+              maxlength="1"
+              aria-label="Digit 2"
+            />
+            <input
+              class="ec-otp-digit"
+              data-ec-otp="2"
+              type="text"
+              inputmode="numeric"
+              maxlength="1"
+              aria-label="Digit 3"
+            />
+            <input
+              class="ec-otp-digit"
+              data-ec-otp="3"
+              type="text"
+              inputmode="numeric"
+              maxlength="1"
+              aria-label="Digit 4"
+            />
           </div>
-          <button type="button" class="ec-link ec-change-number" id="ec-phone-edit">Change number</button>
-          <button type="button" class="ec-resend-btn" id="ec-resend" disabled>Resend OTP in 00:30</button>
+          <button type="button" class="ec-link ec-change-number" id="ec-phone-edit">
+            Change number
+          </button>
+          <button type="button" class="ec-resend-btn" id="ec-resend" disabled>
+            Resend OTP in 00:30
+          </button>
           <p class="ec-hint" id="ec-otp-hint" hidden></p>
         </div>
 
         <label class="ec-consent" id="ec-consent-row">
           <input type="checkbox" id="ec-consent" checked />
-          <span>I agree to receive order updates, offers and important communications on WhatsApp/SMS.</span>
+          <span
+            >I agree to receive order updates, offers and important communications on
+            WhatsApp/SMS.</span
+          >
         </label>
 
         <p class="ec-error" id="ec-login-error" role="alert" hidden></p>
@@ -127,18 +208,28 @@
           <span class="ec-cta-arrow" aria-hidden="true">→</span>
         </button>
 
-        <p class="ec-sub ec-otp-note" id="ec-otp-note" hidden>Returning numbers can continue with saved addresses.</p>
+        <p class="ec-sub ec-otp-note" id="ec-otp-note" hidden>
+          Returning numbers can continue with saved addresses.
+        </p>
 
         <p class="ec-legal">
           By proceeding, you agree to continue with COD checkout for this number and accept our
-          <a href="/policies/terms-of-service" target="_blank" rel="noopener">Terms &amp; Privacy Policy</a>.
+          <a href="/policies/terms-of-service" target="_blank" rel="noopener"
+            >Terms &amp; Privacy Policy</a
+          >.
         </p>
       </div>
 
       <div class="ec-trust-row" aria-label="Trust">
-        <span><i aria-hidden="true">🛡</i><b>PCI DSS<small>Compliant</small></b></span>
-        <span><i aria-hidden="true">🔒</i><b>Secure<small>Checkout</small></b></span>
-        <span><i aria-hidden="true">✔</i><b>Verified<small>Merchant</small></b></span>
+        <span
+          ><i aria-hidden="true">🛡</i><b>PCI DSS<small>Compliant</small></b></span
+        >
+        <span
+          ><i aria-hidden="true">🔒</i><b>Secure<small>Checkout</small></b></span
+        >
+        <span
+          ><i aria-hidden="true">✔</i><b>Verified<small>Merchant</small></b></span
+        >
       </div>
     </section>
 
@@ -151,7 +242,16 @@
             <p class="ec-sub" id="ec-address-sub">Add where we should deliver this order.</p>
           </div>
           <span class="ec-ship-free-badge" id="ec-ship-free-badge-address" hidden>
-            <svg class="ec-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <svg
+              class="ec-ico"
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              aria-hidden="true"
+            >
               <path d="M3 7h11v10H3z" />
               <path d="M14 10h4l3 3v4h-7V10z" />
               <circle cx="7.5" cy="18.5" r="1.5" />
@@ -206,14 +306,32 @@
           <div class="ec-card-head">
             <div class="ec-deliver-title">
               <h2 id="ec-deliver-heading" class="ec-section-title">
-                <svg class="ec-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                <svg
+                  class="ec-ico"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  aria-hidden="true"
+                >
                   <path d="M12 21s7-5.4 7-11a7 7 0 1 0-14 0c0 5.6 7 11 7 11z" />
                   <circle cx="12" cy="10" r="2.4" />
                 </svg>
                 Delivery details
               </h2>
               <span class="ec-ship-free-badge" id="ec-ship-free-badge" hidden>
-                <svg class="ec-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <svg
+                  class="ec-ico"
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  aria-hidden="true"
+                >
                   <path d="M3 7h11v10H3z" />
                   <path d="M14 10h4l3 3v4h-7V10z" />
                   <circle cx="7.5" cy="18.5" r="1.5" />
@@ -242,7 +360,12 @@
                 </button>
               </div>
             </div>
-            <div id="ec-address-list" class="ec-address-list" role="listbox" aria-label="Saved addresses"></div>
+            <div
+              id="ec-address-list"
+              class="ec-address-list"
+              role="listbox"
+              aria-label="Saved addresses"
+            ></div>
           </div>
           <div id="ec-address-form" class="ec-address-form" hidden>
             <p class="ec-sub" id="ec-address-form-title">Edit address</p>
@@ -278,7 +401,16 @@
         <section class="ec-card ec-offers" aria-labelledby="ec-offers-heading">
           <div class="ec-offers-head">
             <h2 id="ec-offers-heading" class="ec-section-title">
-              <svg class="ec-ico ec-ico-offer" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+              <svg
+                class="ec-ico ec-ico-offer"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                aria-hidden="true"
+              >
                 <circle cx="12" cy="12" r="8" stroke-dasharray="2.1 1.5" />
                 <circle cx="9.2" cy="9.2" r="1.35" fill="currentColor" stroke="none" />
                 <circle cx="14.8" cy="14.8" r="1.35" fill="currentColor" stroke="none" />
@@ -290,8 +422,17 @@
           </div>
 
           <div class="ec-coupon-field" id="ec-coupon-form">
-            <svg class="ec-ico ec-coupon-tag" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M10.5 3.5 3.8 10.2a2 2 0 0 0 0 2.8l7.2 7.2a2 2 0 0 0 2.8 0l6.7-6.7V3.5H10.5z" />
+            <svg
+              class="ec-ico ec-coupon-tag"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                d="M10.5 3.5 3.8 10.2a2 2 0 0 0 0 2.8l7.2 7.2a2 2 0 0 0 2.8 0l6.7-6.7V3.5H10.5z"
+              />
               <circle cx="15.2" cy="8.8" r="1.4" fill="#fff" />
             </svg>
             <input
@@ -311,11 +452,20 @@
             <div class="ec-loyalty-top">
               <div class="ec-loyalty-brand">
                 <span class="ec-loyalty-gift" aria-hidden="true">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#fff"
+                    stroke-width="1.8"
+                  >
                     <path d="M4 12h16v9H4z" />
                     <path d="M3 8h18v4H3z" />
                     <path d="M12 8v13" />
-                    <path d="M12 8c-2.2 0-4-1.3-4-3s1.8-2.5 4-1c2.2-1.5 4-.2 4 1.5s-1.8 2.5-4 2.5z" />
+                    <path
+                      d="M12 8c-2.2 0-4-1.3-4-3s1.8-2.5 4-1c2.2-1.5 4-.2 4 1.5s-1.8 2.5-4 2.5z"
+                    />
                   </svg>
                 </span>
                 <span>
@@ -326,14 +476,27 @@
               <div class="ec-loyalty-balance">
                 <strong id="ec-loyalty-points">1,250 points</strong>
                 <span class="ec-loyalty-worth" id="ec-loyalty-value">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <svg
+                    width="11"
+                    height="11"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
                     <ellipse cx="12" cy="8" rx="7" ry="3" />
                     <path d="M5 8v4c0 1.7 3.1 3 7 3s7-1.3 7-3V8" />
                     <path d="M5 12v4c0 1.7 3.1 3 7 3s7-1.3 7-3v-4" />
                   </svg>
                   Worth ₹125.00
                 </span>
-                <button type="button" class="ec-loyalty-apply is-remove" id="ec-loyalty-remove" hidden>Remove</button>
+                <button
+                  type="button"
+                  class="ec-loyalty-apply is-remove"
+                  id="ec-loyalty-remove"
+                  hidden
+                >
+                  Remove
+                </button>
               </div>
             </div>
 
@@ -348,13 +511,26 @@
                     placeholder=" "
                     aria-label="Points to redeem"
                   />
-                  <label class="ec-loyalty-float-label" for="ec-loyalty-points-input">Points to redeem</label>
-                  <span class="ec-loyalty-eq" id="ec-loyalty-input-worth" aria-live="polite" hidden></span>
+                  <label class="ec-loyalty-float-label" for="ec-loyalty-points-input"
+                    >Points to redeem</label
+                  >
+                  <span
+                    class="ec-loyalty-eq"
+                    id="ec-loyalty-input-worth"
+                    aria-live="polite"
+                    hidden
+                  ></span>
                 </div>
                 <div class="ec-loyalty-presets" role="group" aria-label="Quick points">
-                  <button type="button" class="ec-loyalty-preset" data-ec-loyalty-preset="250">250</button>
-                  <button type="button" class="ec-loyalty-preset" data-ec-loyalty-preset="500">500</button>
-                  <button type="button" class="ec-loyalty-preset" data-ec-loyalty-preset="max">Max</button>
+                  <button type="button" class="ec-loyalty-preset" data-ec-loyalty-preset="250">
+                    250
+                  </button>
+                  <button type="button" class="ec-loyalty-preset" data-ec-loyalty-preset="500">
+                    500
+                  </button>
+                  <button type="button" class="ec-loyalty-preset" data-ec-loyalty-preset="max">
+                    Max
+                  </button>
                 </div>
                 <button type="button" class="ec-loyalty-apply" id="ec-loyalty-open">Apply</button>
               </div>
@@ -377,7 +553,16 @@
           <div class="ec-card-head">
             <div>
               <h2 id="ec-pay-heading" class="ec-section-title">
-                <svg class="ec-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                <svg
+                  class="ec-ico"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  aria-hidden="true"
+                >
                   <rect x="3" y="6" width="18" height="12" rx="2" />
                   <path d="M3 10h18" />
                   <path d="M7 15h4" />
@@ -398,7 +583,14 @@
             >
               <span class="ec-pay-dot" aria-hidden="true"></span>
               <span class="ec-pay-icon" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                >
                   <rect x="3" y="7" width="14" height="10" rx="1.5" />
                   <path d="M17 10h2.5L21 12v5h-4v-7z" />
                   <circle cx="7.5" cy="18.5" r="1.4" />
@@ -425,7 +617,14 @@
             >
               <span class="ec-pay-dot" aria-hidden="true"></span>
               <span class="ec-pay-icon" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                >
                   <path d="M4 8.5h16v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-10z" />
                   <path d="M8 8.5V7a4 4 0 0 1 8 0v1.5" />
                   <circle cx="12" cy="14" r="1.6" />
@@ -450,7 +649,14 @@
             >
               <span class="ec-pay-dot" aria-hidden="true"></span>
               <span class="ec-pay-icon" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                >
                   <rect x="7" y="2.5" width="10" height="19" rx="2" />
                   <path d="M10 5.5h4" />
                   <circle cx="12" cy="18" r="0.9" fill="currentColor" stroke="none" />
@@ -475,7 +681,14 @@
             >
               <span class="ec-pay-dot" aria-hidden="true"></span>
               <span class="ec-pay-icon" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                >
                   <rect x="2.5" y="5.5" width="19" height="13" rx="2" />
                   <path d="M2.5 10h19" />
                   <path d="M6.5 15h4" />
@@ -500,7 +713,14 @@
             >
               <span class="ec-pay-dot" aria-hidden="true"></span>
               <span class="ec-pay-icon" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                >
                   <path d="M3 10.5 12 5l9 5.5" />
                   <path d="M5 10.5V18h14v-7.5" />
                   <path d="M3 18h18" />
@@ -530,7 +750,12 @@
           <ul class="ec-trust-badges" aria-label="Trust and security">
             <li>
               <span class="ec-trust-icon" aria-hidden="true">
-                <svg viewBox="0 0 32 32" width="28" height="28"><path fill="currentColor" d="M16 2l10 4v8c0 7.2-4.4 13.4-10 15-5.6-1.6-10-7.8-10-15V6l10-4zm0 4.2L8 9.1v5c0 5.3 3.1 10 8 11.5 4.9-1.5 8-6.2 8-11.5v-5l-8-2.9zm-1.2 13.3l-3.5-3.5 1.4-1.4 2.1 2.1 4.6-4.6 1.4 1.4-6 6z"/></svg>
+                <svg viewBox="0 0 32 32" width="28" height="28">
+                  <path
+                    fill="currentColor"
+                    d="M16 2l10 4v8c0 7.2-4.4 13.4-10 15-5.6-1.6-10-7.8-10-15V6l10-4zm0 4.2L8 9.1v5c0 5.3 3.1 10 8 11.5 4.9-1.5 8-6.2 8-11.5v-5l-8-2.9zm-1.2 13.3l-3.5-3.5 1.4-1.4 2.1 2.1 4.6-4.6 1.4 1.4-6 6z"
+                  />
+                </svg>
               </span>
               <span>PCI DSS Certified</span>
             </li>
@@ -540,7 +765,12 @@
             </li>
             <li>
               <span class="ec-trust-icon" aria-hidden="true">
-                <svg viewBox="0 0 32 32" width="28" height="28"><path fill="currentColor" d="M16 2l11 5v7c0 6.6-4.2 12.5-11 15C9.2 26.5 5 20.6 5 14V7l11-5zm0 3.1L7.5 9v5c0 5.2 3.2 10 8.5 12.1C21.3 24 24.5 19.2 24.5 14V9L16 5.1zm-.2 14.6l-3.8-3.8 1.4-1.4 2.4 2.4 5-5 1.4 1.4-6.4 6.4z"/></svg>
+                <svg viewBox="0 0 32 32" width="28" height="28">
+                  <path
+                    fill="currentColor"
+                    d="M16 2l11 5v7c0 6.6-4.2 12.5-11 15C9.2 26.5 5 20.6 5 14V7l11-5zm0 3.1L7.5 9v5c0 5.2 3.2 10 8.5 12.1C21.3 24 24.5 19.2 24.5 14V9L16 5.1zm-.2 14.6l-3.8-3.8 1.4-1.4 2.4 2.4 5-5 1.4 1.4-6.4 6.4z"
+                  />
+                </svg>
               </span>
               <span>Verified Merchant</span>
             </li>
@@ -548,9 +778,13 @@
           <p class="ec-trust-ref" id="ec-trust-ref" aria-label="Checkout reference"></p>
           <p class="ec-trust-legal">
             By proceeding, I agree to EasyRewardz’s
-            <a href="https://www.easyrewardz.com/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+            <a href="https://www.easyrewardz.com/privacy" target="_blank" rel="noopener noreferrer"
+              >Privacy Policy</a
+            >
             and
-            <a href="https://www.easyrewardz.com/terms" target="_blank" rel="noopener noreferrer">T&amp;C</a>
+            <a href="https://www.easyrewardz.com/terms" target="_blank" rel="noopener noreferrer"
+              >T&amp;C</a
+            >
           </p>
           <span class="ec-sr-only">
             Total <span class="ec-compare" id="ec-mobile-compare" hidden></span>
@@ -594,7 +828,9 @@
     >
       <div class="ec-card-head ec-offers-sheet-head">
         <h2 id="ec-offers-sheet-title">Offers</h2>
-        <button type="button" class="ec-link" id="ec-offers-sheet-close" aria-label="Close">Close</button>
+        <button type="button" class="ec-link" id="ec-offers-sheet-close" aria-label="Close">
+          Close
+        </button>
       </div>
       <div id="ec-offers-sheet-body" class="ec-offers-sheet-body"></div>
       <button type="button" class="ec-place" id="ec-offers-sheet-confirm" hidden>Confirm</button>
@@ -654,12 +890,8 @@
   <div class="ec-loading" id="ec-loading" hidden aria-live="polite" aria-busy="true">
     <div class="ec-loading-card">
       <div class="ec-loading-stage" id="ec-loading-stage" data-ec-anim="orbit" aria-hidden="true">
-        <div class="ec-loading-orbit">
-          <span></span><span></span><span></span>
-        </div>
-        <div class="ec-loading-bags">
-          <i></i><i></i><i></i>
-        </div>
+        <div class="ec-loading-orbit"><span></span><span></span><span></span></div>
+        <div class="ec-loading-bags"><i></i><i></i><i></i></div>
         <div class="ec-loading-spark">✦</div>
         <div class="ec-loading-pulse"></div>
       </div>

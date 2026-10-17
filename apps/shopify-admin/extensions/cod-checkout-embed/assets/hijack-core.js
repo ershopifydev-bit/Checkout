@@ -46,7 +46,9 @@
     }
     if (el.matches) {
       if (
-        el.matches('[name="checkout"], [name="goto_pp"], #checkout, [id*="checkout"], [id*="Checkout"]')
+        el.matches(
+          '[name="checkout"], [name="goto_pp"], #checkout, [id*="checkout"], [id*="Checkout"]',
+        )
       ) {
         return true;
       }
@@ -64,7 +66,10 @@
       if (el.closest('[name="checkout"], #checkout, [class*="cart__checkout"]')) return true;
     }
     var tag = el.tagName;
-    if ((tag === 'BUTTON' || tag === 'A' || (tag === 'INPUT' && el.type === 'submit')) && textLooksLikeCheckout(el)) {
+    if (
+      (tag === 'BUTTON' || tag === 'A' || (tag === 'INPUT' && el.type === 'submit')) &&
+      textLooksLikeCheckout(el)
+    ) {
       return true;
     }
     return false;

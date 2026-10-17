@@ -74,9 +74,10 @@ export async function createCodOrderInShopify(input: {
     }
     const unit = moneyFromMinor(line.unitAmount.amountMinor);
     return {
-      title: line.variantTitle && line.variantTitle !== 'Default Title'
-        ? `${line.title} — ${line.variantTitle}`
-        : line.title,
+      title:
+        line.variantTitle && line.variantTitle !== 'Default Title'
+          ? `${line.title} — ${line.variantTitle}`
+          : line.title,
       quantity: line.quantity,
       priceSet: { shopMoney: unit, presentmentMoney: unit },
     };
