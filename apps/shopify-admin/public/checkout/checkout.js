@@ -20,6 +20,8 @@
   // This flag need to be driven from admin.
   let requireCodConfirmation = true;
   let showUpsell = true;
+  /** Mirrors /v1/settings.payments — applied in the same settings fetch (no extra request). */
+  let paymentMethods = { cod: true, upi: false, card: false, netbanking: false };
 
   // Login / OTP loading state
   let loginBusy = null; // null | 'send' | 'verify' | 'resend'
@@ -129,14 +131,39 @@
   function syncAccountHeader() {
     const account = $('ec-account');
     const phoneEl = $('ec-account-phone');
-    if (!account || !phoneEl) return;
-    const phone = formatPhoneDisplay(shopper?.phone);
+    const nameEl = $('ec-account-name');
+    const initialEl = $('ec-account-avatar-initial');
+    const avatarImg = $('ec-account-avatar-img');
+    const topRow =
+      boundRoot?.querySelector?.('.ec-top-row') || document.querySelector('.ec-top-row');
+    if (!account) return;
+    const phone = formatPhoneDisplay(shopper?.phone || shopper?.address?.phone);
     if (phone) {
       account.hidden = false;
-      phoneEl.textContent = phone;
+      if (topRow) topRow.classList.add('is-logged-in');
+      if (phoneEl) phoneEl.textContent = phone;
+      const fullName = (shopper?.fullName || shopper?.address?.fullName || '').trim();
+      const firstName = fullName ? fullName.split(/\s+/)[0] : '';
+      const displayName = firstName || 'Shopper';
+      if (nameEl) nameEl.textContent = displayName;
+      if (initialEl) {
+        initialEl.textContent = displayName ? displayName.charAt(0).toUpperCase() : '👤';
+      }
+      if (avatarImg) {
+        if (shopper?.avatarUrl) {
+          avatarImg.src = shopper.avatarUrl;
+          avatarImg.hidden = false;
+          if (initialEl) initialEl.hidden = true;
+        } else {
+          avatarImg.hidden = true;
+          if (initialEl) initialEl.hidden = false;
+        }
+      }
     } else {
       account.hidden = true;
-      phoneEl.textContent = '';
+      if (topRow) topRow.classList.remove('is-logged-in');
+      if (phoneEl) phoneEl.textContent = '';
+      if (nameEl) nameEl.textContent = '';
     }
   }
 
@@ -151,6 +178,47 @@
     if (!el) return;
     const id = String(sessionId || activeSessionId || '').replace(/[^a-zA-Z0-9]/g, '');
     el.textContent = id ? id.slice(-8).toLowerCase() : '';
+  }
+
+  function applyPaymentMethods(payments) {
+    const src = payments && typeof payments === 'object' ? payments : {};
+    paymentMethods = {
+      cod: src.cod !== false,
+      upi: src.upi === true,
+      card: src.card === true,
+      netbanking: src.netbanking === true,
+    };
+    if (
+      !paymentMethods.cod &&
+      !paymentMethods.upi &&
+      !paymentMethods.card &&
+      !paymentMethods.netbanking
+    ) {
+      paymentMethods.cod = true;
+    }
+    const rows = document.querySelectorAll('[data-ec-pay]');
+    for (const row of rows) {
+      const id = row.getAttribute('data-ec-pay') || '';
+      const on = paymentMethods[id] === true;
+      row.hidden = !on;
+      row.disabled = !on;
+      row.setAttribute('data-ec-pay-enabled', on ? '1' : '0');
+      if (!on) {
+        row.classList.remove('is-selected');
+        row.setAttribute('aria-checked', 'false');
+      }
+    }
+    const selectedRow = document.querySelector(`[data-ec-pay="${selectedPay}"]`);
+    if (!selectedRow || selectedRow.hidden) {
+      const first = document.querySelector('[data-ec-pay]:not([hidden])');
+      selectedPay = first?.getAttribute('data-ec-pay') || 'cod';
+    }
+    for (const row of rows) {
+      const on = row.getAttribute('data-ec-pay') === selectedPay && !row.hidden;
+      row.classList.toggle('is-selected', on);
+      row.setAttribute('aria-checked', on ? 'true' : 'false');
+    }
+    if (typeof refreshPaymentAmounts === 'function') refreshPaymentAmounts();
   }
 
   function applyBrand(settings) {
@@ -169,6 +237,7 @@
         void loadStoreUpsells(sessionLines);
       }
     }
+    if (settings.payments) applyPaymentMethods(settings.payments);
     const mode = settings.brandMode === 'logo' ? 'logo' : 'name';
     const name = String(settings.brandName || 'RARE').trim() || 'RARE';
     const logoUrl = String(settings.logoUrl || '').trim();
@@ -668,13 +737,11 @@
     const amount = formatInr(
       payableEl ? payAmountForMethod(payableEl, basePayMinor) : basePayMinor,
     );
-    if (selectedPay === 'cod' || selectedPay === 'bropay') {
+    if (selectedPay === 'cod') {
       showPaySheet(
-        selectedPay === 'cod' ? 'Confirm COD order' : 'Confirm Bro Pay',
-        `<p class="ec-sub">You will pay <strong>${amount}</strong>${
-          selectedPay === 'cod' ? ' when the order arrives.' : ' with Bro Pay (demo).'
-        }</p><p class="ec-sub">Deliver to <strong>${shopper?.address?.fullName || ''}</strong>.</p>`,
-        selectedPay === 'cod' ? 'Yes, place COD order' : 'Yes, continue',
+        'Confirm COD order',
+        `<p class="ec-sub">You will pay <strong>${amount}</strong> when the order arrives.</p><p class="ec-sub">Deliver to <strong>${shopper?.address?.fullName || ''}</strong>.</p>`,
+        'Yes, place COD order',
       );
       return;
     }
@@ -1125,7 +1192,7 @@
 
   function couponCategory(coupon) {
     const hay = `${coupon?.code || ''} ${coupon?.summary || ''}`.toLowerCase();
-    if (/\b(upi|card|wallet|bropay|paytm|gpay|phonepe|payment)\b/.test(hay)) return 'payments';
+    if (/\b(upi|card|wallet|paytm|gpay|phonepe|payment)\b/.test(hay)) return 'payments';
     if (/\b(hdfc|icici|axis|sbi|kotak|bank|emi|credit)\b/.test(hay)) return 'bank';
     if (/\b(referral|welcome|first|member|personal|foryou|for you)\b/.test(hay)) return 'foryou';
     return 'store';
@@ -2017,7 +2084,30 @@
     setStep('checkout');
   }
 
+  function showLogoutConfirmation() {
+    const overlay = $('ec-logout-overlay');
+    if (!overlay) {
+      void logout();
+      return;
+    }
+    const phoneEl = $('ec-logout-phone');
+    if (phoneEl) {
+      const raw = shopper?.phone || shopper?.address?.phone || '';
+      const formatted = raw ? `+91 ${raw.replace(/^\+?91/, '')}` : '';
+      const name = (shopper?.fullName || shopper?.address?.fullName || '').trim();
+      phoneEl.textContent =
+        name && formatted ? `${name} (${formatted})` : formatted || name || 'your account';
+    }
+    overlay.hidden = false;
+  }
+
+  function hideLogoutConfirmation() {
+    const overlay = $('ec-logout-overlay');
+    if (overlay) overlay.hidden = true;
+  }
+
   async function logout() {
+    hideLogoutConfirmation();
     if (shopper?.token) {
       await fetch(`${apiBase}/v1/auth/customer`, {
         method: 'DELETE',
@@ -2048,6 +2138,7 @@
 
   /** Clear success/order UI so a reused panel does not reopen on the last thank-you screen. */
   function resetOrderSuccessUi() {
+    hideLogoutConfirmation();
     offersAutoApplied = false;
     offersCache = null;
     appliedCouponCode = '';
@@ -2093,6 +2184,13 @@
 
   async function placeOrder() {
     showErr('ec-error', '');
+    if (selectedPay !== 'cod') {
+      showErr(
+        'ec-error',
+        'This payment method is coming soon. Choose Cash on Delivery to place your order.',
+      );
+      return;
+    }
     if (cartBusy) {
       showErr('ec-error', 'Please wait — we are still adding an item to your bag.');
       return;
@@ -2132,9 +2230,14 @@
           body: JSON.stringify(address),
         },
       );
-      const body = await response.json().catch(() => null);
+      let body = await response.json().catch(() => null);
+
       if (!response.ok) {
-        showErr('ec-error', body?.error?.message || 'Could not place the order.');
+        const errorMsg =
+          body?.error?.code === 'NOT_FOUND'
+            ? 'Checkout session expired. Please close and reopen checkout.'
+            : body?.error?.message || 'Could not place the order.';
+        showErr('ec-error', errorMsg);
         return;
       }
       // Keep last-used address as default for next checkout.
@@ -2368,7 +2471,19 @@
         return;
       }
       if (target.closest('#ec-logout')) {
+        showLogoutConfirmation();
+        return;
+      }
+      if (target.closest('#ec-logout-close') || target.closest('#ec-logout-stay')) {
+        hideLogoutConfirmation();
+        return;
+      }
+      if (target.closest('#ec-logout-confirm')) {
         void logout();
+        return;
+      }
+      if (target.id === 'ec-logout-overlay') {
+        hideLogoutConfirmation();
         return;
       }
       if (target.closest('#ec-phone-edit')) {

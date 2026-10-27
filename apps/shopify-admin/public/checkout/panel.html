@@ -10,23 +10,39 @@
       <button type="button" class="ec-back" id="ec-back" data-ec-exit aria-label="Back">←</button>
       <p class="ec-brand" id="ec-title">RARE</p>
       <div class="ec-account" id="ec-account" hidden>
-        <button type="button" class="ec-link ec-logout" id="ec-logout">
+        <div class="ec-account-avatar" id="ec-account-avatar">
+          <img class="ec-account-avatar-img" id="ec-account-avatar-img" alt="" hidden />
+          <span class="ec-account-avatar-initial" id="ec-account-avatar-initial">👤</span>
+        </div>
+        <div class="ec-account-info">
+          <span class="ec-account-name" id="ec-account-name">Shopper</span>
+          <span class="ec-account-phone" id="ec-account-phone"></span>
+        </div>
+        <span class="ec-account-divider" aria-hidden="true"></span>
+        <button
+          type="button"
+          class="ec-logout ec-account-logout"
+          id="ec-logout"
+          aria-label="Log out"
+          title="Log out"
+        >
           <svg
-            class="ec-ico"
-            width="14"
-            height="14"
+            class="ec-logout-ico"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            stroke-width="1.8"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
             aria-hidden="true"
           >
-            <circle cx="12" cy="8" r="3.5" />
-            <path d="M5.5 19.5c1.5-3.2 3.8-4.8 6.5-4.8s5 1.6 6.5 4.8" />
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
           </svg>
-          Logout
         </button>
-        <span class="ec-account-phone" id="ec-account-phone"></span>
       </div>
       <button type="button" class="ec-close" id="ec-close" data-ec-exit aria-label="Close checkout">
         ✕
@@ -611,41 +627,9 @@
               class="ec-pay-row"
               role="radio"
               aria-checked="false"
-              data-ec-pay="bropay"
-              data-ec-pay-discount-pct="25"
-              data-ec-pay-enabled="1"
-            >
-              <span class="ec-pay-dot" aria-hidden="true"></span>
-              <span class="ec-pay-icon" aria-hidden="true">
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.6"
-                >
-                  <path d="M4 8.5h16v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-10z" />
-                  <path d="M8 8.5V7a4 4 0 0 1 8 0v1.5" />
-                  <circle cx="12" cy="14" r="1.6" />
-                </svg>
-              </span>
-              <span class="ec-pay-main">
-                <strong>Bro Pay</strong>
-                <small>25% off with Bro Pay (demo)</small>
-              </span>
-              <span class="ec-pay-side">
-                <span class="ec-pay-badge ec-pay-badge-save">−25%</span>
-                <span class="ec-pay-amount" data-ec-pay-amount>—</span>
-              </span>
-            </button>
-            <button
-              type="button"
-              class="ec-pay-row"
-              role="radio"
-              aria-checked="false"
               data-ec-pay="upi"
-              data-ec-pay-enabled="1"
+              data-ec-pay-enabled="0"
+              hidden
             >
               <span class="ec-pay-dot" aria-hidden="true"></span>
               <span class="ec-pay-icon" aria-hidden="true">
@@ -677,7 +661,8 @@
               role="radio"
               aria-checked="false"
               data-ec-pay="card"
-              data-ec-pay-enabled="1"
+              data-ec-pay-enabled="0"
+              hidden
             >
               <span class="ec-pay-dot" aria-hidden="true"></span>
               <span class="ec-pay-icon" aria-hidden="true">
@@ -709,7 +694,8 @@
               aria-checked="false"
               data-ec-pay="netbanking"
               data-ec-pay-surcharge-pct="2"
-              data-ec-pay-enabled="1"
+              data-ec-pay-enabled="0"
+              hidden
             >
               <span class="ec-pay-dot" aria-hidden="true"></span>
               <span class="ec-pay-icon" aria-hidden="true">
@@ -834,6 +820,31 @@
       </div>
       <div id="ec-offers-sheet-body" class="ec-offers-sheet-body"></div>
       <button type="button" class="ec-place" id="ec-offers-sheet-confirm" hidden>Confirm</button>
+    </div>
+  </div>
+
+  <!-- Logout confirmation sheet -->
+  <div class="ec-pay-overlay" id="ec-logout-overlay" hidden>
+    <div
+      class="ec-pay-sheet ec-logout-sheet"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ec-logout-heading"
+    >
+      <div class="ec-card-head">
+        <h2 id="ec-logout-heading">Log out of account?</h2>
+        <button type="button" class="ec-link" id="ec-logout-close" aria-label="Close">✕</button>
+      </div>
+      <p class="ec-sub">
+        You are currently logged in with <strong id="ec-logout-phone"></strong>. Were you intending
+        to log out, or was it an accidental touch?
+      </p>
+      <div class="ec-logout-actions">
+        <button type="button" class="ec-place" id="ec-logout-stay">Stay logged in</button>
+        <button type="button" class="ec-secondary-btn ec-logout-confirm-btn" id="ec-logout-confirm">
+          Yes, log out
+        </button>
+      </div>
     </div>
   </div>
 
