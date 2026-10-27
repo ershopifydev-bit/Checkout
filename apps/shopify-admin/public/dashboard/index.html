@@ -1,0 +1,2041 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Checkout OS</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    />
+    <style>
+      :root {
+        --bg: #f8fafc;
+        --card: #fff;
+        --tx: #111827;
+        --tx2: #64748b;
+        --ac: #4f46e5;
+        --ok: #16a34a;
+        --wa: #f59e0b;
+        --er: #dc2626;
+        --bd: #e2e8f0;
+        --hv: #f1f5f9;
+        box-sizing: border-box;
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --bg: #0b1020;
+          --card: #131a2e;
+          --tx: #e5e7eb;
+          --tx2: #94a3b8;
+          --bd: #243049;
+          --hv: #1a2340;
+          --ac: #818cf8;
+          color-scheme: dark;
+        }
+      }
+      :root[data-theme='dark'] {
+        --bg: #0b1020;
+        --card: #131a2e;
+        --tx: #e5e7eb;
+        --tx2: #94a3b8;
+        --bd: #243049;
+        --hv: #1a2340;
+        --ac: #818cf8;
+        color-scheme: dark;
+      }
+      html {
+        scroll-padding-top: env(safe-area-inset-top, 0px);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--tx);
+        font:
+          13px/1.45 'Segoe UI',
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      button,
+      select,
+      input {
+        font: inherit;
+        color: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      :focus-visible {
+        outline: 2px solid var(--ac);
+        outline-offset: 1px;
+      }
+      #app {
+        display: flex;
+        min-height: 100vh;
+      }
+      aside {
+        width: 240px;
+        background: var(--card);
+        border-right: 1px solid var(--bd);
+        padding: 10px 8px;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow: auto;
+        flex: none;
+        transition: width 0.18s;
+      }
+      aside.c {
+        width: 64px;
+      }
+      aside.c .lb,
+      aside.c h6,
+      aside.c .bdg {
+        display: none;
+      }
+      .logo {
+        font-weight: 700;
+        font-size: 15px;
+        padding: 6px 8px 10px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .logo i {
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        background: var(--ac);
+        display: inline-block;
+        flex: none;
+      }
+      aside h6 {
+        margin: 12px 8px 4px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--tx2);
+        cursor: pointer;
+      }
+      .nv {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        width: 100%;
+        border: 0;
+        background: none;
+        text-align: left;
+        padding: 6px 8px;
+        border-radius: 6px;
+        color: var(--tx2);
+      }
+      .nv:hover {
+        background: var(--hv);
+      }
+      .nv.on {
+        background: var(--hv);
+        color: var(--ac);
+        font-weight: 600;
+      }
+      .nv .ic {
+        width: 16px;
+        text-align: center;
+        flex: none;
+      }
+      .bdg {
+        margin-left: auto;
+        background: var(--er);
+        color: #fff;
+        border-radius: 9px;
+        padding: 0 6px;
+        font-size: 11px;
+      }
+      main {
+        flex: 1;
+        min-width: 0;
+      }
+      header {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        padding: 8px 16px;
+        background: var(--card);
+        border-bottom: 1px solid var(--bd);
+        position: sticky;
+        top: 0;
+        z-index: 5;
+      }
+      header select,
+      header input,
+      .btn {
+        background: var(--card);
+        border: 1px solid var(--bd);
+        border-radius: 6px;
+        padding: 5px 8px;
+      }
+      .btn:hover {
+        background: var(--hv);
+      }
+      .btn.p {
+        background: var(--ac);
+        color: #fff;
+        border-color: var(--ac);
+      }
+      .btn.s {
+        padding: 2px 8px;
+        font-size: 12px;
+      }
+      .sp {
+        flex: 1;
+      }
+      .pill {
+        border-radius: 10px;
+        padding: 1px 8px;
+        font-size: 11px;
+        font-weight: 600;
+        background: var(--hv);
+        white-space: nowrap;
+      }
+      .ok {
+        color: var(--ok);
+      }
+      .wa {
+        color: var(--wa);
+      }
+      .er {
+        color: var(--er);
+      }
+      .mu {
+        color: var(--tx2);
+      }
+      .env {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .env.pr {
+        background: #dcfce7;
+        color: #166534;
+      }
+      section.pg {
+        padding: 14px 16px;
+        max-width: 1500px;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 2px;
+      }
+      .sub {
+        color: var(--tx2);
+        margin-bottom: 12px;
+      }
+      .g {
+        display: grid;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .g4 {
+        grid-template-columns: repeat(4, 1fr);
+      }
+      .g2 {
+        grid-template-columns: 2fr 1fr;
+      }
+      .g3 {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .e2 {
+        grid-template-columns: 1fr 1fr;
+      }
+      .cd {
+        background: var(--card);
+        border: 1px solid var(--bd);
+        border-radius: 8px;
+        padding: 10px 12px;
+        min-width: 0;
+      }
+      .cd h3 {
+        margin: 0 0 6px;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .kv {
+        font-size: 20px;
+        font-weight: 650;
+        font-variant-numeric: tabular-nums;
+      }
+      .kl {
+        color: var(--tx2);
+        font-size: 12px;
+      }
+      .tw {
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-variant-numeric: tabular-nums;
+      }
+      th,
+      td {
+        padding: 6px 8px;
+        border-bottom: 1px solid var(--bd);
+        text-align: left;
+        white-space: nowrap;
+      }
+      th {
+        color: var(--tx2);
+        font-weight: 600;
+        cursor: pointer;
+        user-select: none;
+      }
+      tbody tr:hover {
+        background: var(--hv);
+        cursor: pointer;
+      }
+      .tb {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .tb input,
+      .tb select {
+        background: var(--card);
+        border: 1px solid var(--bd);
+        border-radius: 6px;
+        padding: 5px 8px;
+      }
+      #dr {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: min(440px, 100%);
+        background: var(--card);
+        border-left: 1px solid var(--bd);
+        padding: 14px;
+        overflow: auto;
+        transform: translateX(100%);
+        transition: transform 0.18s;
+        z-index: 20;
+      }
+      #dr.o {
+        transform: none;
+      }
+      pre {
+        background: var(--hv);
+        padding: 8px;
+        border-radius: 6px;
+        overflow: auto;
+        font-size: 12px;
+      }
+      .k {
+        color: var(--ac);
+      }
+      .sv {
+        color: var(--ok);
+      }
+      .nm {
+        color: var(--wa);
+      }
+      #ts {
+        position: fixed;
+        bottom: 16px;
+        right: 16px;
+        display: grid;
+        gap: 6px;
+        z-index: 30;
+      }
+      .t {
+        background: var(--tx);
+        color: var(--bg);
+        padding: 8px 12px;
+        border-radius: 6px;
+      }
+      .feed {
+        max-height: 420px;
+        overflow: auto;
+      }
+      .feed div {
+        padding: 4px 0;
+        border-bottom: 1px solid var(--bd);
+      }
+      .ig {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+        gap: 10px;
+      }
+      .mn {
+        display: none;
+      }
+      @media (max-width: 900px) {
+        aside {
+          position: fixed;
+          z-index: 15;
+          left: 0;
+          transform: translateX(-100%);
+        }
+        aside.m {
+          transform: none;
+        }
+        .mn {
+          display: inline-block;
+        }
+        .g4 {
+          grid-template-columns: 1fr 1fr;
+        }
+        .g2,
+        .g3,
+        .e2 {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 480px) {
+        .g4 {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          transition: none !important;
+        }
+      }
+      body {
+        font-family: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif;
+        font-size: 13px;
+        letter-spacing: -0.005em;
+      }
+      .sf label {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        margin: 8px 0;
+        cursor: pointer;
+      }
+      .sf .fld {
+        display: grid;
+        gap: 4px;
+        margin: 10px 0;
+      }
+      .sf .fld input,
+      .sf .fld select {
+        background: var(--card);
+        border: 1px solid var(--bd);
+        border-radius: 6px;
+        padding: 6px 8px;
+        width: 100%;
+        max-width: 420px;
+      }
+      .sf .row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+      .sf .banner {
+        padding: 8px 10px;
+        border-radius: 6px;
+        background: var(--hv);
+        margin-bottom: 10px;
+      }
+      :root {
+        --bg: #f4f5fa;
+        --bd: #e6e8f2;
+        --sh: 0 1px 2px rgba(16, 24, 64, 0.05), 0 4px 14px rgba(16, 24, 64, 0.04);
+        --ink: #0e1124;
+        --tl: #0ea5a4;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --bg: #0a0d1c;
+          --card: #12162b;
+          --bd: #222845;
+          --sh: none;
+        }
+      }
+      :root[data-theme='dark'] {
+        --bg: #0a0d1c;
+        --card: #12162b;
+        --bd: #222845;
+        --sh: none;
+      }
+      aside {
+        background: var(--ink);
+        border-right: 0;
+        color: #a5adcb;
+      }
+      aside h6 {
+        color: #6b7399;
+        letter-spacing: 0.01em;
+        font-weight: 600;
+      }
+      .nv {
+        color: #a5adcb;
+        border-radius: 8px;
+        position: relative;
+      }
+      .nv:hover {
+        background: rgba(255, 255, 255, 0.06);
+        color: #fff;
+      }
+      .nv.on {
+        background: rgba(129, 140, 248, 0.16);
+        color: #fff;
+      }
+      .nv.on:before {
+        content: '';
+        position: absolute;
+        left: -8px;
+        top: 7px;
+        bottom: 7px;
+        width: 3px;
+        border-radius: 2px;
+        background: #818cf8;
+      }
+      .logo {
+        color: #fff;
+      }
+      .logo i {
+        background: conic-gradient(from 200deg, #818cf8, #0ea5a4, #818cf8);
+      }
+      header {
+        background: color-mix(in srgb, var(--card) 88%, transparent);
+        backdrop-filter: blur(8px);
+        border-bottom-color: var(--bd);
+      }
+      .cd {
+        border-radius: 14px;
+        box-shadow: var(--sh);
+        padding: 14px 16px;
+      }
+      .cd h3 {
+        font-size: 13.5px;
+        font-weight: 700;
+      }
+      h1 {
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      .kv {
+        font-size: 24px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      .btn,
+      header select,
+      header input,
+      .tb input {
+        border-radius: 8px;
+      }
+      .btn.p {
+        background: var(--ac);
+      }
+      th {
+        font-size: 11.5px;
+        font-weight: 600;
+        background: var(--hv);
+      }
+      th:first-child {
+        border-radius: 8px 0 0 8px;
+      }
+      th:last-child {
+        border-radius: 0 8px 8px 0;
+      }
+      th,
+      td {
+        border-bottom-color: var(--bd);
+        padding: 8px 10px;
+      }
+      .pill {
+        border-radius: 20px;
+        padding: 2px 9px;
+      }
+      .pill.ok {
+        background: rgba(22, 163, 74, 0.12);
+      }
+      .pill.er {
+        background: rgba(220, 38, 38, 0.12);
+      }
+      .pill.wa {
+        background: rgba(245, 158, 11, 0.16);
+      }
+      .hero {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr;
+        gap: 14px;
+        background: var(--ink);
+        color: #e5e7eb;
+        border-radius: 18px;
+        padding: 18px 20px;
+        margin-bottom: 12px;
+        box-shadow: 0 10px 30px rgba(14, 17, 36, 0.25);
+      }
+      .hero .kl {
+        color: #8e96bc;
+      }
+      .hero b.big {
+        font-size: 38px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        color: #fff;
+      }
+      .lk {
+        display: grid;
+        grid-template-columns: 130px 1fr 80px;
+        gap: 8px;
+        align-items: center;
+        margin: 7px 0;
+        font-size: 12.5px;
+      }
+      .lk i {
+        display: block;
+        height: 8px;
+        border-radius: 4px;
+      }
+      .uk {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+      .uk .cd {
+        border-top: 3px solid var(--c, var(--ac));
+      }
+      .uk .why {
+        color: var(--tx2);
+        font-size: 11.5px;
+        margin-top: 4px;
+      }
+      .nw {
+        font-size: 10.5px;
+        background: var(--tl);
+        color: #fff;
+        border-radius: 4px;
+        padding: 0 5px;
+        margin-left: 6px;
+        font-weight: 700;
+      }
+      .fl {
+        display: flex;
+        gap: 0;
+        overflow-x: auto;
+        padding: 6px 0;
+      }
+      .fl div {
+        min-width: 130px;
+        padding: 8px 10px;
+        border: 1px solid var(--bd);
+        border-left: 0;
+        background: var(--hv);
+      }
+      .fl div:first-child {
+        border-left: 1px solid var(--bd);
+        border-radius: 10px 0 0 10px;
+      }
+      .fl div:last-child {
+        border-radius: 0 10px 10px 0;
+      }
+      .fl .bad {
+        background: rgba(220, 38, 38, 0.12);
+        border-color: var(--er);
+      }
+      @media (max-width: 900px) {
+        .hero {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <aside id="sb"></aside>
+      <main>
+        <header id="tp"></header>
+        <section class="pg" id="pg"></section>
+      </main>
+    </div>
+    <div id="dr"></div>
+    <div id="ts" role="status"></div>
+    <script>
+      // ---------- seeded demo data (deterministic) ----------
+      let sd = 20261017;
+      const R = () => {
+        sd |= 0;
+        sd = (sd + 0x6d2b79f5) | 0;
+        let t = Math.imul(sd ^ (sd >>> 15), 1 | sd);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+      const pick = (a) => a[Math.floor(R() * a.length)],
+        wpick = (o) => {
+          let r = R(),
+            s = 0;
+          for (const k in o) {
+            s += o[k];
+            if (r < s) return k;
+          }
+          return Object.keys(o)[0];
+        };
+      const MER = [
+        'Kala Threads',
+        'Masala Box',
+        'Urban Soles',
+        'Ayur Roots',
+        'Nirvana Home',
+        'Bolt Gadgets',
+        'Saffron & Co',
+        'Pixel Paper',
+      ].map((n, i) => ({
+        id: 'm_' + (i + 1),
+        name: n,
+        shop: n.toLowerCase().replace(/[^a-z]+/g, '-') + '.myshopify.com',
+        plan: ['Growth', 'Scale', 'Enterprise'][i % 3],
+        tier: ['Full checkout', 'Shopify-hosted fallback', 'Full checkout'][i % 3 == 1 ? 1 : 0],
+        health: i == 5 ? 'Degraded' : 'Healthy',
+        size: 0.5 + R() * 1.5,
+      }));
+      const GW = ['Razorpay', 'Cashfree', 'PayU'],
+        FAIL = [
+          'UPI_TIMEOUT',
+          'BANK_DECLINED',
+          '3DS_FAILED',
+          'INSUFFICIENT_FUNDS',
+          'GATEWAY_ERROR',
+        ];
+      const S = [],
+        O = [],
+        P = [],
+        W = [],
+        L = [],
+        A = [];
+      const EV = [
+        'checkout.created',
+        'checkout.completed',
+        'payment.succeeded',
+        'payment.failed',
+        'order.created',
+        'order.sync_failed',
+        'refund.created',
+        'loyalty.redeemed',
+      ];
+      for (let i = 0; i < 1800; i++) {
+        const m = pick(MER);
+        if (R() > m.size / 2) continue;
+        const day = Math.floor(R() * 30),
+          hr = Math.floor(8 + R() * 15),
+          type = R() < 0.35 ? 'Buy Now' : 'Cart';
+        const st = wpick({
+          Completed: 0.3,
+          Abandoned: 0.36,
+          'Payment Failed': 0.12,
+          'Payment Pending': 0.05,
+          Expired: 0.07,
+          Active: 0.05,
+          Created: 0.05,
+        });
+        const pm = wpick({ UPI: 0.5, Cards: 0.17, COD: 0.2, 'Net Banking': 0.06, Wallets: 0.07 }),
+          val = Math.round(500 + R() * R() * 6000);
+        const s = {
+          id: 'cs_' + (100000 + i),
+          merchant: m.id,
+          mname: m.name,
+          customer: '+91 9••••' + String(1000 + Math.floor(R() * 9000)).slice(1),
+          type,
+          value: val,
+          currency: 'INR',
+          method: pm,
+          status: st,
+          device: wpick({ Mobile: 0.72, Desktop: 0.25, Tablet: 0.03 }),
+          day,
+          hr,
+          created: `D-${day} ${hr}:${String(Math.floor(R() * 60)).padStart(2, '0')}`,
+          load: Math.round(900 + R() * R() * 3000),
+        };
+        S.push(s);
+        if (st != 'Created' && st != 'Active' && st != 'Abandoned' && st != 'Expired') {
+          const n = st == 'Completed' ? (R() < 0.15 ? 2 : 1) : 1 + (R() < 0.3);
+          for (let a = 0; a < n; a++) {
+            const ok = st == 'Completed' && a == n - 1,
+              pn = st == 'Payment Pending' && a == n - 1;
+            P.push({
+              id: 'pay_' + (500000 + P.length),
+              checkout: s.id,
+              merchant: m.id,
+              mname: m.name,
+              amount: val,
+              gateway: pick(GW),
+              method: pm,
+              status: ok ? 'Succeeded' : pn ? 'Pending' : 'Failed',
+              code: ok || pn ? '—' : pick(FAIL),
+              attempt: a + 1,
+              day,
+              hr,
+              latency: Math.round(300 + R() * 900),
+            });
+          }
+        }
+        if (st == 'Completed') {
+          const mism = R() < 0.03,
+            cod = pm == 'COD',
+            disc = R() < 0.3 ? Math.round(val * 0.1) : 0;
+          const o = {
+            id: 'ORD-' + (70000 + O.length),
+            shopify: mism ? '— (sync failed)' : '#' + (4000 + O.length),
+            checkout: s.id,
+            merchant: m.id,
+            mname: m.name,
+            customer: s.customer,
+            amount: val,
+            method: pm,
+            payment: mism ? 'Paid · Shopify sync failed' : cod ? 'COD pending' : 'Paid',
+            fulfil: wpick({
+              Unfulfilled: 0.2,
+              Shipped: 0.4,
+              Delivered: 0.35,
+              RTO: cod ? 0.2 : 0.02,
+            }),
+            discount: disc,
+            points: R() < 0.15 ? Math.round(R() * 500) : 0,
+            risk: cod ? Math.round(10 + R() * 80) : null,
+            type,
+            day,
+            hr,
+            created: s.created,
+          };
+          O.push(o);
+          [
+            ['order.created', 1],
+            ['payment.succeeded', 1],
+          ].forEach(([e]) => {
+            const f = R() < (m.id == 'm_6' ? 0.3 : 0.05);
+            W.push({
+              id: 'evt_' + (900000 + W.length),
+              event: e,
+              endpoint: `https://hooks.${m.shop.split('.')[0]}.in/co`,
+              merchant: m.id,
+              mname: m.name,
+              http: f ? pick([500, 502, 0, 429]) : 200,
+              attempts: f ? 1 + Math.floor(R() * 5) : 1,
+              status: f ? 'Failed' : 'Delivered',
+              duration: Math.round(80 + R() * 600) + 'ms',
+              day,
+              hr,
+              payload: { event: e, order: o.id, amount: val, customer: '[redacted]' },
+            });
+          });
+        }
+      }
+      for (let i = 0; i < 300; i++) {
+        const lv = wpick({ Info: 0.7, Warning: 0.2, Error: 0.08, Critical: 0.02 });
+        L.push({
+          id: 'log_' + i,
+          ts: `D-${Math.floor(R() * 3)} ${String(Math.floor(R() * 24)).padStart(2, '0')}:${String(Math.floor(R() * 60)).padStart(2, '0')}`,
+          service: pick(['api', 'checkout', 'payments', 'shopify-sync', 'webhooks']),
+          level: lv,
+          message: pick([
+            'Request completed',
+            'Retry scheduled',
+            'Gateway latency elevated',
+            'Shopify API throttled (429)',
+            'Order sync failed: inventory lock',
+            'Webhook delivery timeout',
+          ]),
+          correlation: 'cor_' + Math.floor(R() * 1e8).toString(36),
+          merchant: pick(MER).name,
+        });
+      }
+      const SV = [
+        'API servers',
+        'Checkout service',
+        'Payment orchestration',
+        'Shopify workers',
+        'Webhook processors',
+        'Redis',
+        'MongoDB',
+        'Background queues',
+      ].map((n, i) => ({
+        service: n,
+        status: i == 3 ? 'Degraded' : 'Healthy',
+        latency: Math.round(20 + R() * 180) + 'ms',
+        errorRate: (i == 3 ? 2.4 : R() * 0.4).toFixed(2) + '%',
+        throughput: Math.round(200 + R() * 2000) + '/s',
+        heartbeat: i == 3 ? '42s ago' : '3s ago',
+      }));
+      const IG = [
+        ['Shopify', 'Ecommerce Platforms', 'Connected'],
+        ['Razorpay', 'Payment Providers', 'Connected'],
+        ['Cashfree', 'Payment Providers', 'Connected'],
+        ['PayU', 'Payment Providers', 'Planned'],
+        ['EasyRewardz', 'Loyalty & Rewards', 'Connected'],
+        ['Unicommerce', 'ERP / OMS', 'Planned'],
+        ['Shiprocket', 'Shipping & Logistics', 'Configurable'],
+        ['Delhivery', 'Shipping & Logistics', 'Planned'],
+        ['Google Analytics', 'Marketing & Analytics', 'Configurable'],
+        ['Meta Pixel', 'Marketing & Analytics', 'Configurable'],
+        ['WhatsApp provider', 'Communication', 'Planned'],
+      ].map(([n, c, s]) => ({
+        name: n,
+        cat: c,
+        status: s,
+        env: 'Sandbox',
+        sync: s == 'Connected' ? '4 min ago' : '—',
+      }));
+      const AUD = [
+        {
+          ts: 'Today 10:42',
+          actor: 'ops@checkout.os',
+          action: 'Webhook endpoint changed',
+          target: 'hooks.bolt-gadgets.in',
+        },
+      ];
+      // ---------- state ----------
+      const st = {
+        page: 'overview',
+        merchant: 'all',
+        env: 'Sandbox',
+        range: 7,
+        theme: 'auto',
+        col: false,
+        role: 'Platform Super Admin',
+        gran: 'daily',
+        ftype: 'all',
+        live: true,
+        open: {},
+      };
+      const NAV = [
+        [
+          'Workspace',
+          [
+            ['overview', 'Overview', '◧'],
+            ['live', 'Live Activity', '◉'],
+            ['analytics', 'Analytics', '▤'],
+          ],
+        ],
+        [
+          'Commerce',
+          [
+            ['checkouts', 'Checkouts', '▣'],
+            ['orders', 'Orders', '▦'],
+            ['payments', 'Payments', '₹'],
+            ['cod', 'COD & RTO', '↺'],
+            ['customers', 'Customers', '☺'],
+            ['discounts', 'Discounts & Loyalty', '%'],
+          ],
+        ],
+        [
+          'Platform',
+          [
+            ['integrations', 'Integrations', '⌘'],
+            ['webhooks', 'Webhooks', '⇄'],
+            ['api', 'API & Developers', '{}'],
+            ['monitoring', 'Monitoring', '♡'],
+            ['logs', 'Logs & Alerts', '≡'],
+          ],
+        ],
+        [
+          'Management',
+          [
+            ['billing', 'Settlements & Billing', '▥'],
+            ['team', 'Team & Access', '⚇'],
+            ['settings', 'Settings', '⚙'],
+          ],
+        ],
+        [
+          'Partner admin',
+          [
+            ['merchants', 'Merchants', '▧'],
+            ['health', 'Platform Health', '✚'],
+            ['global', 'Global Transactions', '◫'],
+            ['infra', 'Infrastructure', '▩'],
+            ['audit', 'Audit Logs', '✎'],
+          ],
+        ],
+      ];
+      const ROLES = [
+        'Platform Super Admin',
+        'Platform Operations',
+        'Merchant Admin',
+        'Merchant Analyst',
+        'Merchant Developer',
+        'Read-only Viewer',
+      ];
+      const isAdmin = () => st.role.startsWith('Platform'),
+        canWrite = () => !['Read-only Viewer', 'Merchant Analyst'].includes(st.role);
+      // ---------- helpers ----------
+      const $ = (s) => document.querySelector(s),
+        esc = (s) =>
+          String(s).replace(
+            /[&<>"]/g,
+            (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c],
+          );
+      const inr = (n) =>
+        n >= 1e7
+          ? '₹' + (n / 1e7).toFixed(2) + 'Cr'
+          : n >= 1e5
+            ? '₹' + (n / 1e5).toFixed(2) + 'L'
+            : '₹' + n.toLocaleString('en-IN');
+      const exact = (n) => '₹' + Math.round(n).toLocaleString('en-IN'),
+        pc = (n) => (n * 100).toFixed(1) + '%';
+      const toast = (m) => {
+        const e = document.createElement('div');
+        e.className = 't';
+        e.textContent = m;
+        $('#ts').append(e);
+        setTimeout(() => e.remove(), 2800);
+      };
+      const audit = (a, t) => {
+        AUD.unshift({ ts: 'Just now', actor: st.role, action: a, target: t });
+      };
+      const inF = (r) => (st.merchant == 'all' || r.merchant == st.merchant) && r.day < st.range,
+        inP = (r) =>
+          (st.merchant == 'all' || r.merchant == st.merchant) &&
+          r.day >= st.range &&
+          r.day < 2 * st.range;
+      const sum = (a, f) => a.reduce((x, r) => x + f(r), 0);
+      const pill = (v) => {
+        const c =
+          /Succeeded|Delivered|Healthy|Connected|Completed|Paid$|Info|Shipped|Resolved/.test(v)
+            ? 'ok'
+            : /Fail|Error|Critical|Degraded|RTO|sync failed/.test(v)
+              ? 'er'
+              : /Warn|Pending|Planned|Abandon|Configurable|Unfulfilled/.test(v)
+                ? 'wa'
+                : '';
+        return `<span class="pill ${c}">${esc(v)}</span>`;
+      };
+      function spark(v, c = 'var(--ac)') {
+        const mx = Math.max(...v),
+          mn = Math.min(...v),
+          w = 80,
+          h = 22;
+        return `<svg width="${w}" height="${h}" aria-hidden="true"><polyline fill="none" stroke="${c}" stroke-width="1.5" points="${v.map((y, i) => `${(i * w) / (v.length - 1)},${h - 2 - (mx == mn ? 0 : ((y - mn) / (mx - mn)) * (h - 4))}`).join(' ')}"/></svg>`;
+      }
+      // ---------- shell ----------
+      function shell() {
+        const bd = {
+          webhooks: W.filter((w) => w.status == 'Failed').length,
+          logs: L.filter((l) => l.level == 'Critical').length,
+          integrations: IG.filter((i) => i.status == 'Configurable').length,
+        };
+        $('#sb').className = (st.col ? 'c ' : '') + (st.mob ? 'm' : '');
+        $('#sb').innerHTML =
+          `<div class="logo"><i></i><span class="lb">Checkout OS</span></div>` +
+          NAV.filter(([g]) => g != 'Partner admin' || isAdmin())
+            .map(
+              ([g, items]) =>
+                `<h6 data-g="${g}">${g} ${st.open[g] ? '▸' : '▾'}</h6>` +
+                (st.open[g]
+                  ? ''
+                  : items
+                      .map(
+                        ([k, l, i]) =>
+                          `<button class="nv ${st.page == k ? 'on' : ''}" data-p="${k}" title="${l}"><span class="ic">${i}</span><span class="lb">${l}</span>${bd[k] ? `<span class="bdg">${bd[k]}</span>` : ''}</button>`,
+                      )
+                      .join('')),
+            )
+            .join('');
+        $('#tp').innerHTML =
+          `<button class="btn mn" id="mb" aria-label="Menu">☰</button><button class="btn" id="cl" aria-label="Collapse sidebar">⇔</button>
+ <select id="mc" aria-label="Merchant" ${isAdmin() ? '' : 'disabled'}><option value="all">All merchants</option>${MER.map((m) => `<option value="${m.id}" ${st.merchant == m.id ? 'selected' : ''}>${m.name}</option>`).join('')}</select>
+ <select id="en" aria-label="Environment"><option>Sandbox</option><option ${st.env == 'Production' ? 'selected' : ''}>Production</option></select><span class="pill env ${st.env == 'Production' ? 'pr' : ''}">${st.env}</span>
+ <select id="rg" aria-label="Date range">${[
+   [1, 'Today'],
+   [2, 'Yesterday+Today'],
+   [7, 'Last 7 days'],
+   [30, 'Last 30 days'],
+ ]
+   .map(([d, l]) => `<option value="${d}" ${st.range == d ? 'selected' : ''}>${l}</option>`)
+   .join('')}</select>
+ <input id="gs" placeholder="Search order, session, payment, event, correlation ID" style="min-width:220px;flex:1" aria-label="Global search">
+ <span class="sp"></span><span class="pill" title="Demo: Shopify workers degraded"><span class="wa">●</span> 1 incident</span>
+ <select id="ro" aria-label="Role (demo)">${ROLES.map((r) => `<option ${st.role == r ? 'selected' : ''}>${r}</option>`).join('')}</select><button class="btn" id="th" aria-label="Toggle theme">◐</button>`;
+      }
+      document.addEventListener('click', (e) => {
+        const t = e.target.closest(
+          '[data-p],[data-g],#cl,#mb,#th,[data-act],.btn,[data-row],[data-close]',
+        );
+        if (!t) return;
+        if (t.dataset.p) {
+          st.page = t.dataset.p;
+          st.mob = false;
+          render();
+        } else if (t.dataset.g) {
+          st.open[t.dataset.g] = !st.open[t.dataset.g];
+          shell();
+        } else if (t.id == 'cl') {
+          st.col = !st.col;
+          shell();
+        } else if (t.id == 'mb') {
+          st.mob = !st.mob;
+          shell();
+        } else if (t.id == 'th') {
+          const d = document.documentElement,
+            dark = getComputedStyle(d).colorScheme == 'dark';
+          d.dataset.theme = dark ? 'light' : 'dark';
+        } else if (t.dataset.close != null) $('#dr').classList.remove('o');
+        else if (t.dataset.act) act(t.dataset.act, t.dataset.id);
+        else if (t.dataset.row != null) openRow(+t.dataset.row);
+      });
+      document.addEventListener('change', (e) => {
+        const i = e.target.id;
+        if (i == 'mc') st.merchant = e.target.value;
+        else if (i == 'en') {
+          st.env = e.target.value;
+          toast(
+            'Switched to ' +
+              st.env +
+              (st.env == 'Production' ? ' — live data not connected; showing demo data' : ''),
+          );
+        } else if (i == 'rg') st.range = +e.target.value;
+        else if (i == 'ro') ((st.role = e.target.value), isAdmin() || (st.merchant = 'm_1'));
+        else if (i == 'gran') st.gran = e.target.value;
+        else if (i == 'ft') st.ftype = e.target.value;
+        else return;
+        render();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key == 'Escape') $('#dr').classList.remove('o');
+        if (e.target.id == 'gs' && e.key == 'Enter') {
+          const q = e.target.value.trim().toLowerCase();
+          if (!q) return;
+          const h = [
+            ...S.map((r) => ['checkouts', r.id, r]),
+            ...O.map((r) => ['orders', r.id, r]),
+            ...P.map((r) => ['payments', r.id, r]),
+            ...W.map((r) => ['webhooks', r.id, r]),
+            ...L.map((r) => ['logs', r.correlation, r]),
+          ].find((x) => x[1].toLowerCase() == q || x[1].toLowerCase().includes(q));
+          if (h) {
+            st.page = h[0];
+            st.q = h[1];
+            render();
+            toast('Found ' + h[1]);
+          } else toast('No match for “' + q + '”');
+        }
+      });
+      function act(a, id) {
+        if (!canWrite()) {
+          toast('Your role cannot do this action');
+          return;
+        }
+        if (a == 'replay') {
+          const w = W.find((x) => x.id == id);
+          w.status = 'Delivered';
+          w.http = 200;
+          w.attempts++;
+          audit('Webhook replayed (simulated, idempotent)', id);
+          toast('Replay simulated for ' + id);
+        } else if (a == 'test') {
+          toast('Connection test simulated: OK');
+          audit('Integration test', id);
+        } else if (a == 'disc' && confirm('Disconnect ' + id + '? This stops syncing.')) {
+          IG.find((i) => i.name == id).status = 'Planned';
+          audit('Integration disconnected', id);
+          toast(id + ' disconnected');
+        } else if (a == 'conn') {
+          IG.find((i) => i.name == id).status = 'Configurable';
+          audit('Integration configuration started', id);
+          toast(id + ' marked configurable — no live API connection yet');
+        } else if (a == 'copy') {
+          navigator.clipboard?.writeText(id);
+          toast('Copied ' + id);
+          return;
+        } else if (a == 'refund') {
+          audit('Refund requested (needs backend authorization)', id);
+          toast('Refund request logged; backend approval required');
+        }
+        render();
+      }
+      // ---------- charts ----------
+      function bars(data, prev, fmt) {
+        const w = 620,
+          h = 180,
+          mx = Math.max(...data, ...prev, 1),
+          bw = w / data.length;
+        return `<svg viewBox="0 0 ${w} ${h + 16}" width="100%" role="img" aria-label="Revenue chart">${data.map((v, i) => `<rect x="${i * bw + 1}" y="${h - (v / mx) * h}" width="${Math.max(bw - 2, 1)}" height="${(v / mx) * h}" fill="var(--ac)" opacity=".85"><title>${fmt(v)} (prev ${fmt(prev[i] || 0)})</title></rect>`).join('')}<polyline fill="none" stroke="var(--wa)" stroke-width="1.5" stroke-dasharray="4 3" points="${prev.map((v, i) => `${i * bw + bw / 2},${h - (v / mx) * h}`).join(' ')}"/></svg>`;
+      }
+      function donut(parts) {
+        const t = sum(parts, (p) => p[1]) || 1;
+        let a = 0;
+        const cs = ['#4F46E5', '#16A34A', '#F59E0B', '#0EA5E9', '#DC2626', '#8B5CF6'];
+        return `<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><svg viewBox="-1 -1 2 2" width="120" height="120" style="transform:rotate(-90deg)">${parts
+          .map((p, i) => {
+            const f = p[1] / t,
+              x1 = Math.cos(2 * Math.PI * a),
+              y1 = Math.sin(2 * Math.PI * a);
+            a += f;
+            const x2 = Math.cos(2 * Math.PI * a),
+              y2 = Math.sin(2 * Math.PI * a);
+            return `<path d="M${x1} ${y1}A1 1 0 ${f > 0.5 ? 1 : 0} 1 ${x2} ${y2}L${x2 * 0.6} ${y2 * 0.6}A.6 .6 0 ${f > 0.5 ? 1 : 0} 0 ${x1 * 0.6} ${y1 * 0.6}Z" fill="${cs[i % 6]}"><title>${p[0]} ${pc(f)}</title></path>`;
+          })
+          .join(
+            '',
+          )}</svg><div>${parts.map((p, i) => `<div><span style="color:${cs[i % 6]}">■</span> ${p[0]} <b>${pc(p[1] / t)}</b></div>`).join('')}</div></div>`;
+      }
+      // ---------- table engine ----------
+      const T = {};
+      function table(id, cols, rows, opt = {}) {
+        T[id] = T[id] || { q: st.q || '', sort: null, dir: 1, pg: 0 };
+        const s = T[id];
+        st.q = null;
+        let r = rows.filter(
+          (x) => !s.q || JSON.stringify(x).toLowerCase().includes(s.q.toLowerCase()),
+        );
+        if (s.sort) r = [...r].sort((a, b) => (a[s.sort] > b[s.sort] ? 1 : -1) * s.dir);
+        const n = r.length,
+          pg = r.slice(s.pg * 10, s.pg * 10 + 10);
+        T[id].rows = pg;
+        T[id].cur = id;
+        window.__cur = id;
+        return `<div class="cd"><div class="tb"><input placeholder="Filter ${n} rows" value="${esc(s.q)}" data-t="${id}" aria-label="Filter table"><button class="btn s" onclick="csv('${id}')">Export CSV</button>${opt.extra || ''}<span class="sp"></span><span class="mu">${n} rows</span></div>
+ <div class="tw"><table><thead><tr>${cols.map((c) => `<th data-s="${id}|${c[0]}">${c[1]}${s.sort == c[0] ? (s.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead><tbody>${pg.length ? pg.map((x, i) => `<tr data-row="${i}" data-tb="${id}" tabindex="0">${cols.map((c) => `<td>${c[2] ? c[2](x) : /status|level|payment|fulfil/.test(c[0]) ? pill(x[c[0]]) : esc(x[c[0]] ?? '')}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${cols.length}" class="mu">No records match these filters. Widen the date range or clear the filter.</td></tr>`}</tbody></table></div>
+ <div class="tb" style="margin:8px 0 0"><button class="btn s" onclick="pgn('${id}',-1)">Prev</button><button class="btn s" onclick="pgn('${id}',1)">Next</button><span class="mu">Page ${s.pg + 1} of ${Math.max(1, Math.ceil(n / 10))}</span></div></div>`;
+      }
+      document.addEventListener('input', (e) => {
+        const id = e.target.dataset.t;
+        if (id) {
+          T[id].q = e.target.value;
+          T[id].pg = 0;
+          const p = e.target.selectionStart;
+          render();
+          const i = document.querySelector(`[data-t="${id}"]`);
+          i.focus();
+          i.setSelectionRange(p, p);
+        }
+      });
+      document.addEventListener('click', (e) => {
+        const h = e.target.closest('[data-s]');
+        if (h) {
+          const [id, k] = h.dataset.s.split('|'),
+            s = T[id];
+          s.dir = s.sort == k ? -s.dir : 1;
+          s.sort = k;
+          render();
+        }
+      });
+      window.pgn = (id, d) => {
+        T[id].pg = Math.max(0, T[id].pg + d);
+        render();
+      };
+      window.csv = (id) => {
+        const r = T[id].rows;
+        if (!r.length) return toast('Nothing to export');
+        const k = Object.keys(r[0]).filter((x) => typeof r[0][x] != 'object'),
+          b = new Blob(
+            [
+              k.join(',') +
+                '\n' +
+                r.map((x) => k.map((c) => JSON.stringify(x[c] ?? '')).join(',')).join('\n'),
+            ],
+            { type: 'text/csv' },
+          ),
+          a = document.createElement('a');
+        a.href = URL.createObjectURL(b);
+        a.download = id + '.csv';
+        a.click();
+        toast('Exported ' + r.length + ' rows (this page)');
+      };
+      function json(o) {
+        return esc(JSON.stringify(o, null, 2))
+          .replace(/"([^"]+)":/g, '<span class="k">"$1"</span>:')
+          .replace(
+            /: (&quot;|")?([^,\n]*)/g,
+            (m, q, v) =>
+              ': ' +
+              (/^\d/.test(v) ? `<span class="nm">${v}</span>` : `<span class="sv">${v}</span>`),
+          );
+      }
+      function openRow(i) {
+        const rec = T[window.__cur]?.rows?.[i];
+        if (!rec) return;
+        const id = rec.id || rec.service || rec.name || 'record';
+        const extra = rec.event
+          ? `<p class="mu">Simulated delivery. Signing secrets are never shown. Verify with HMAC-SHA256 over the raw body.</p>${rec.status == 'Failed' ? `<button class="btn p" data-act="replay" data-id="${id}">Replay (simulated)</button> ` : ''}`
+          : rec.amount && rec.gateway
+            ? `<button class="btn" data-act="refund" data-id="${id}">Request refund</button> `
+            : '';
+        $('#dr').innerHTML =
+          `<button class="btn s" data-close>Close</button><h2 style="margin:8px 0">${esc(id)}</h2>${extra}<button class="btn s" data-act="copy" data-id="${id}">Copy ID</button>${rec.payment?.includes('sync failed') ? `<div class="cd er" style="margin:8px 0">Reconciliation issue: payment succeeded but Shopify order creation failed. Retry sync from Integrations.</div>` : ''}<pre>${json(rec.payload ? { ...rec, payload: rec.payload } : rec)}</pre>`;
+        $('#dr').classList.add('o');
+      }
+      // ---------- pages ----------
+      function kpi(l, v, d, tip, sp, good = true) {
+        const up = d >= 0,
+          c = up == good ? 'ok' : 'er';
+        return `<div class="cd" title="${esc(tip)}"><div class="kl">${l}</div><div class="kv">${v}</div><div style="display:flex;justify-content:space-between;align-items:center"><span class="${c}">${up ? '▲' : '▼'} ${Math.abs(d * 100).toFixed(1)}%</span>${sp ? spark(sp) : ''}</div></div>`;
+      }
+      function stats(f) {
+        const c = f.filter((s) => s.status == 'Completed'),
+          pay = P.filter((p) => f.some((s) => s.id == p.checkout)),
+          ok = pay.filter((p) => p.status == 'Succeeded');
+        return {
+          gmv: sum(c, (s) => s.value),
+          n: c.length,
+          sess: f.length,
+          conv: c.length / (f.length || 1),
+          aov: sum(c, (s) => s.value) / (c.length || 1),
+          psr: ok.length / (pay.length || 1),
+          ab: f.filter((s) => s.status == 'Abandoned').length / (f.length || 1),
+          p95: [...f].map((s) => s.load).sort((a, b) => a - b)[Math.floor(f.length * 0.95)] || 0,
+          act: f.filter((s) => s.status == 'Active').length,
+          att: pay.length,
+        };
+      }
+      function dayseries(f, k) {
+        const out = Array(st.range).fill(0);
+        f.forEach((s) => {
+          if (s.status == 'Completed' || k == 'n')
+            out[st.range - 1 - s.day] += k == 'n' ? (s.status == 'Completed' ? 1 : 0) : s.value;
+        });
+        return out;
+      }
+      function overview() {
+        const f = S.filter(inF),
+          p = S.filter(inP),
+          a = stats(f),
+          b = stats(p),
+          d = (x, y) => (y ? (x - y) / y : 0),
+          ds = dayseries(f, 'v'),
+          dn = dayseries(f, 'n');
+        const buckets =
+            st.gran == 'hourly'
+              ? 24
+              : st.gran == 'weekly'
+                ? Math.max(1, Math.ceil(st.range / 7))
+                : st.range,
+          bk = (arr, pf) => {
+            const o = Array(buckets).fill(0);
+            arr
+              .filter((s) => s.status == 'Completed')
+              .forEach((s) => {
+                const i =
+                  st.gran == 'hourly'
+                    ? s.hr
+                    : st.gran == 'weekly'
+                      ? Math.floor((pf ? s.day - st.range : s.day) / 7)
+                      : pf
+                        ? s.day - st.range
+                        : s.day;
+                o[Math.min(buckets - 1, i)] += s.value;
+              });
+            return o.reverse();
+          };
+        const ft = st.ftype,
+          ff = f.filter((s) => ft == 'all' || s.type == ft),
+          fo = ff.length,
+          stg = [
+            ['Checkout opened', fo],
+            ['Contact details completed', ff.filter((s) => s.status != 'Created').length],
+            [
+              'Shipping completed',
+              ff.filter((s) => !['Created', 'Expired'].includes(s.status)).length,
+            ],
+            [
+              'Payment initiated',
+              ff.filter((s) =>
+                ['Payment Failed', 'Payment Pending', 'Completed'].includes(s.status),
+              ).length,
+            ],
+            ['Payment successful', ff.filter((s) => s.status == 'Completed').length],
+            [
+              'Order created',
+              ff.filter((s) => s.status == 'Completed').length -
+                ff.filter(
+                  (s) =>
+                    s.status == 'Completed' &&
+                    O.find((o) => o.checkout == s.id)?.payment.includes('sync failed'),
+                ).length,
+            ],
+          ];
+        const meth = {};
+        f.filter((s) => s.status == 'Completed').forEach(
+          (s) => (meth[s.method] = (meth[s.method] || 0) + 1),
+        );
+        const fr = {};
+        P.filter((x) => x.status == 'Failed' && f.some((s) => s.id == x.checkout)).forEach(
+          (x) => (fr[x.code] = (fr[x.code] || 0) + 1),
+        );
+        const fw = W.filter((w) => w.status == 'Failed' && inF(w)).length;
+        return `<h1>Overview</h1><div class="sub">Demo data · ${st.env} · ${st.merchant == 'all' ? 'all merchants' : MER.find((m) => m.id == st.merchant).name} · vs previous ${st.range} day(s)</div>
+ <div class="g g4">${kpi('GMV', inr(a.gmv), d(a.gmv, b.gmv), exact(a.gmv), ds)}${kpi('Total orders', a.n.toLocaleString('en-IN'), d(a.n, b.n), 'Completed checkouts that created orders', dn)}${kpi('Checkout conversion', pc(a.conv), d(a.conv, b.conv), a.n + ' completed / ' + a.sess + ' sessions')}${kpi('AOV', exact(a.aov), d(a.aov, b.aov), 'GMV ÷ orders')}
+ ${kpi('Payment success', pc(a.psr), d(a.psr, b.psr), 'Successful attempts / ' + a.att + ' payment attempts (not unique checkouts)')}${kpi('Abandonment', pc(a.ab), d(a.ab, b.ab), 'Abandoned sessions / all sessions', null, false)}${kpi('Load time p95', (a.p95 / 1000).toFixed(2) + 's', d(a.p95, b.p95), 'Target: usable UI in 1–2s', null, false)}${kpi('Active sessions', a.act, 0, 'Sessions currently active')}</div>
+ <div class="g g2"><div class="cd"><h3>Revenue <span class="sp"></span><select id="gran" aria-label="Granularity">${['hourly', 'daily', 'weekly'].map((x) => `<option ${st.gran == x ? 'selected' : ''}>${x}</option>`).join('')}</select></h3>${bars(bk(f), bk(p, 1), inr)}<div class="mu">Bars: this period · dashed: previous period. Hover for values.</div></div>
+ <div class="cd"><h3>Payment methods (completed)</h3>${donut(Object.entries(meth))}</div></div>
+ <div class="g g2"><div class="cd"><h3>Checkout funnel <span class="sp"></span><select id="ft" aria-label="Checkout type"><option value="all">All</option><option ${ft == 'Buy Now' ? 'selected' : ''}>Buy Now</option><option ${ft == 'Cart' ? 'selected' : ''}>Cart</option></select></h3>${stg.map((x, i) => `<div style="margin:4px 0"><div style="display:flex;justify-content:space-between"><span>${x[0]}</span><span>${x[1]} · ${pc(x[1] / (fo || 1))}${i ? ` <span class="er">−${pc(1 - x[1] / (stg[i - 1][1] || 1))}</span>` : ''}</span></div><div style="height:6px;background:var(--hv);border-radius:3px"><div style="height:6px;width:${(x[1] / (fo || 1)) * 100}%;background:var(--ac);border-radius:3px"></div></div></div>`).join('')}</div>
+ <div class="cd"><h3>Checkout performance</h3><div class="kl">p50 / p95 / p99 load</div><div class="kv">${((a.p95 * 0.45) / 1000).toFixed(2)}s / ${(a.p95 / 1000).toFixed(2)}s / ${((a.p95 * 1.5) / 1000).toFixed(2)}s</div>${spark(
+   ds.map((v, i) => 1200 + ((i * 37) % 9) * 60),
+   'var(--wa)',
+ )}<div class="mu">Error rate ${((P.filter((x) => x.code == 'GATEWAY_ERROR').length / P.length) * 100).toFixed(2)}%</div></div></div>
+ <div class="g e2"><div class="cd"><h3>Payment failure reasons</h3>${
+   Object.entries(fr)
+     .sort((x, y) => y[1] - x[1])
+     .map(([k, v]) => `<div>${k} <b>${v}</b></div>`)
+     .join('') || '<span class=mu>No failures in range</span>'
+ }<button class="btn s" data-p="payments">Open payments</button></div>
+ <div class="cd"><h3>Alerts &amp; health</h3><div class="er">● ${fw} failed webhooks <button class="btn s" data-p="webhooks">Review</button></div><div class="wa">● Shopify workers degraded (429 throttling)</div><div>Integrations: ${IG.filter((i) => i.status == 'Connected').length} connected · ${IG.filter((i) => i.status == 'Planned').length} planned <button class="btn s" data-p="integrations">Manage</button></div><div class="mu" style="margin-top:6px">Top stores: ${MER.map(
+   (m) => [
+     m.name,
+     sum(
+       f.filter((s) => s.merchant == m.id && s.status == 'Completed'),
+       (s) => s.value,
+     ),
+   ],
+ )
+   .sort((x, y) => y[1] - x[1])
+   .slice(0, 3)
+   .map((x) => x[0] + ' ' + inr(x[1]))
+   .join(' · ')}</div></div></div>
+ <h3>Recent orders</h3>${table('ov-orders', ORD, O.filter(inF).slice(-30).reverse())}`;
+      }
+      const ORD = [
+        ['id', 'Order ID'],
+        ['shopify', 'Shopify ID'],
+        ['mname', 'Merchant'],
+        ['customer', 'Customer'],
+        ['amount', 'Amount', (o) => exact(o.amount)],
+        ['method', 'Method'],
+        ['payment', 'Payment'],
+        ['fulfil', 'Fulfilment'],
+        ['created', 'Created'],
+      ];
+      function live() {
+        const evs = [
+          'Checkout session created',
+          'Shipping address updated',
+          'Discount applied',
+          'Loyalty points redeemed',
+          'Payment initiated',
+          'Payment authorized',
+          'Order successfully created',
+          'Webhook delivery failed',
+        ];
+        if (!st.feed) st.feed = [];
+        const f = S.filter(inF);
+        return `<h1>Live Activity</h1><div class="sub">Simulated event stream (swap for WebSocket/SSE) · last updated <b id="lu">${new Date().toLocaleTimeString()}</b> <label><input type="checkbox" id="al" ${st.live ? 'checked' : ''} onchange="st.live=this.checked"> Auto-refresh</label></div>
+ <div class="g g4"><div class="cd"><div class="kl">Active sessions</div><div class="kv">${f.filter((s) => s.status == 'Active').length}</div></div><div class="cd"><div class="kl">Payment attempts / min</div><div class="kv" id="pm">${st.pm || 42}</div></div><div class="cd"><div class="kl">Orders / min</div><div class="kv" id="om">${st.om || 9}</div></div><div class="cd"><div class="kl">Failed payments (5m)</div><div class="kv er" id="fp">${st.fp || 3}</div></div></div>
+ <div class="cd"><h3>Event feed <select id="evf" onchange="st.evf=this.value;lf()"><option value="">All events</option>${evs.map((e) => `<option ${st.evf == e ? 'selected' : ''}>${e}</option>`).join('')}</select></h3><div class="feed" id="fd"></div></div>`;
+      }
+      window.lf = () => {
+        const fd = $('#fd');
+        if (fd)
+          fd.innerHTML = st.feed
+            .filter((e) => !st.evf || e.t == st.evf)
+            .map(
+              (e) =>
+                `<div><span class="mu">${e.ts}</span> ${e.t.includes('fail') ? '<span class="er">' + e.t + '</span>' : e.t} <span class="mu">${e.m} · ${e.id}</span></div>`,
+            )
+            .join('');
+      };
+      setInterval(() => {
+        if (st.page != 'live' || !st.live) return;
+        const evs = [
+          'Checkout session created',
+          'Shipping address updated',
+          'Discount applied',
+          'Loyalty points redeemed',
+          'Payment initiated',
+          'Payment authorized',
+          'Order successfully created',
+          'Webhook delivery failed',
+        ];
+        st.feed.unshift({
+          ts: new Date().toLocaleTimeString(),
+          t: evs[Math.floor(Math.random() * 8)],
+          m: MER[Math.floor(Math.random() * 8)].name,
+          id: 'cs_' + (100000 + Math.floor(Math.random() * 1800)),
+        });
+        st.feed = st.feed.slice(0, 80);
+        st.pm = 38 + Math.floor(Math.random() * 10);
+        st.om = 7 + Math.floor(Math.random() * 5);
+        st.fp = Math.floor(Math.random() * 6);
+        $('#pm').textContent = st.pm;
+        $('#om').textContent = st.om;
+        $('#fp').textContent = st.fp;
+        $('#lu').textContent = new Date().toLocaleTimeString();
+        lf();
+      }, 1500);
+      function pageOf(k) {
+        const f = S.filter(inF),
+          mm = (r) => st.merchant == 'all' || r.merchant == st.merchant;
+        const M = {
+          checkouts: [
+            'Checkout sessions',
+            [
+              ['id', 'Session'],
+              ['mname', 'Merchant'],
+              ['customer', 'Customer (masked)'],
+              ['type', 'Type'],
+              ['value', 'Cart', (r) => exact(r.value)],
+              ['method', 'Method'],
+              ['status', 'Status'],
+              ['device', 'Device'],
+              ['created', 'Created'],
+            ],
+            f,
+          ],
+          orders: ['Orders', ORD, O.filter(inF)],
+          payments: [
+            'Payment operations',
+            [
+              ['id', 'Payment'],
+              ['checkout', 'Checkout'],
+              ['amount', 'Amount', (r) => exact(r.amount)],
+              ['gateway', 'Gateway'],
+              ['method', 'Method'],
+              ['status', 'Status'],
+              ['code', 'Failure code'],
+              ['attempt', 'Attempt'],
+            ],
+            P.filter(inF),
+          ],
+          cod: [
+            'COD & RTO intelligence (demo risk scores, explainable inputs only)',
+            [
+              ...ORD.slice(0, 5),
+              [
+                'risk',
+                'Demo risk score',
+                (r) => r.risk + ' · based on order value, pincode history',
+              ],
+              ['fulfil', 'Fulfilment'],
+            ],
+            O.filter((o) => inF(o) && o.method == 'COD'),
+          ],
+          customers: [
+            'Customers (masked)',
+            [
+              ['customer', 'Customer'],
+              ['orders', 'Orders'],
+              ['spend', 'Spend', (r) => exact(r.spend)],
+            ],
+            Object.values(
+              O.filter(inF).reduce((m, o) => {
+                (m[o.customer] = m[o.customer] || { customer: o.customer, orders: 0, spend: 0 })
+                  .orders++;
+                m[o.customer].spend += o.amount;
+                return m;
+              }, {}),
+            ),
+          ],
+          discounts: [
+            'Discounts & loyalty redemptions',
+            [
+              ['id', 'Order'],
+              ['customer', 'Customer ref'],
+              ['discount', 'Discount', (r) => exact(r.discount)],
+              ['points', 'Points'],
+              ['payment', 'Order payment'],
+              ['created', 'Timestamp'],
+            ],
+            O.filter((o) => inF(o) && (o.discount || o.points)),
+          ],
+          webhooks: [
+            'Webhook delivery logs',
+            [
+              ['id', 'Event ID'],
+              ['event', 'Event'],
+              ['endpoint', 'Endpoint'],
+              ['http', 'HTTP'],
+              ['attempts', 'Attempts'],
+              ['status', 'Status'],
+              ['duration', 'Duration'],
+            ],
+            W.filter(inF),
+          ],
+          api: [
+            'API request explorer',
+            [
+              ['id', 'Request ID'],
+              ['method', 'Method'],
+              ['endpoint', 'Endpoint'],
+              ['http', 'Status'],
+              ['duration', 'Duration'],
+            ],
+            P.slice(0, 120)
+              .map((p, i) => ({
+                id: 'req_' + (7000 + i),
+                method: i % 3 ? 'POST' : 'GET',
+                endpoint: i % 3 ? '/v1/checkouts' : '/v1/orders',
+                http: p.status == 'Failed' ? 422 : 200,
+                duration: p.latency + 'ms',
+                merchant: p.merchant,
+                day: p.day,
+              }))
+              .filter(inF),
+          ],
+          logs: [
+            'Logs & alerts',
+            [
+              ['ts', 'Timestamp'],
+              ['service', 'Service'],
+              ['level', 'Level'],
+              ['message', 'Message'],
+              ['correlation', 'Correlation ID'],
+              ['merchant', 'Merchant'],
+            ],
+            L,
+          ],
+          integrations: null,
+          monitoring: [
+            'Monitoring',
+            [
+              ['service', 'Service'],
+              ['status', 'Status'],
+              ['latency', 'Latency'],
+              ['errorRate', 'Error rate'],
+              ['throughput', 'Throughput'],
+              ['heartbeat', 'Heartbeat'],
+            ],
+            SV,
+          ],
+          billing: [
+            'Settlements & billing (platform fees only; settlement is held by the payment provider)',
+            [
+              ['name', 'Merchant'],
+              ['gmv', 'Processed GMV'],
+              ['fee', 'Platform fee (1.2%)'],
+              ['n', 'Billable txns'],
+            ],
+            MER.map((m) => {
+              const c = O.filter((o) => o.merchant == m.id && inF(o));
+              const g = sum(c, (o) => o.amount);
+              return { name: m.name, gmv: exact(g), fee: exact(g * 0.012), n: c.length };
+            }),
+          ],
+          analytics: [
+            'Merchant analytics',
+            [
+              ['name', 'Merchant'],
+              ['sess', 'Sessions'],
+              ['conv', 'Conversion'],
+              ['gmv', 'GMV'],
+              ['health', 'Health'],
+            ],
+            MER.map((m) => {
+              const s = S.filter((x) => x.merchant == m.id && inF(x)),
+                c = s.filter((x) => x.status == 'Completed');
+              return {
+                name: m.name,
+                sess: s.length,
+                conv: pc(c.length / (s.length || 1)),
+                gmv: exact(sum(c, (x) => x.value)),
+                health: m.health,
+              };
+            }),
+          ],
+          team: [
+            'Team & access',
+            [
+              ['name', 'Name'],
+              ['role', 'Role'],
+              ['scope', 'Scope'],
+            ],
+            ROLES.map((r, i) => ({
+              name: 'User ' + (i + 1),
+              role: r,
+              scope: r.startsWith('Platform') ? 'All merchants' : 'Single merchant',
+            })),
+          ],
+          settings: [
+            'Checkout settings (changes need backend approval)',
+            [
+              ['setting', 'Setting'],
+              ['value', 'Value'],
+              ['status', 'Status'],
+            ],
+            [
+              { setting: 'Buy Now checkout', value: 'Enabled', status: 'Healthy' },
+              { setting: 'Cart checkout', value: 'Enabled', status: 'Healthy' },
+              {
+                setting: 'Shopify-hosted fallback',
+                value: 'Active for ineligible merchants',
+                status: 'Healthy',
+              },
+              { setting: 'COD eligibility rules', value: 'Value < ₹5,000', status: 'Healthy' },
+            ],
+          ],
+          merchants: [
+            'Merchants',
+            [
+              ['name', 'Merchant'],
+              ['shop', 'Shopify store'],
+              ['plan', 'Plan'],
+              ['tier', 'Checkout tier'],
+              ['health', 'Health'],
+              ['orders', 'Orders'],
+              ['gmv', 'GMV'],
+            ],
+            MER.map((m) => {
+              const c = O.filter((o) => o.merchant == m.id && inF(o));
+              return { ...m, orders: c.length, gmv: exact(sum(c, (o) => o.amount)) };
+            }),
+          ],
+          health: [
+            'Platform health',
+            [
+              ['service', 'Service'],
+              ['status', 'Status'],
+              ['latency', 'Latency'],
+              ['errorRate', 'Error rate'],
+            ],
+            SV,
+          ],
+          global: [
+            'Global transactions',
+            [
+              ['id', 'Payment'],
+              ['mname', 'Merchant'],
+              ['amount', 'Amount', (r) => exact(r.amount)],
+              ['gateway', 'Gateway'],
+              ['status', 'Status'],
+            ],
+            P.filter((p) => p.day < st.range),
+          ],
+          infra: [
+            'Infrastructure (capacity target ~5,000 orders/min peak; not achieved performance)',
+            [
+              ['service', 'Service'],
+              ['status', 'Status'],
+              ['throughput', 'Throughput'],
+              ['heartbeat', 'Heartbeat'],
+            ],
+            SV,
+          ],
+          audit: [
+            'Audit logs',
+            [
+              ['ts', 'When'],
+              ['actor', 'Actor'],
+              ['action', 'Action'],
+              ['target', 'Target'],
+            ],
+            AUD,
+          ],
+        };
+        return M[k];
+      }
+      function integrations() {
+        return `<h1>Integrations</h1><div class="sub">Status reflects configuration only: planned means no live API connection exists yet.</div><div class="ig">${IG.map((i) => `<div class="cd"><b>${i.name}</b> ${pill(i.status)}<div class="mu">${i.cat} · ${i.env}</div><div class="mu">Last sync: ${i.sync}</div>${i.name == 'Shopify' ? '<div class="mu">Checkout tier: Full where approved; otherwise Shopify-hosted fallback. Scopes: read_orders, write_checkouts (demo).</div>' : ''}<div style="margin-top:6px;display:flex;gap:6px"><button class="btn s" data-act="${i.status == 'Connected' ? 'test' : 'conn'}" data-id="${i.name}">${i.status == 'Connected' ? 'Test connection' : 'Configure'}</button>${i.status == 'Connected' ? `<button class="btn s" data-act="disc" data-id="${i.name}">Disconnect</button>` : ''}</div></div>`).join('')}</div>`;
+      }
+      function ring(v, c) {
+        const r = 42,
+          L = 2 * Math.PI * r;
+        return `<svg viewBox="0 0 100 100" width="130" height="130"><circle cx="50" cy="50" r="${r}" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="9"/><circle cx="50" cy="50" r="${r}" fill="none" stroke="${c}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${(L * v) / 100} ${L}" transform="rotate(-90 50 50)"/><text x="50" y="56" text-anchor="middle" fill="#fff" font-size="24" font-weight="800">${Math.round(v)}</text></svg>`;
+      }
+      function uq() {
+        const f = S.filter(inF),
+          o = O.filter(inF),
+          w = W.filter(inF),
+          fc = (id) => {
+            const p = P.filter((x) => x.checkout == id);
+            return p.length ? p[p.length - 1].code : 'GATEWAY_ERROR';
+          };
+        const pf = f.filter((s) => s.status == 'Payment Failed'),
+          codes = {};
+        pf.forEach((s) => {
+          const c = fc(s.id);
+          codes[c] = (codes[c] || 0) + s.value;
+        });
+        const payL = sum(pf, (s) => s.value),
+          slowL = sum(
+            f.filter((s) => s.status == 'Abandoned' && s.load >= 2500),
+            (s) => s.value,
+          ),
+          syncL = sum(
+            o.filter((x) => x.payment.includes('sync failed')),
+            (x) => x.amount,
+          ),
+          rto = sum(
+            o.filter((x) => x.method == 'COD' && x.fulfil == 'RTO'),
+            (x) => x.amount,
+          ),
+          codRisk = sum(
+            o.filter((x) => x.method == 'COD' && x.risk > 60 && x.fulfil == 'Unfulfilled'),
+            (x) => x.amount,
+          );
+        const resc = f.filter(
+            (s) => s.status == 'Completed' && P.filter((p) => p.checkout == s.id).length > 1,
+          ),
+          fast = f.filter((s) => s.load < 1800),
+          slow = f.filter((s) => s.load >= 2500),
+          cv = (a) => a.filter((s) => s.status == 'Completed').length / (a.length || 1);
+        const integ =
+            1 - o.filter((x) => x.payment.includes('sync failed')).length / (o.length || 1),
+          first =
+            w.filter((x) => x.attempts == 1 && x.status == 'Delivered').length / (w.length || 1),
+          a = stats(f);
+        const rec = payL * 0.35 + syncL + slowL * 0.2,
+          leak = payL + slowL + syncL + rto,
+          score =
+            100 *
+            (0.3 * a.psr +
+              0.25 * integ +
+              0.2 * first +
+              0.15 * (1 - slowL / (leak || 1)) +
+              0.1 * (1 - rto / (sum(o, (x) => x.amount) || 1)));
+        return {
+          codes,
+          payL,
+          slowL,
+          syncL,
+          rto,
+          codRisk,
+          resc,
+          leak,
+          rec,
+          integ,
+          first,
+          score,
+          fc: cv(fast),
+          sc: cv(slow),
+          nf: fast.length,
+          ns: slow.length,
+        };
+      }
+      function overviewNew() {
+        const s = overview(),
+          u = uq(),
+          i = s.indexOf('<div class="g g4">'),
+          mx = Math.max(u.payL, u.slowL, u.syncL, u.rto, 1);
+        const row = (l, v, c) =>
+          `<div class="lk"><span>${l}</span><span><i style="width:${(v / mx) * 100}%;background:${c}"></i></span><b style="text-align:right" title="${exact(v)}">${inr(v)}</b></div>`;
+        const kc = (l, v, why, c) =>
+          `<div class="cd" style="--c:${c}"><div class="kl">${l}<span class="nw">ONLY HERE</span></div><div class="kv">${v}</div><div class="why">${why}</div></div>`;
+        const hero = `<div class="hero"><div><div class="kl">Revenue Leak Radar · where your checkout loses money</div><b class="big">${inr(u.leak)}</b> <span class="kl">leaked this period</span><div style="margin:4px 0 10px" class="kl"><span style="color:#34D399">${inr(u.rec)} recoverable</span> with retries, sync repair and speed fixes</div>${row('Payment failures', u.payL, '#F87171')}${row('Slow-checkout drop-offs', u.slowL, '#FBBF24')}${row('Shopify sync gaps', u.syncL, '#818CF8')}${row('COD returns (RTO)', u.rto, '#2DD4BF')}</div>
+ <div style="display:flex;gap:14px;align-items:center">${ring(u.score, u.score > 85 ? '#34D399' : '#FBBF24')}<div><div class="kl">Checkout Health Score</div><div style="color:#fff;font-weight:700">Blends payments, Shopify integrity, webhook reliability, speed and RTO</div><div class="kl" style="margin-top:6px">Top fix: ${Object.entries(u.codes).sort((x, y) => y[1] - x[1])[0]?.[0] || 'none'} (${inr(Object.values(u.codes).sort((x, y) => y - x)[0] || 0)} lost)</div><button class="btn s" data-p="payments" style="margin-top:8px">Investigate</button></div></div></div>`;
+        const uk = `<div class="uk">${kc('Rescued revenue', inr(sum(u.resc, (s) => s.value)), u.resc.length + ' orders saved by retry/fallback after a failed attempt', 'var(--ok)')}${kc('Shopify order integrity', pc(u.integ), 'Paid checkouts that landed as Shopify orders (no ghost orders)', u.integ > 0.97 ? 'var(--ok)' : 'var(--er)')}${kc('Webhook first-try delivery', pc(u.first), 'Events delivered without any retry', 'var(--ac)')}${kc('Speed tax', ((u.fc - u.sc) * 100).toFixed(1) + ' pts', 'Conversion gap: sessions under 1.8s (' + pc(u.fc) + ') vs over 2.5s (' + pc(u.sc) + ')', 'var(--wa)')}${kc('COD at-risk exposure', inr(u.codRisk), 'Unfulfilled COD orders with demo risk score above 60: nudge to prepaid', 'var(--tl)')}</div>`;
+        const pulse = `<div class="g e2"><div class="cd"><h3>Shopify Pulse <span class="nw">DEMO</span></h3>${[
+          ['Admin API bucket', '31/40 calls', 77],
+          ['GraphQL cost', '612/1000 pts', 61],
+          ['Order sync lag p95', '4.2s (target 5s)', 84],
+          ['Webhook topic health', 'orders/create 99.8% · refunds/create 97.4%', 97],
+        ]
+          .map(
+            (x) =>
+              `<div style="margin:6px 0"><div style="display:flex;justify-content:space-between"><span>${x[0]}</span><span class="mu">${x[1]}</span></div><div style="height:6px;background:var(--hv);border-radius:3px"><div style="height:6px;width:${x[2]}%;background:${x[2] > 90 ? 'var(--ok)' : x[2] > 70 ? 'var(--wa)' : 'var(--er)'};border-radius:3px"></div></div></div>`,
+          )
+          .join(
+            '',
+          )}</div><div class="cd"><h3>Checkout tier by store</h3>${MER.map((m) => `<div style="display:flex;justify-content:space-between;padding:3px 0"><span>${m.name}</span>${pill(m.tier == 'Full checkout' ? 'Connected' : 'Planned').replace(/>[^<]+</, '>' + m.tier + '<')}</div>`).join('')}<div class="mu">Ineligible stores stay on Shopify-hosted checkout.</div></div></div><h3 style="margin:14px 0 8px">Core metrics</h3>`;
+        return s.slice(0, i) + hero + uk + pulse + s.slice(i);
+      }
+      function whx() {
+        const w = W.filter(inF),
+          t = w.length || 1,
+          dead = w.filter((x) => x.attempts >= 5).length,
+          o = O.find((x) => x.payment.includes('sync failed')) || O[0],
+          u = uq();
+        const hops = [
+          ['checkout.created', '+0ms'],
+          ['contact.completed', '+8.2s'],
+          ['payment.initiated', '+21.4s'],
+          ['payment.succeeded', '+34.0s'],
+          ['webhook dispatched', '+180ms'],
+          ['Shopify orders/create', '429 throttled, retry 2s', 1],
+          ['order.sync_failed', 'dead-letter after 5', 1],
+        ];
+        return `<div class="uk"><div class="cd"><div class="kl">Webhook Trust Score<span class="nw">ONLY HERE</span></div><div class="kv">${Math.round(u.first * 100)}</div><div class="why">First-try delivery weighted by payment-critical events</div></div><div class="cd" style="--c:var(--er)"><div class="kl">Dead-letter queue</div><div class="kv">${dead}</div><div class="why">5+ attempts; replay is idempotent (simulated)</div></div><div class="cd" style="--c:var(--wa)"><div class="kl">Failed deliveries</div><div class="kv">${w.filter((x) => x.status == 'Failed').length}</div><div class="why">of ${w.length} events</div></div></div>
+ <div class="cd" style="margin-bottom:10px"><h3>Checkout Flight Recorder<span class="nw">ONLY HERE</span> <span class="mu">${o.id} · ${o.mname}</span></h3><div class="mu">One checkout traced from first tap to Shopify order, with the delay between each hop. Red marks where it broke.</div><div class="fl">${hops.map((h) => `<div class="${h[2] ? 'bad' : ''}"><b>${h[0]}</b><div style="border:0;background:none;padding:0;min-width:0" class="mu">${h[1]}</div></div>`).join('')}</div></div>`;
+      }
+      /* Live settings API — admin session only; never called from storefront checkout. */
+      let liveSettings = null,
+        liveSettingsErr = '';
+      function getAuthQueryAndHeaders() {
+        const p = new URLSearchParams(window.location.search);
+        const token = p.get('token') || '';
+        const shop = p.get('shop') || '';
+        const q =
+          token && shop
+            ? `?shop=${encodeURIComponent(shop)}&token=${encodeURIComponent(token)}`
+            : shop
+              ? `?shop=${encodeURIComponent(shop)}`
+              : '';
+        const h = {};
+        if (token) h['x-dashboard-token'] = token;
+        return { q, h };
+      }
+      async function fetchLiveSettings() {
+        try {
+          const { q, h } = getAuthQueryAndHeaders();
+          const r = await fetch('/api/settings' + q, {
+            credentials: 'same-origin',
+            headers: { accept: 'application/json', ...h },
+          });
+          if (r.status === 401 || r.status === 302) {
+            liveSettingsErr =
+              'Open this dashboard from Shopify Admin (App → Checkout OS) so your session can load.';
+            liveSettings = null;
+            return null;
+          }
+          if (!r.ok) {
+            liveSettingsErr = 'Could not load settings (' + r.status + ').';
+            liveSettings = null;
+            return null;
+          }
+          liveSettings = await r.json();
+          liveSettingsErr = '';
+          return liveSettings;
+        } catch (e) {
+          liveSettingsErr = 'Network error loading settings.';
+          liveSettings = null;
+          return null;
+        }
+      }
+      function payBlock(p) {
+        p = p || { cod: true, upi: false, card: false, netbanking: false };
+        return `<div class="cd sf"><h3>Storefront payment methods</h3>
+  <div class="mu">Enabled methods appear in checkout. Bro Pay is removed. Only COD places a real Shopify order today; prepaid UI is demo until gateway work lands. Flags ride the existing /v1/settings payload — no extra shopper requests.</div>
+  <label><input type="checkbox" data-ec-pay="cod" ${p.cod !== false ? 'checked' : ''}/> Cash on Delivery</label>
+  <label><input type="checkbox" data-ec-pay="upi" ${p.upi === true ? 'checked' : ''}/> UPI</label>
+  <label><input type="checkbox" data-ec-pay="card" ${p.card === true ? 'checked' : ''}/> Cards</label>
+  <label><input type="checkbox" data-ec-pay="netbanking" ${p.netbanking === true ? 'checked' : ''}/> Net banking</label>
+  <div class="row"><button type="button" class="btn p" data-ec-save-pays>Save payment methods</button></div></div>`;
+      }
+      function settingsLive() {
+        const s = liveSettings,
+          b = s ? '' : `<div class="banner">${liveSettingsErr || 'Loading live settings…'}</div>`;
+        if (!s)
+          return `<h1>Settings</h1><div class="sub">Live checkout configuration for the connected Shopify store</div>${b}<div class="cd"><button class="btn p" data-ec-reload>Retry load</button></div>`;
+        const p = s.payments || {};
+        return `<h1>Settings</h1><div class="sub">Live · shop <b>${s.shop || '—'}</b> · saves to Mongo checkoutSettings</div>
+  <div class="g e2">
+  <div class="cd sf"><h3>Branding</h3>
+    <div class="fld"><span class="kl">Center display</span>
+      <label><input type="radio" name="brandMode" value="name" ${s.brandMode !== 'logo' ? 'checked' : ''}/> Brand name</label>
+      <label><input type="radio" name="brandMode" value="logo" ${s.brandMode === 'logo' ? 'checked' : ''}/> Brand logo</label>
+    </div>
+    <div class="fld"><label class="kl">Brand name</label><input data-ec-f="brandName" value="${(s.brandName || '').replace(/"/g, '&quot;')}" maxlength="80"/></div>
+    <div class="fld"><label class="kl">Logo URL</label><input data-ec-f="logoUrl" value="${(s.logoUrl || '').replace(/"/g, '&quot;')}" placeholder="https://…"/></div>
+    <label><input type="checkbox" data-ec-f="requireCodConfirmation" ${s.requireCodConfirmation !== false ? 'checked' : ''}/> Ask for confirmation before placing COD orders</label>
+    <label><input type="checkbox" data-ec-f="showUpsell" ${s.showUpsell !== false ? 'checked' : ''}/> Show “You may also like”</label>
+    <label><input type="checkbox" data-ec-f="giftVouchersEnabled" ${s.giftVouchersEnabled !== false ? 'checked' : ''}/> Enable gift vouchers</label>
+    <div class="fld"><label class="kl">Gift voucher verification</label>
+      <select data-ec-f="giftVoucherVerifyMode"><option value="pin" ${s.giftVoucherVerifyMode !== 'otp' ? 'selected' : ''}>PIN</option><option value="otp" ${s.giftVoucherVerifyMode === 'otp' ? 'selected' : ''}>OTP</option></select>
+    </div>
+    <label><input type="checkbox" data-ec-f="loyaltyPartnerEnabled" ${s.loyaltyPartnerEnabled !== false ? 'checked' : ''}/> Show loyalty partner points</label>
+    <div class="fld"><label class="kl">Loyalty partner name</label><input data-ec-f="loyaltyPartnerName" value="${(s.loyaltyPartnerName || '').replace(/"/g, '&quot;')}"/></div>
+    <div class="fld"><label class="kl">Loyalty points balance (demo)</label><input data-ec-f="loyaltyPointsBalance" type="number" min="0" step="1" value="${Number(s.loyaltyPointsBalance) || 0}"/></div>
+    <div class="row"><button type="button" class="btn p" data-ec-save-all>Save all settings</button></div>
+  </div>
+  ${payBlock(p)}
+  </div>`;
+      }
+      function paymentsLive() {
+        const s = liveSettings;
+        if (!s)
+          return `<h1>Payments</h1><div class="sub">Enable or disable methods shown on checkout</div><div class="banner">${liveSettingsErr || 'Loading…'}</div><button class="btn p" data-ec-reload>Retry load</button>`;
+        return `<h1>Payments</h1><div class="sub">Live payment method flags · shop <b>${s.shop || '—'}</b></div>${payBlock(s.payments)}
+  <div class="cd" style="margin-top:10px"><h3>How prepaid works (now)</h3><div class="mu">UPI / Cards / Net banking can be shown when enabled. Confirm sheets are demo only — place order still requires COD. Gateway collection comes later without changing this settings shape.</div></div>`;
+      }
+      function readPaymentsFromDom(root) {
+        const g = (id) => !!root.querySelector(`[data-ec-pay="${id}"]`)?.checked;
+        return { cod: g('cod'), upi: g('upi'), card: g('card'), netbanking: g('netbanking') };
+      }
+      function readAllFromDom(root) {
+        const f = (k) => root.querySelector(`[data-ec-f="${k}"]`);
+        const mode = root.querySelector('input[name="brandMode"]:checked')?.value || 'name';
+        return {
+          brandMode: mode,
+          brandName: f('brandName')?.value || '',
+          logoUrl: f('logoUrl')?.value || '',
+          requireCodConfirmation: !!f('requireCodConfirmation')?.checked,
+          showUpsell: !!f('showUpsell')?.checked,
+          giftVouchersEnabled: !!f('giftVouchersEnabled')?.checked,
+          giftVoucherVerifyMode: f('giftVoucherVerifyMode')?.value || 'pin',
+          loyaltyPartnerEnabled: !!f('loyaltyPartnerEnabled')?.checked,
+          loyaltyPartnerName: f('loyaltyPartnerName')?.value || '',
+          loyaltyPointsBalance: Number(f('loyaltyPointsBalance')?.value || 0),
+          payments: readPaymentsFromDom(root),
+        };
+      }
+      async function putLiveSettings(body) {
+        const { q, h } = getAuthQueryAndHeaders();
+        const r = await fetch('/api/settings' + q, {
+          method: 'PUT',
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json', accept: 'application/json', ...h },
+          body: JSON.stringify(body),
+        });
+        const j = await r.json().catch(() => null);
+        if (!r.ok) throw new Error(j?.error?.message || 'Save failed (' + r.status + ')');
+        liveSettings = j;
+        liveSettingsErr = '';
+        return j;
+      }
+      function bindLiveSettings() {
+        const pg = $('#pg');
+        pg.querySelector('[data-ec-reload]')?.addEventListener('click', async () => {
+          await fetchLiveSettings();
+          render();
+        });
+        pg.querySelector('[data-ec-save-pays]')?.addEventListener('click', async (ev) => {
+          const btn = ev.currentTarget;
+          btn.disabled = true;
+          try {
+            await putLiveSettings({ payments: readPaymentsFromDom(pg) });
+            toast('Payment methods saved');
+            render();
+          } catch (e) {
+            toast(e.message || 'Save failed');
+          } finally {
+            btn.disabled = false;
+          }
+        });
+        pg.querySelector('[data-ec-save-all]')?.addEventListener('click', async (ev) => {
+          const btn = ev.currentTarget;
+          btn.disabled = true;
+          try {
+            await putLiveSettings(readAllFromDom(pg));
+            toast('Settings saved');
+            render();
+          } catch (e) {
+            toast(e.message || 'Save failed');
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      }
+      function render() {
+        shell();
+        let h;
+        if (st.page == 'overview') h = overviewNew();
+        else if (st.page == 'live') h = live();
+        else if (st.page == 'integrations') h = integrations();
+        else if (st.page == 'settings') h = settingsLive();
+        else if (st.page == 'payments') h = paymentsLive();
+        else {
+          const p = pageOf(st.page);
+          if (p[2].length && p[2][0].merchant !== undefined && st.page != 'logs')
+            p[2] = p[2].filter(
+              (r) =>
+                st.merchant == 'all' ||
+                r.merchant == st.merchant ||
+                r.merchant == MER.find((m) => m.id == st.merchant)?.name,
+            );
+          const extra =
+            st.page == 'webhooks'
+              ? `<button class="btn s" onclick="T.webhooks.q='Failed';render()">Failed queue</button><button class="btn s" onclick="T.webhooks.q='';render()">All</button>`
+              : '';
+          h = `<h1>${p[0]}</h1><div class="sub">Demo data · click a row for details · sensitive fields masked</div>${st.page == 'webhooks' ? whx() : ''}${table(st.page, p[1], p[2], { extra })}`;
+        }
+        $('#pg').innerHTML = h;
+        if (st.page == 'live') lf();
+        if (st.page == 'settings' || st.page == 'payments') bindLiveSettings();
+        $('#pg').scrollTop = 0;
+      }
+      fetchLiveSettings().then(() => {
+        if (st.page == 'settings' || st.page == 'payments') render();
+      });
+      render();
+    </script>
+  </body>
+</html>
