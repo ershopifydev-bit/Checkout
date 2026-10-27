@@ -13,6 +13,8 @@ export default [
       'tasks/**',
       'tools/**',
       'Doc/**',
+      'apps/shopify-admin/**',
+      'vitest.mongo.config.ts',
     ],
   },
   js.configs.recommended,
@@ -32,6 +34,13 @@ export default [
           ],
         },
       ],
+    },
+  },
+  {
+    files: ['tests/**/*.ts'],
+    rules: {
+      '@typescript-eslint/require-await': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
     },
   },
   {

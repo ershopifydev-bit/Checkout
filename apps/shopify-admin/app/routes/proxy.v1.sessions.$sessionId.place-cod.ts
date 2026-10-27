@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs } from 'react-router';
 import { getShopper } from '../checkout-auth.server';
 import { placeCodFromSession, type CheckoutAddress } from '../checkout-session.server';
+import { guardProxyRequest, storeUnavailableResponse } from '../proxy-guard.server';
 import { authenticate } from '../shopify.server';
 
 function errorResponse(code: string, message: string, status: number) {
@@ -10,6 +11,8 @@ function errorResponse(code: string, message: string, status: number) {
 export async function action({ request, params }: ActionFunctionArgs) {
   await authenticate.public.appProxy(request);
   if (request.method !== 'POST') return errorResponse('INVALID_REQUEST', 'POST required.', 405);
+  const guard = await guardProxyRequest(request, 'placeOrder');
+  if (guard instanceof Response) return guard;
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body || typeof body !== 'object')
     return errorResponse('INVALID_REQUEST', 'Invalid body.', 400);
@@ -32,6 +35,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
       address,
       undefined,
       {
+        shop: guard.shop,
         ...(shopper?.customerId ? { customerId: shopper.customerId } : {}),
       },
     );
@@ -40,6 +44,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
     const code = error instanceof Error ? error.message : 'INVALID_REQUEST';
     if (code === 'SESSION_NOT_FOUND') {
       return errorResponse('NOT_FOUND', 'Session not found.', 404);
+    }
+    if (code === 'SESSION_STORE_UNAVAILABLE') return storeUnavailableResponse();
+    if (code === 'ORDER_IN_PROGRESS') {
+      return errorResponse(code, 'This order is already being placed.', 409);
     }
     if (code === 'NOT_SERVICEABLE') {
       return errorResponse('NOT_SERVICEABLE', 'COD is not available for this PIN.', 400);

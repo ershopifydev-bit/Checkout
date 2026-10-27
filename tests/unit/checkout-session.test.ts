@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   createCheckoutSession,
   createMemorySessionStore,
+  getCheckoutSession,
   patchCheckoutSession,
   placeCodFromSession,
   publicSessionView,
@@ -179,5 +180,129 @@ describe('checkout sessions', () => {
       ),
     ).rejects.toThrow('ORDER_CREATE_FAILED');
     expect(await store.get(created.sessionId)).not.toBeNull();
+  });
+
+  it('isolates memory sessions per created store instance', async () => {
+    const storeA = createMemorySessionStore();
+    const storeB = createMemorySessionStore();
+    const session = await createCheckoutSession(
+      {
+        shop: 'codemadi.myshopify.com',
+        source: 'cart',
+        lines: [{ title: 'Chair', variantTitle: 'Black', quantity: 1, price: 14999 }],
+      },
+      storeA,
+    );
+    expect(await storeA.get(session.sessionId)).not.toBeNull();
+    expect(await storeB.get(session.sessionId)).toBeNull();
+  });
+
+  it('stores and retrieves sessions using default store', async () => {
+    const session = await createCheckoutSession({
+      shop: 'codemadi.myshopify.com',
+      source: 'buy_now',
+      lines: [{ variantId: '123', title: 'Chair', quantity: 1, price: 14999 }],
+    });
+    const retrieved = await getCheckoutSession(session.sessionId);
+    expect(retrieved?.sessionId).toBe(session.sessionId);
+    expect(retrieved?.lines[0]?.title).toBe('Chair');
+  });
+});
+
+describe('place COD safety', () => {
+  const address = {
+    phone: '8268195957',
+    fullName: 'Ada Lovelace',
+    addressLine1: '1 Test Street',
+    locality: 'Mumbai',
+    region: 'Maharashtra',
+    postalCode: '401105',
+  };
+  const shopifyOrder = { orderGid: 'gid://shopify/Order/1', orderId: '1', orderName: '#1001' };
+
+  async function quotedSession(store = createMemorySessionStore()) {
+    const created = await createCheckoutSession(
+      {
+        shop: 'codemadi.myshopify.com',
+        source: 'cart',
+        lines: [{ title: 'Chair', variantTitle: 'Black', quantity: 1, price: 14999 }],
+      },
+      store,
+    );
+    await quoteCheckoutSession(created.sessionId, { postalCode: '401105' }, store);
+    return { store, sessionId: created.sessionId };
+  }
+
+  it('errors without creating an order when the session does not exist', async () => {
+    const createOrder = vi.fn(async () => shopifyOrder);
+    await expect(
+      placeCodFromSession('sess_missing', address, createMemorySessionStore(), { createOrder }),
+    ).rejects.toThrow('SESSION_NOT_FOUND');
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+
+  it('rejects a session that belongs to another shop', async () => {
+    const { store, sessionId } = await quotedSession();
+    const createOrder = vi.fn(async () => shopifyOrder);
+    await expect(
+      placeCodFromSession(sessionId, address, store, { createOrder, shop: 'other.myshopify.com' }),
+    ).rejects.toThrow('SESSION_NOT_FOUND');
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+
+  it('creates exactly one order for concurrent requests on the same session', async () => {
+    const { store, sessionId } = await quotedSession();
+    const createOrder = vi.fn(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      return shopifyOrder;
+    });
+    const results = await Promise.allSettled([
+      placeCodFromSession(sessionId, address, store, { createOrder }),
+      placeCodFromSession(sessionId, address, store, { createOrder }),
+      placeCodFromSession(sessionId, address, store, { createOrder }),
+    ]);
+    expect(createOrder).toHaveBeenCalledTimes(1);
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    expect(
+      results.filter((r) => r.status === 'rejected' && r.reason.message === 'ORDER_IN_PROGRESS'),
+    ).toHaveLength(2);
+  });
+
+  it('replays the placed order on retry instead of creating another', async () => {
+    const { store, sessionId } = await quotedSession();
+    const createOrder = vi.fn(async () => shopifyOrder);
+    const first = await placeCodFromSession(sessionId, address, store, { createOrder });
+    const second = await placeCodFromSession(sessionId, address, store, { createOrder });
+    expect(second).toEqual(first);
+    expect(createOrder).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows a retry after Shopify orderCreate fails', async () => {
+    const { store, sessionId } = await quotedSession();
+    await expect(
+      placeCodFromSession(sessionId, address, store, {
+        createOrder: async () => {
+          throw new Error('ORDER_CREATE_FAILED');
+        },
+      }),
+    ).rejects.toThrow('ORDER_CREATE_FAILED');
+    const placed = await placeCodFromSession(sessionId, address, store, {
+      createOrder: async () => shopifyOrder,
+    });
+    expect(placed.orderName).toBe('#1001');
+  });
+
+  it('expires sessions after the configured TTL', async () => {
+    vi.stubEnv('CHECKOUT_SESSION_TTL_SECONDS', '60');
+    vi.useFakeTimers();
+    try {
+      const { store, sessionId } = await quotedSession();
+      expect(await store.get(sessionId)).not.toBeNull();
+      vi.advanceTimersByTime(61_000);
+      expect(await store.get(sessionId)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllEnvs();
+    }
   });
 });

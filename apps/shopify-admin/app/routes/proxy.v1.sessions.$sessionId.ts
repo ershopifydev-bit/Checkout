@@ -5,6 +5,7 @@ import {
   publicSessionView,
   type CheckoutAddress,
 } from '../checkout-session.server';
+import { guardProxyRequest, storeUnavailableResponse } from '../proxy-guard.server';
 import { authenticate } from '../shopify.server';
 
 function errorResponse(code: string, message: string, status: number) {
@@ -13,7 +14,10 @@ function errorResponse(code: string, message: string, status: number) {
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   await authenticate.public.appProxy(request);
-  const session = await getCheckoutSession(String(params['sessionId'] || ''));
+  const sessionId = String(params['sessionId'] || '');
+  const guard = await guardProxyRequest(request, 'sessionRead', { sessionId });
+  if (guard instanceof Response) return guard;
+  const session = await getCheckoutSession(sessionId);
   if (!session) return errorResponse('NOT_FOUND', 'Session not found.', 404);
   return Response.json(publicSessionView(session));
 }
@@ -23,6 +27,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
   if (request.method !== 'PATCH' && request.method !== 'POST') {
     return errorResponse('INVALID_REQUEST', 'PATCH required.', 405);
   }
+  const guard = await guardProxyRequest(request, 'sessionWrite', {
+    sessionId: String(params['sessionId'] || ''),
+  });
+  if (guard instanceof Response) return guard;
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body || typeof body !== 'object')
     return errorResponse('INVALID_REQUEST', 'Invalid body.', 400);
@@ -62,6 +70,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
     if (code === 'SESSION_NOT_FOUND') {
       return errorResponse('NOT_FOUND', 'Session not found.', 404);
     }
+    if (code === 'SESSION_STORE_UNAVAILABLE') return storeUnavailableResponse();
     if (code === 'INVALID_COUPON' || code === 'COUPON_INACTIVE') {
       return errorResponse(code, 'That coupon code is not valid.', 400);
     }
