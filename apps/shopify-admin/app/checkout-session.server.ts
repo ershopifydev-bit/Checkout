@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import type { Redis } from 'ioredis';
+import { getRedis } from './redis.server';
 import {
   computeCouponDiscountMinor,
   resolveShopifyCoupon,
@@ -100,32 +102,178 @@ export type CreateSessionInput = {
   }>;
 };
 
+/** Result returned to the shopper once an order exists; replayed on retries of the same session. */
+export type PlacedOrder = {
+  orderId: string;
+  orderName: string;
+  orderGid: string;
+  status: 'placed';
+  paymentMethod: 'cod';
+  sessionId: string;
+  source: CheckoutSession['source'];
+  totals: CheckoutSession['totals'];
+  lines: CheckoutLine[];
+  message: string;
+};
+
 export type SessionStore = {
   put(session: CheckoutSession): Promise<void>;
   get(sessionId: string): Promise<CheckoutSession | null>;
+  /** Removes the session and its order lock. */
   delete(sessionId: string): Promise<void>;
+  /** Atomically takes the one-order-per-session lock. False when another request holds it. */
+  claim(sessionId: string): Promise<boolean>;
+  release(sessionId: string): Promise<void>;
+  getPlaced(sessionId: string): Promise<PlacedOrder | null>;
+  setPlaced(sessionId: string, order: PlacedOrder): Promise<void>;
 };
 
-/** ponytail: process-local until Mongo checkout_sessions collection is wired; fine for single-replica pnpm dev. */
-const memory = new Map<string, CheckoutSession>();
+/** Sessions expire this long after their last write; override with CHECKOUT_SESSION_TTL_SECONDS. */
+function sessionTtlSeconds(): number {
+  const raw = Number(process.env['CHECKOUT_SESSION_TTL_SECONDS']);
+  return Number.isFinite(raw) && raw >= 60 ? Math.floor(raw) : 30 * 60;
+}
 
-export function createMemorySessionStore(): SessionStore {
+const ORDER_LOCK_TTL_SECONDS = 60;
+const PLACED_ORDER_TTL_SECONDS = 15 * 60;
+
+type MemorySessionState = {
+  sessions: Map<string, { value: CheckoutSession; expiresAt: number }>;
+  locks: Map<string, number>;
+  placed: Map<string, { value: PlacedOrder; expiresAt: number }>;
+};
+
+function newMemoryState(): MemorySessionState {
+  return { sessions: new Map(), locks: new Map(), placed: new Map() };
+}
+
+/**
+ * Dev/test fallback used when REDIS_URL is unset. Survives Vite HMR via globalThis so
+ * sessions are not wiped while a checkout modal is open.
+ */
+const sharedMemoryState: MemorySessionState =
+  (globalThis as typeof globalThis & { __ecSessionState?: MemorySessionState }).__ecSessionState ??
+  newMemoryState();
+(globalThis as typeof globalThis & { __ecSessionState?: MemorySessionState }).__ecSessionState =
+  sharedMemoryState;
+
+export function createMemorySessionStore(
+  state: MemorySessionState = newMemoryState(),
+): SessionStore {
+  const live = <T extends { expiresAt: number }>(entry: T | undefined) =>
+    entry && entry.expiresAt > Date.now() ? entry : undefined;
   return {
     async put(session) {
-      memory.set(session.sessionId, session);
+      state.sessions.set(session.sessionId, {
+        value: session,
+        expiresAt: Date.now() + sessionTtlSeconds() * 1000,
+      });
     },
     async get(sessionId) {
-      return memory.get(sessionId) ?? null;
+      return live(state.sessions.get(sessionId))?.value ?? null;
     },
     async delete(sessionId) {
-      memory.delete(sessionId);
+      state.sessions.delete(sessionId);
+      state.locks.delete(sessionId);
     },
+    async claim(sessionId) {
+      const lockedUntil = state.locks.get(sessionId) ?? 0;
+      if (lockedUntil > Date.now()) return false;
+      state.locks.set(sessionId, Date.now() + ORDER_LOCK_TTL_SECONDS * 1000);
+      return true;
+    },
+    async release(sessionId) {
+      state.locks.delete(sessionId);
+    },
+    async getPlaced(sessionId) {
+      return live(state.placed.get(sessionId))?.value ?? null;
+    },
+    async setPlaced(sessionId, order) {
+      state.placed.set(sessionId, {
+        value: order,
+        expiresAt: Date.now() + PLACED_ORDER_TTL_SECONDS * 1000,
+      });
+    },
+  };
+}
+
+const SESSION_KEY = 'ec:sess:';
+const LOCK_KEY = 'ec:sess-lock:';
+const PLACED_KEY = 'ec:sess-placed:';
+
+/** Redis-backed store: the source of truth for live checkout sessions. */
+export function createRedisSessionStore(redis: Redis): SessionStore {
+  const guard = async <T>(run: () => Promise<T>): Promise<T> => {
+    try {
+      return await run();
+    } catch (error) {
+      console.error('[EasyCheckout] session store error', (error as Error).message);
+      throw new Error('SESSION_STORE_UNAVAILABLE');
+    }
+  };
+  return {
+    put: (session) =>
+      guard(async () => {
+        await redis.set(
+          SESSION_KEY + session.sessionId,
+          JSON.stringify(session),
+          'EX',
+          sessionTtlSeconds(),
+        );
+      }),
+    get: (sessionId) =>
+      guard(async () => {
+        const raw = await redis.get(SESSION_KEY + sessionId);
+        return raw ? (JSON.parse(raw) as CheckoutSession) : null;
+      }),
+    delete: (sessionId) =>
+      guard(async () => {
+        await redis.del(SESSION_KEY + sessionId, LOCK_KEY + sessionId);
+      }),
+    claim: (sessionId) =>
+      guard(async () => {
+        const result = await redis.set(
+          LOCK_KEY + sessionId,
+          '1',
+          'EX',
+          ORDER_LOCK_TTL_SECONDS,
+          'NX',
+        );
+        return result === 'OK';
+      }),
+    release: (sessionId) =>
+      guard(async () => {
+        await redis.del(LOCK_KEY + sessionId);
+      }),
+    getPlaced: (sessionId) =>
+      guard(async () => {
+        const raw = await redis.get(PLACED_KEY + sessionId);
+        return raw ? (JSON.parse(raw) as PlacedOrder) : null;
+      }),
+    setPlaced: (sessionId, order) =>
+      guard(async () => {
+        await redis.set(
+          PLACED_KEY + sessionId,
+          JSON.stringify(order),
+          'EX',
+          PLACED_ORDER_TTL_SECONDS,
+        );
+      }),
   };
 }
 
 let defaultStore: SessionStore | undefined;
 export function getCheckoutSessionStore(): SessionStore {
-  defaultStore ??= createMemorySessionStore();
+  if (defaultStore) return defaultStore;
+  const redis = process.env['NODE_ENV'] === 'test' ? null : getRedis();
+  if (redis) {
+    defaultStore = createRedisSessionStore(redis);
+  } else {
+    if (process.env['NODE_ENV'] !== 'test') {
+      console.warn('[EasyCheckout] REDIS_URL unset: using in-memory checkout sessions (dev only)');
+    }
+    defaultStore = createMemorySessionStore(sharedMemoryState);
+  }
   return defaultStore;
 }
 
@@ -427,7 +575,13 @@ export async function quoteCheckoutSession(
   return session;
 }
 
+function logStoreError(error: unknown) {
+  console.error('[EasyCheckout] post-order session cleanup failed', (error as Error).message);
+}
+
 export type PlaceCodOrderOptions = {
+  /** Shop from the verified app-proxy request; the session must belong to it. */
+  shop?: string;
   customerId?: string;
   /** Injected in tests — defaults to Shopify Admin orderCreate. */
   createOrder?: typeof import('./shopify-cod-order.server').createCodOrderInShopify;
@@ -438,43 +592,65 @@ export async function placeCodFromSession(
   address: CheckoutAddress,
   store: SessionStore = getCheckoutSessionStore(),
   options: PlaceCodOrderOptions = {},
-) {
-  const session = await patchCheckoutSession(sessionId, { address }, store);
-  if (!session.shipping?.codEnabled) throw new Error('NOT_SERVICEABLE');
+): Promise<PlacedOrder> {
+  // A retry of an already-placed session replays the result instead of creating a second order.
+  const alreadyPlaced = await store.getPlaced(sessionId);
+  if (alreadyPlaced) return alreadyPlaced;
 
-  const createOrder =
-    options.createOrder || (await import('./shopify-cod-order.server')).createCodOrderInShopify;
-
-  let shopifyOrder;
-  try {
-    shopifyOrder = await createOrder({
-      shop: session.shop,
-      address,
-      lines: session.lines,
-      totals: session.totals,
-      coupon: session.coupon,
-      ...(options.customerId ? { customerId: options.customerId } : {}),
-    });
-  } catch (error) {
-    const code = error instanceof Error ? error.message : 'ORDER_CREATE_FAILED';
-    if (code === 'ADMIN_TOKEN_MISSING' || code === 'ORDER_CREATE_FAILED' || code === 'EMPTY_CART') {
-      throw new Error(code);
-    }
-    console.error('[EasyCheckout] place COD unexpected error', error);
-    throw new Error('ORDER_CREATE_FAILED');
+  const existing = await store.get(sessionId);
+  if (!existing || (options.shop && existing.shop !== options.shop)) {
+    throw new Error('SESSION_NOT_FOUND');
   }
+  if (!(await store.claim(sessionId))) throw new Error('ORDER_IN_PROGRESS');
+  try {
+    const session = await patchCheckoutSession(sessionId, { address }, store);
+    if (!session.shipping?.codEnabled) throw new Error('NOT_SERVICEABLE');
 
-  await store.delete(sessionId);
-  return {
-    orderId: shopifyOrder.orderId,
-    orderName: shopifyOrder.orderName,
-    orderGid: shopifyOrder.orderGid,
-    status: 'placed' as const,
-    paymentMethod: 'cod' as const,
-    sessionId,
-    source: session.source,
-    totals: session.totals,
-    lines: session.lines,
-    message: `Order ${shopifyOrder.orderName} placed. Pay cash on delivery.`,
-  };
+    const createOrder =
+      options.createOrder || (await import('./shopify-cod-order.server')).createCodOrderInShopify;
+
+    let shopifyOrder;
+    try {
+      shopifyOrder = await createOrder({
+        shop: session.shop,
+        address,
+        lines: session.lines,
+        totals: session.totals,
+        ...(session.coupon ? { coupon: session.coupon } : {}),
+        ...(options.customerId ? { customerId: options.customerId } : {}),
+      });
+    } catch (error) {
+      const code = error instanceof Error ? error.message : 'ORDER_CREATE_FAILED';
+      if (
+        code === 'ADMIN_TOKEN_MISSING' ||
+        code === 'ORDER_CREATE_FAILED' ||
+        code === 'EMPTY_CART'
+      ) {
+        throw new Error(code);
+      }
+      console.error('[EasyCheckout] place COD unexpected error', error);
+      throw new Error('ORDER_CREATE_FAILED');
+    }
+
+    const placed: PlacedOrder = {
+      orderId: shopifyOrder.orderId,
+      orderName: shopifyOrder.orderName,
+      orderGid: shopifyOrder.orderGid,
+      status: 'placed',
+      paymentMethod: 'cod',
+      sessionId,
+      source: session.source,
+      totals: session.totals,
+      lines: session.lines,
+      message: `Order ${shopifyOrder.orderName} placed. Pay cash on delivery.`,
+    };
+    // The order already exists in Shopify, so bookkeeping failures must not fail the request.
+    await store.setPlaced(sessionId, placed).catch(logStoreError);
+    await store.delete(sessionId).catch(logStoreError);
+    return placed;
+  } catch (error) {
+    // The session stays usable after a failure so the shopper can retry.
+    await store.release(sessionId).catch(() => undefined);
+    throw error;
+  }
 }

@@ -2,6 +2,7 @@ import type { LoaderFunctionArgs } from 'react-router';
 import { getCheckoutSession } from '../checkout-session.server';
 import { listShopifyCoupons } from '../shopify-discount.server';
 import { getCheckoutSettings } from '../checkout-settings.server';
+import { guardProxyRequest } from '../proxy-guard.server';
 import { authenticate } from '../shopify.server';
 
 function errorResponse(code: string, message: string, status: number) {
@@ -10,7 +11,10 @@ function errorResponse(code: string, message: string, status: number) {
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   await authenticate.public.appProxy(request);
-  const session = await getCheckoutSession(String(params['sessionId'] || ''));
+  const sessionId = String(params['sessionId'] || '');
+  const guard = await guardProxyRequest(request, 'sessionRead', { sessionId });
+  if (guard instanceof Response) return guard;
+  const session = await getCheckoutSession(sessionId);
   if (!session) return errorResponse('NOT_FOUND', 'Session not found.', 404);
 
   const settings = await getCheckoutSettings(session.shop);

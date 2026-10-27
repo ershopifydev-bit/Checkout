@@ -1,11 +1,7 @@
 import type { ActionFunctionArgs } from 'react-router';
 import { createCheckoutSession, publicSessionView } from '../checkout-session.server';
+import { guardProxyRequest, storeUnavailableResponse } from '../proxy-guard.server';
 import { authenticate } from '../shopify.server';
-
-function shopFromRequest(request: Request): string {
-  const url = new URL(request.url);
-  return (url.searchParams.get('shop') || '').trim().toLowerCase();
-}
 
 function errorResponse(code: string, message: string, status: number) {
   return Response.json({ error: { code, message } }, { status });
@@ -14,8 +10,9 @@ function errorResponse(code: string, message: string, status: number) {
 export async function action({ request }: ActionFunctionArgs) {
   await authenticate.public.appProxy(request);
   if (request.method !== 'POST') return errorResponse('INVALID_REQUEST', 'POST required.', 405);
-  const shop = shopFromRequest(request);
-  if (!shop) return errorResponse('INVALID_REQUEST', 'Missing shop.', 400);
+  const guard = await guardProxyRequest(request, 'sessionCreate');
+  if (guard instanceof Response) return guard;
+  const { shop } = guard;
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body || typeof body !== 'object')
     return errorResponse('INVALID_REQUEST', 'Invalid body.', 400);
@@ -34,6 +31,9 @@ export async function action({ request }: ActionFunctionArgs) {
     });
     return Response.json(publicSessionView(session));
   } catch (error) {
+    if (error instanceof Error && error.message === 'SESSION_STORE_UNAVAILABLE') {
+      return storeUnavailableResponse();
+    }
     if (error instanceof Error && error.message === 'EMPTY_CART') {
       return errorResponse('EMPTY_CART', 'Add an item before checkout.', 400);
     }

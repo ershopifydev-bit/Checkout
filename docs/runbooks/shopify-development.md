@@ -16,6 +16,8 @@ The tracked development app is Checkout Development in EasyRewardz Software Serv
 
    Keep it running in a terminal. `tools/` is ignored. Production needs authenticated MongoDB with TLS and the separately planned durability configuration.
 
+   Also run Redis (`redis-server`, default `redis://127.0.0.1:6379`) and set `REDIS_URL` in `.env`. Checkout sessions and rate limits live there; production refuses to serve checkout without it.
+
 3. Copy `apps/shopify-admin/.env.example` to `apps/shopify-admin/.env`. Set the MongoDB URI/database and generate a stable 32-byte base64 encryption key using the command in the example. Keep `.env` private; never commit or paste its contents. Losing/changing the key requires reauthentication of stored sessions. Key rotation is not implemented in this increment.
 4. Run `npm run config:link` (or `pnpm config:link`). Select the organization owning `codemadi.myshopify.com`, then select/create the intended **development app**. Do not link an unrelated existing production app. The client ID is public configuration; the client secret belongs in the CLI-managed environment.
 5. Review `apps/shopify-admin/shopify.app.toml` after linking. Preserve embedded mode, empty commerce scopes, the development-store domain, automatic development URL updates, and the two app lifecycle webhook subscriptions shown in this feature. Linking downloads remote configuration and may replace these settings.
@@ -42,7 +44,7 @@ Use the CLI preview URL for embedded Admin authentication. After the app is runn
 
 ```sh
 pnpm check
-MONGODB_TEST_URI=mongodb://127.0.0.1:27028 pnpm test:admin:db
+MONGODB_TEST_URI=mongodb://127.0.0.1:27027 pnpm test:admin:db
 pnpm audit --audit-level=moderate
 ```
 
