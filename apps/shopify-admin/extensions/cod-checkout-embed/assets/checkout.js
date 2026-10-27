@@ -20,6 +20,11 @@
   // This flag need to be driven from admin.
   let requireCodConfirmation = true;
   let showUpsell = true;
+  /** Mirrors /v1/settings.payments — applied in the same settings fetch (no extra request). */
+  let paymentMethods = { cod: true, upi: false, card: false, netbanking: false };
+  let currentSettings = null;
+  let currentUpiConfig = null;
+  let upiTimerInterval = null;
 
   // Login / OTP loading state
   let loginBusy = null; // null | 'send' | 'verify' | 'resend'
@@ -129,14 +134,39 @@
   function syncAccountHeader() {
     const account = $('ec-account');
     const phoneEl = $('ec-account-phone');
-    if (!account || !phoneEl) return;
-    const phone = formatPhoneDisplay(shopper?.phone);
+    const nameEl = $('ec-account-name');
+    const initialEl = $('ec-account-avatar-initial');
+    const avatarImg = $('ec-account-avatar-img');
+    const topRow =
+      boundRoot?.querySelector?.('.ec-top-row') || document.querySelector('.ec-top-row');
+    if (!account) return;
+    const phone = formatPhoneDisplay(shopper?.phone || shopper?.address?.phone);
     if (phone) {
       account.hidden = false;
-      phoneEl.textContent = phone;
+      if (topRow) topRow.classList.add('is-logged-in');
+      if (phoneEl) phoneEl.textContent = phone;
+      const fullName = (shopper?.fullName || shopper?.address?.fullName || '').trim();
+      const firstName = fullName ? fullName.split(/\s+/)[0] : '';
+      const displayName = firstName || 'Shopper';
+      if (nameEl) nameEl.textContent = displayName;
+      if (initialEl) {
+        initialEl.textContent = displayName ? displayName.charAt(0).toUpperCase() : '👤';
+      }
+      if (avatarImg) {
+        if (shopper?.avatarUrl) {
+          avatarImg.src = shopper.avatarUrl;
+          avatarImg.hidden = false;
+          if (initialEl) initialEl.hidden = true;
+        } else {
+          avatarImg.hidden = true;
+          if (initialEl) initialEl.hidden = false;
+        }
+      }
     } else {
       account.hidden = true;
-      phoneEl.textContent = '';
+      if (topRow) topRow.classList.remove('is-logged-in');
+      if (phoneEl) phoneEl.textContent = '';
+      if (nameEl) nameEl.textContent = '';
     }
   }
 
@@ -153,8 +183,495 @@
     el.textContent = id ? id.slice(-8).toLowerCase() : '';
   }
 
+  function applyPaymentMethods(payments) {
+    const src = payments && typeof payments === 'object' ? payments : {};
+    paymentMethods = {
+      cod: src.cod !== false,
+      upi: src.upi === true,
+      card: src.card === true,
+      netbanking: src.netbanking === true,
+    };
+    if (
+      !paymentMethods.cod &&
+      !paymentMethods.upi &&
+      !paymentMethods.card &&
+      !paymentMethods.netbanking
+    ) {
+      paymentMethods.cod = true;
+    }
+    const rows = document.querySelectorAll('[data-ec-pay]');
+    for (const row of rows) {
+      const id = row.getAttribute('data-ec-pay') || '';
+      const on = paymentMethods[id] === true;
+      row.hidden = !on;
+      if ('disabled' in row) row.disabled = !on;
+      row.setAttribute('data-ec-pay-enabled', on ? '1' : '0');
+      if (!on) {
+        row.classList.remove('is-selected');
+        row.setAttribute('aria-checked', 'false');
+      }
+    }
+    const selectedRow = document.querySelector(`[data-ec-pay="${selectedPay}"]`);
+    if (!selectedRow || selectedRow.hidden) {
+      const first = document.querySelector('[data-ec-pay]:not([hidden])');
+      selectedPay = first?.getAttribute('data-ec-pay') || 'cod';
+    }
+    for (const row of rows) {
+      const on = row.getAttribute('data-ec-pay') === selectedPay && !row.hidden;
+      row.classList.toggle('is-selected', on);
+      row.setAttribute('aria-checked', on ? 'true' : 'false');
+    }
+    if (typeof refreshPaymentAmounts === 'function') refreshPaymentAmounts();
+  }
+
+  // --------------------------------------------------------------------------
+  // QR Code generator for UPI payment URIs (zero external dependencies)
+  // --------------------------------------------------------------------------
+  function generateUpiQrSvg(text, pixelSize = 124) {
+    const EXP = new Uint8Array(512);
+    const LOG = new Uint8Array(256);
+    let x = 1;
+    for (let i = 0; i < 255; i++) {
+      EXP[i] = x;
+      EXP[i + 255] = x;
+      LOG[x] = i;
+      x = (x << 1) ^ (x >= 128 ? 0x11d : 0);
+    }
+
+    function gfMul(a, b) {
+      return a === 0 || b === 0 ? 0 : EXP[LOG[a] + LOG[b]];
+    }
+
+    function polyMul(p, q) {
+      const r = new Uint8Array(p.length + q.length - 1);
+      for (let i = 0; i < p.length; i++) {
+        for (let j = 0; j < q.length; j++) {
+          r[i + j] ^= gfMul(p[i], q[j]);
+        }
+      }
+      return r;
+    }
+
+    function rsCompute(data, eccLength) {
+      let g = new Uint8Array([1]);
+      for (let i = 0; i < eccLength; i++) {
+        g = polyMul(g, new Uint8Array([1, EXP[i]]));
+      }
+      const res = new Uint8Array(data.length + eccLength);
+      res.set(data);
+      for (let i = 0; i < data.length; i++) {
+        const coef = res[i];
+        if (coef !== 0) {
+          for (let j = 0; j < g.length; j++) {
+            res[i + j] ^= gfMul(g[j], coef);
+          }
+        }
+      }
+      return res.slice(data.length);
+    }
+
+    const QR_VERSIONS = [
+      null,
+      { version: 1, size: 21, dataCap: 16, eccCap: 10, align: [] },
+      { version: 2, size: 25, dataCap: 28, eccCap: 16, align: [6, 18] },
+      { version: 3, size: 29, dataCap: 44, eccCap: 26, align: [6, 22] },
+      { version: 4, size: 33, dataCap: 64, eccCap: 36, align: [6, 26] },
+      { version: 5, size: 37, dataCap: 86, eccCap: 48, align: [6, 30] },
+      { version: 6, size: 41, dataCap: 108, eccCap: 64, align: [6, 34] },
+      { version: 7, size: 45, dataCap: 124, eccCap: 72, align: [6, 22, 38] },
+      { version: 8, size: 49, dataCap: 154, eccCap: 88, align: [6, 24, 42] },
+    ];
+
+    const encoder = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
+    const rawBytes = encoder ? encoder.encode(text) : Array.from(text).map((c) => c.charCodeAt(0));
+    const dataLen = rawBytes.length;
+
+    let chosen = null;
+    for (let v = 1; v < QR_VERSIONS.length; v++) {
+      if (dataLen + 2 <= QR_VERSIONS[v].dataCap) {
+        chosen = QR_VERSIONS[v];
+        break;
+      }
+    }
+    if (!chosen) chosen = QR_VERSIONS[QR_VERSIONS.length - 1];
+
+    const dataCap = chosen.dataCap;
+    const eccCap = chosen.eccCap;
+
+    const bits = [];
+    function pushBits(val, count) {
+      for (let i = count - 1; i >= 0; i--) bits.push((val >> i) & 1);
+    }
+
+    pushBits(0b0100, 4);
+    pushBits(dataLen, 8);
+    for (let i = 0; i < rawBytes.length; i++) pushBits(rawBytes[i], 8);
+
+    const bitCap = dataCap * 8;
+    const termLen = Math.min(4, bitCap - bits.length);
+    for (let i = 0; i < termLen; i++) bits.push(0);
+    while (bits.length % 8 !== 0) bits.push(0);
+
+    const padBytes = [0xec, 0x11];
+    let pIdx = 0;
+    while (bits.length < bitCap) {
+      pushBits(padBytes[pIdx], 8);
+      pIdx = (pIdx + 1) % 2;
+    }
+
+    const dataCodewords = new Uint8Array(dataCap);
+    for (let i = 0; i < dataCap; i++) {
+      let b = 0;
+      for (let j = 0; j < 8; j++) b = (b << 1) | bits[i * 8 + j];
+      dataCodewords[i] = b;
+    }
+
+    const eccCodewords = rsCompute(dataCodewords, eccCap);
+    const total = new Uint8Array(dataCap + eccCap);
+    total.set(dataCodewords);
+    total.set(eccCodewords, dataCap);
+
+    const size = chosen.size;
+    const matrix = Array.from({ length: size }, () => new Int8Array(size).fill(-1));
+    const reserved = Array.from({ length: size }, () => new Uint8Array(size));
+
+    function setModule(r, c, val, isRes = true) {
+      if (r >= 0 && r < size && c >= 0 && c < size) {
+        matrix[r][c] = val ? 1 : 0;
+        if (isRes) reserved[r][c] = 1;
+      }
+    }
+
+    function placeFinder(r, c) {
+      for (let dr = -1; dr <= 7; dr++) {
+        for (let dc = -1; dc <= 7; dc++) {
+          const nr = r + dr;
+          const nc = c + dc;
+          if (nr < 0 || nr >= size || nc < 0 || nc >= size) continue;
+          if (dr >= 0 && dr <= 6 && dc >= 0 && dc <= 6) {
+            const isBlack =
+              dr === 0 ||
+              dr === 6 ||
+              dc === 0 ||
+              dc === 6 ||
+              (dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4);
+            setModule(nr, nc, isBlack);
+          } else {
+            setModule(nr, nc, 0);
+          }
+        }
+      }
+    }
+
+    placeFinder(0, 0);
+    placeFinder(0, size - 7);
+    placeFinder(size - 7, 0);
+
+    if (chosen.align.length > 0) {
+      const coords = chosen.align;
+      for (const ar of coords) {
+        for (const ac of coords) {
+          if (reserved[ar][ac]) continue;
+          for (let dr = -2; dr <= 2; dr++) {
+            for (let dc = -2; dc <= 2; dc++) {
+              const isBlack = Math.max(Math.abs(dr), Math.abs(dc)) !== 1;
+              setModule(ar + dr, ac + dc, isBlack);
+            }
+          }
+        }
+      }
+    }
+
+    for (let i = 8; i < size - 8; i++) {
+      if (!reserved[6][i]) setModule(6, i, i % 2 === 0);
+      if (!reserved[i][6]) setModule(i, 6, i % 2 === 0);
+    }
+    setModule(size - 8, 8, 1);
+
+    for (let i = 0; i < 9; i++) {
+      if (!reserved[8][i]) reserved[8][i] = 1;
+      if (!reserved[i][8]) reserved[i][8] = 1;
+    }
+    for (let i = size - 8; i < size; i++) {
+      if (!reserved[8][i]) reserved[8][i] = 1;
+      if (!reserved[i][8]) reserved[i][8] = 1;
+    }
+
+    let bitIdx = 0;
+    const allBits = [];
+    for (let i = 0; i < total.length; i++) {
+      for (let b = 7; b >= 0; b--) allBits.push((total[i] >> b) & 1);
+    }
+
+    for (let right = size - 1; right > 0; right -= 2) {
+      if (right === 6) right--;
+      const left = right - 1;
+      const upward = ((right + 1) & 2) !== 0;
+      const startRow = upward ? size - 1 : 0;
+      const endRow = upward ? -1 : size;
+      const step = upward ? -1 : 1;
+
+      for (let r = startRow; r !== endRow; r += step) {
+        for (const col of [right, left]) {
+          if (!reserved[r][col]) {
+            const bit = bitIdx < allBits.length ? allBits[bitIdx++] : 0;
+            const mask = (r + col) % 2 === 0;
+            matrix[r][col] = bit ^ (mask ? 1 : 0) ? 1 : 0;
+          }
+        }
+      }
+    }
+
+    const fmt = 0x5412;
+    const fmtBits = [];
+    for (let i = 14; i >= 0; i--) fmtBits.push((fmt >> i) & 1);
+
+    const tlCoords = [
+      [8, 0],
+      [8, 1],
+      [8, 2],
+      [8, 3],
+      [8, 4],
+      [8, 5],
+      [8, 7],
+      [8, 8],
+      [7, 8],
+      [5, 8],
+      [4, 8],
+      [3, 8],
+      [2, 8],
+      [1, 8],
+      [0, 8],
+    ];
+    for (let i = 0; i < 15; i++) matrix[tlCoords[i][0]][tlCoords[i][1]] = fmtBits[i];
+    for (let i = 0; i < 7; i++) matrix[size - 1 - i][8] = fmtBits[i];
+    for (let i = 0; i < 8; i++) matrix[8][size - 8 + i] = fmtBits[7 + i];
+
+    const border = 2;
+    const totalModules = size + border * 2;
+    const scale = pixelSize / totalModules;
+
+    let pathD = '';
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        if (matrix[r][c] === 1) {
+          const mx = (c + border) * scale;
+          const my = (r + border) * scale;
+          pathD += `M${mx.toFixed(1)},${my.toFixed(1)}h${scale.toFixed(1)}v${scale.toFixed(1)}h-${scale.toFixed(1)}z `;
+        }
+      }
+    }
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${pixelSize} ${pixelSize}" width="${pixelSize}" height="${pixelSize}" shape-rendering="crispEdges" aria-label="UPI QR Code"><rect width="100%" height="100%" fill="#ffffff"/><path d="${pathD.trim()}" fill="#111827"/></svg>`;
+  }
+
+  const UPI_APPS = {
+    paytm: {
+      id: 'paytm',
+      name: 'Paytm',
+      logo: `<svg width="36" height="18" viewBox="0 0 60 20" fill="none" aria-hidden="true"><path d="M2 5h8c2 0 3.5 1 3.5 3s-1.5 3-3.5 3H6v4H2V5zm4 4h3.5c.5 0 1-.3 1-.9 0-.6-.5-.9-1-.9H6V9z" fill="#002970"/><path d="M14 9c0-2.5 1.5-4 4-4s4 1.5 4 4v6h-3.5v-5.5c0-.6-.5-1-1-1s-1 .4-1 1V15H14V9z" fill="#002970"/><path d="M24 5h4l2 4.5 2-4.5h4l-4.5 8v2.5h-3.5V13L24 5z" fill="#002970"/><path d="M37 5h10v2.8h-3.2v7.2h-3.5V7.8H37V5z" fill="#00baf2"/><path d="M48 5h4v10h-4V5z" fill="#00baf2"/><path d="M20 18.5h20" stroke="#00baf2" stroke-width="1.5"/></svg>`,
+    },
+    phonepe: {
+      id: 'phonepe',
+      name: 'PhonePe',
+      logo: `<svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#5f259f"/><path d="M12 9v14h3v-4.5h2.5c3.5 0 5.5-1.8 5.5-4.8 0-2.8-2-4.7-5.5-4.7H12zm3 2.5h2.5c1.8 0 2.8.8 2.8 2.2 0 1.5-1 2.3-2.8 2.3H15v-4.5z" fill="#fff"/><path d="M10 9h12" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>`,
+    },
+    gpay: {
+      id: 'gpay',
+      name: 'G Pay',
+      logo: `<svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#fff" stroke="#e5e7eb" stroke-width="1.2"/><path d="M14 10.5a3.5 3.5 0 0 0-3.5 3.5v3a3.5 3.5 0 0 0 7 0v-3" stroke="#4285F4" stroke-width="2.5" stroke-linecap="round"/><path d="M17.5 14v3a3.5 3.5 0 0 0 7 0v-3a3.5 3.5 0 0 0-3.5-3.5" stroke="#34A853" stroke-width="2.5" stroke-linecap="round"/><path d="M14 17v.5a3.5 3.5 0 0 0 7 0V17" stroke="#FBBC05" stroke-width="2.5" stroke-linecap="round"/><path d="M17.5 10.5a3.5 3.5 0 0 0-3.5 3.5" stroke="#EA4335" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+    },
+    amazonpay: {
+      id: 'amazonpay',
+      name: 'Amazon Pay',
+      logo: `<svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#232f3e"/><text x="7" y="17" fill="#fff" font-family="sans-serif" font-weight="bold" font-size="10">pay</text><path d="M8 21c4.5 2.5 10.5 2.5 15 0" stroke="#FF9900" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+    },
+    bhim: {
+      id: 'bhim',
+      name: 'BHIM',
+      logo: `<svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#e6f9f0"/><path d="M14 8L10 24h3.5l3.5-12z" fill="#097939"/><path d="M18.5 8L14 24h3.5L21 8z" fill="#ED752E"/></svg>`,
+    },
+    cred: {
+      id: 'cred',
+      name: 'CRED',
+      logo: `<svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#111"/><path d="M10 10h12v12H10z" fill="none" stroke="#fff" stroke-width="2"/><path d="M13 13h6v6h-6z" fill="#fff"/></svg>`,
+    },
+  };
+
+  function renderMobileUpiApps(settings) {
+    const grid = $('ec-upi-apps-grid');
+    const drawer = $('ec-upi-all-drawer');
+    if (!grid) return;
+    grid.replaceChildren();
+    if (drawer) drawer.replaceChildren();
+
+    const configured =
+      Array.isArray(settings?.upiConfig?.apps) && settings.upiConfig.apps.length > 0
+        ? settings.upiConfig.apps
+        : ['paytm', 'phonepe', 'gpay', 'amazonpay', 'bhim', 'cred'];
+
+    const topApps = configured.slice(0, 4);
+    const extraApps = configured.slice(4);
+
+    topApps.forEach((appId, index) => {
+      const item = UPI_APPS[appId] || { id: appId, name: appId.toUpperCase(), logo: '📱' };
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = index === 0 ? 'ec-upi-app-card is-selected' : 'ec-upi-app-card';
+      btn.setAttribute('data-ec-upi-app', item.id);
+      btn.setAttribute('role', 'radio');
+      btn.setAttribute('aria-checked', index === 0 ? 'true' : 'false');
+      btn.innerHTML = `<span class="ec-upi-app-logo">${item.logo}</span><span class="ec-upi-app-name">${item.name}</span>`;
+      grid.appendChild(btn);
+    });
+
+    if (drawer) {
+      extraApps.forEach((appId) => {
+        const item = UPI_APPS[appId] || { id: appId, name: appId.toUpperCase(), logo: '📱' };
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ec-upi-app-card';
+        btn.setAttribute('data-ec-upi-app', item.id);
+        btn.setAttribute('role', 'radio');
+        btn.setAttribute('aria-checked', 'false');
+        btn.innerHTML = `<span class="ec-upi-app-logo">${item.logo}</span><span class="ec-upi-app-name">${item.name}</span>`;
+        drawer.appendChild(btn);
+      });
+      const allBtn = $('ec-upi-all-btn');
+      if (allBtn) allBtn.hidden = extraApps.length === 0;
+    }
+  }
+
+  function applyUpiSettings(settings) {
+    if (!settings || typeof settings !== 'object') return;
+    currentUpiConfig = settings.upiConfig || null;
+    const discountText = settings.upiConfig?.discountBadge || '₹50 Off';
+    const cashbackText = settings.upiConfig?.cashbackBadge || 'Win Cashback';
+    for (const el of document.querySelectorAll('[data-ec-upi-discount]')) {
+      el.textContent = discountText;
+    }
+    for (const el of document.querySelectorAll('[data-ec-upi-cashback] span')) {
+      el.textContent = cashbackText;
+    }
+    renderMobileUpiApps(settings);
+  }
+
+  function startUpiQrCountdown(seconds) {
+    if (upiTimerInterval) clearInterval(upiTimerInterval);
+    let remaining = seconds;
+    const timerVal = $('ec-upi-timer-val');
+    function tick() {
+      if (!timerVal) return;
+      const mins = Math.floor(remaining / 60)
+        .toString()
+        .padStart(2, '0');
+      const secs = (remaining % 60).toString().padStart(2, '0');
+      timerVal.textContent = `Valid for ${mins}:${secs}`;
+      if (remaining <= 0) {
+        clearInterval(upiTimerInterval);
+        timerVal.textContent = 'QR expired — click to refresh';
+      }
+      remaining--;
+    }
+    tick();
+    upiTimerInterval = setInterval(tick, 1000);
+  }
+
+  function handleShowUpiQr() {
+    selectedPay = 'upi';
+    for (const row of document.querySelectorAll('[data-ec-pay]')) {
+      const on = row.getAttribute('data-ec-pay') === 'upi';
+      row.classList.toggle('is-selected', on);
+      row.setAttribute('aria-checked', on ? 'true' : 'false');
+    }
+    updatePayableDisplay();
+
+    const payableEl = document.querySelector('[data-ec-pay="upi"]');
+    const payableMinor = payableEl ? payAmountForMethod(payableEl, basePayMinor) : basePayMinor;
+    const amountStr = (payableMinor / 100).toFixed(2);
+    const vpa = (currentUpiConfig?.vpa || 'merchant@upi').trim();
+    const merchantName = (
+      currentUpiConfig?.merchantName ||
+      currentSettings?.brandName ||
+      'Store'
+    ).trim();
+    const upiUri = `upi://pay?pa=${encodeURIComponent(vpa)}&pn=${encodeURIComponent(merchantName)}&am=${amountStr}&cu=INR&tn=${encodeURIComponent(activeSessionId || 'Order')}`;
+
+    const realEl = $('ec-upi-qr-real');
+    const blurredEl = $('ec-upi-qr-blurred');
+    const showBtn = $('ec-upi-show-qr-btn');
+    if (realEl) {
+      realEl.innerHTML = generateUpiQrSvg(upiUri, 124);
+      realEl.hidden = false;
+    }
+    if (blurredEl) blurredEl.hidden = true;
+    if (showBtn) showBtn.hidden = true;
+
+    // Show item details ("generate the qr for the order and show the item")
+    const firstLine = sessionLines && sessionLines[0];
+    const itemCard = $('ec-upi-desk-item-card');
+    if (itemCard) {
+      itemCard.hidden = false;
+      const titleEl = $('ec-upi-item-title');
+      const subEl = $('ec-upi-item-sub');
+      const imgWrap = $('ec-upi-item-img-wrap');
+      if (titleEl) titleEl.textContent = firstLine?.title || 'Order item';
+      const count = (sessionLines || []).reduce((sum, l) => sum + (l.quantity || 1), 0) || 1;
+      if (subEl)
+        subEl.textContent = `${count} item${count > 1 ? 's' : ''} · ${formatInr(payableMinor)}`;
+      if (imgWrap) {
+        if (firstLine?.imageUrl) {
+          imgWrap.innerHTML = `<img src="${firstLine.imageUrl}" alt="" />`;
+        } else {
+          imgWrap.innerHTML = `<span class="ec-upi-item-fallback-img">📦</span>`;
+        }
+      }
+    }
+
+    startUpiQrCountdown(600);
+  }
+
+  function handleUpiAppSelect(btn) {
+    selectedPay = 'upi';
+    for (const b of document.querySelectorAll('[data-ec-upi-app]')) {
+      const on = b === btn;
+      b.classList.toggle('is-selected', on);
+      b.setAttribute('aria-checked', on ? 'true' : 'false');
+    }
+    for (const row of document.querySelectorAll('[data-ec-pay]')) {
+      const on = row.getAttribute('data-ec-pay') === 'upi';
+      row.classList.toggle('is-selected', on);
+      row.setAttribute('aria-checked', on ? 'true' : 'false');
+    }
+    updatePayableDisplay();
+  }
+
+  function handleUpiVpaSubmit() {
+    const input = $('ec-upi-vpa-input');
+    const errEl = $('ec-upi-vpa-error');
+    const val = (input?.value || '').trim();
+    if (!val || !val.includes('@') || val.length < 5) {
+      if (errEl) {
+        errEl.textContent = 'Please enter a valid UPI ID (e.g. yourname@okaxis)';
+        errEl.hidden = false;
+      }
+      return;
+    }
+    if (errEl) errEl.hidden = true;
+    selectedPay = 'upi';
+    for (const row of document.querySelectorAll('[data-ec-pay]')) {
+      const on = row.getAttribute('data-ec-pay') === 'upi';
+      row.classList.toggle('is-selected', on);
+      row.setAttribute('aria-checked', on ? 'true' : 'false');
+    }
+    updatePayableDisplay();
+    input?.blur();
+  }
+
   function applyBrand(settings) {
     if (!settings || typeof settings !== 'object') return;
+    currentSettings = settings;
+    if (settings.upiConfig) applyUpiSettings(settings);
     if (typeof settings.requireCodConfirmation === 'boolean') {
       requireCodConfirmation = settings.requireCodConfirmation;
     }
@@ -169,6 +686,7 @@
         void loadStoreUpsells(sessionLines);
       }
     }
+    if (settings.payments) applyPaymentMethods(settings.payments);
     const mode = settings.brandMode === 'logo' ? 'logo' : 'name';
     const name = String(settings.brandName || 'RARE').trim() || 'RARE';
     const logoUrl = String(settings.logoUrl || '').trim();
@@ -668,13 +1186,11 @@
     const amount = formatInr(
       payableEl ? payAmountForMethod(payableEl, basePayMinor) : basePayMinor,
     );
-    if (selectedPay === 'cod' || selectedPay === 'bropay') {
+    if (selectedPay === 'cod') {
       showPaySheet(
-        selectedPay === 'cod' ? 'Confirm COD order' : 'Confirm Bro Pay',
-        `<p class="ec-sub">You will pay <strong>${amount}</strong>${
-          selectedPay === 'cod' ? ' when the order arrives.' : ' with Bro Pay (demo).'
-        }</p><p class="ec-sub">Deliver to <strong>${shopper?.address?.fullName || ''}</strong>.</p>`,
-        selectedPay === 'cod' ? 'Yes, place COD order' : 'Yes, continue',
+        'Confirm COD order',
+        `<p class="ec-sub">You will pay <strong>${amount}</strong> when the order arrives.</p><p class="ec-sub">Deliver to <strong>${shopper?.address?.fullName || ''}</strong>.</p>`,
+        'Yes, place COD order',
       );
       return;
     }
@@ -693,14 +1209,20 @@
       return;
     }
     if (selectedPay === 'upi') {
-      showPaySheet(
-        'Pay with UPI',
-        `<div class="ec-upi-qr" aria-hidden="true"></div>
-         <p class="ec-sub" style="text-align:center">Scan QR or open an app · <strong>${amount}</strong></p>
-         <div class="ec-upi-apps"><span>GPay</span><span>PhonePe</span><span>Paytm</span><span>BHIM</span></div>
-         <p class="ec-hint">Demo QR — no real UPI collection yet.</p>`,
-        'I have paid',
-      );
+      const isMobile = window.innerWidth <= 640;
+      if (!isMobile) {
+        const realEl = $('ec-upi-qr-real');
+        if (realEl && realEl.hidden) {
+          handleShowUpiQr();
+        }
+        $('ec-upi-qr-box')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } else {
+        const upiCard = document.querySelector('.ec-pay-upi-card');
+        if (upiCard) {
+          upiCard.classList.remove('is-collapsed');
+          upiCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }
       return;
     }
     if (selectedPay === 'netbanking') {
@@ -1125,7 +1647,7 @@
 
   function couponCategory(coupon) {
     const hay = `${coupon?.code || ''} ${coupon?.summary || ''}`.toLowerCase();
-    if (/\b(upi|card|wallet|bropay|paytm|gpay|phonepe|payment)\b/.test(hay)) return 'payments';
+    if (/\b(upi|card|wallet|paytm|gpay|phonepe|payment)\b/.test(hay)) return 'payments';
     if (/\b(hdfc|icici|axis|sbi|kotak|bank|emi|credit)\b/.test(hay)) return 'bank';
     if (/\b(referral|welcome|first|member|personal|foryou|for you)\b/.test(hay)) return 'foryou';
     return 'store';
@@ -2017,7 +2539,30 @@
     setStep('checkout');
   }
 
+  function showLogoutConfirmation() {
+    const overlay = $('ec-logout-overlay');
+    if (!overlay) {
+      void logout();
+      return;
+    }
+    const phoneEl = $('ec-logout-phone');
+    if (phoneEl) {
+      const raw = shopper?.phone || shopper?.address?.phone || '';
+      const formatted = raw ? `+91 ${raw.replace(/^\+?91/, '')}` : '';
+      const name = (shopper?.fullName || shopper?.address?.fullName || '').trim();
+      phoneEl.textContent =
+        name && formatted ? `${name} (${formatted})` : formatted || name || 'your account';
+    }
+    overlay.hidden = false;
+  }
+
+  function hideLogoutConfirmation() {
+    const overlay = $('ec-logout-overlay');
+    if (overlay) overlay.hidden = true;
+  }
+
   async function logout() {
+    hideLogoutConfirmation();
     if (shopper?.token) {
       await fetch(`${apiBase}/v1/auth/customer`, {
         method: 'DELETE',
@@ -2048,6 +2593,7 @@
 
   /** Clear success/order UI so a reused panel does not reopen on the last thank-you screen. */
   function resetOrderSuccessUi() {
+    hideLogoutConfirmation();
     offersAutoApplied = false;
     offersCache = null;
     appliedCouponCode = '';
@@ -2093,6 +2639,13 @@
 
   async function placeOrder() {
     showErr('ec-error', '');
+    if (selectedPay !== 'cod') {
+      showErr(
+        'ec-error',
+        'This payment method is coming soon. Choose Cash on Delivery to place your order.',
+      );
+      return;
+    }
     if (cartBusy) {
       showErr('ec-error', 'Please wait — we are still adding an item to your bag.');
       return;
@@ -2132,9 +2685,14 @@
           body: JSON.stringify(address),
         },
       );
-      const body = await response.json().catch(() => null);
+      let body = await response.json().catch(() => null);
+
       if (!response.ok) {
-        showErr('ec-error', body?.error?.message || 'Could not place the order.');
+        const errorMsg =
+          body?.error?.code === 'NOT_FOUND'
+            ? 'Checkout session expired. Please close and reopen checkout.'
+            : body?.error?.message || 'Could not place the order.';
+        showErr('ec-error', errorMsg);
         return;
       }
       // Keep last-used address as default for next checkout.
@@ -2297,18 +2855,56 @@
         }
         return;
       }
+      // UPI-specific interactions
+      if (target.closest('#ec-upi-show-qr-btn')) {
+        handleShowUpiQr();
+        return;
+      }
+      if (target.closest('#ec-upi-mob-head')) {
+        const upiCard = target.closest('.ec-pay-upi-card');
+        if (upiCard) upiCard.classList.toggle('is-collapsed');
+        return;
+      }
+      const upiAppBtn = target.closest('[data-ec-upi-app]');
+      if (upiAppBtn) {
+        handleUpiAppSelect(upiAppBtn);
+        return;
+      }
+      if (target.closest('#ec-upi-all-btn')) {
+        const drawer = $('ec-upi-all-drawer');
+        if (drawer) drawer.hidden = !drawer.hidden;
+        return;
+      }
+      if (target.closest('#ec-upi-vpa-toggle')) {
+        const form = $('ec-upi-vpa-form');
+        const card = target.closest('.ec-upi-vpa-card');
+        if (form) {
+          form.hidden = !form.hidden;
+          if (card) card.classList.toggle('is-active', !form.hidden);
+          if (!form.hidden) $('ec-upi-vpa-input')?.focus();
+        }
+        return;
+      }
+      if (target.closest('#ec-upi-vpa-btn')) {
+        handleUpiVpaSubmit();
+        return;
+      }
+
       const payRow = target.closest('[data-ec-pay]');
       if (payRow) {
         if (payRow.disabled || payRow.getAttribute('data-ec-pay-enabled') !== '1') return;
-        selectedPay = payRow.getAttribute('data-ec-pay') || 'cod';
+        const newPay = payRow.getAttribute('data-ec-pay') || 'cod';
+        selectedPay = newPay;
         for (const row of document.querySelectorAll('[data-ec-pay]')) {
           const on = row === payRow;
           row.classList.toggle('is-selected', on);
           row.setAttribute('aria-checked', on ? 'true' : 'false');
         }
         updatePayableDisplay();
-        // Place / confirm on payment method tap — no separate pay button.
-        void beginPlaceOrder();
+        // If clicking on UPI card, don't popup modal — user interacts directly with inline UPI UI
+        if (newPay !== 'upi') {
+          void beginPlaceOrder();
+        }
         return;
       }
       const qtyBtn = target.closest('[data-ec-qty-delta]');
@@ -2368,7 +2964,19 @@
         return;
       }
       if (target.closest('#ec-logout')) {
+        showLogoutConfirmation();
+        return;
+      }
+      if (target.closest('#ec-logout-close') || target.closest('#ec-logout-stay')) {
+        hideLogoutConfirmation();
+        return;
+      }
+      if (target.closest('#ec-logout-confirm')) {
         void logout();
+        return;
+      }
+      if (target.id === 'ec-logout-overlay') {
+        hideLogoutConfirmation();
         return;
       }
       if (target.closest('#ec-phone-edit')) {
@@ -2578,6 +3186,11 @@
       if (event.key === 'Enter' && target.id === 'ec-sheet-coupon-input') {
         event.preventDefault();
         void applyCouponCode(undefined, { keepSheet: true });
+        return;
+      }
+      if (event.key === 'Enter' && target.id === 'ec-upi-vpa-input') {
+        event.preventDefault();
+        handleUpiVpaSubmit();
         return;
       }
       if (!target.matches('[data-ec-otp]')) return;
