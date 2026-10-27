@@ -4,7 +4,11 @@ export default [
   route('json/version', 'routes/json.version.ts'),
   route('auth/login', 'routes/login.tsx'),
   route('auth/*', 'routes/auth.tsx'),
-  route('app', 'routes/app.tsx', [index('routes/app-home.tsx')]),
+  route('app', 'routes/app.tsx', [
+    index('routes/app-home.tsx'),
+    route('dashboard', 'routes/app.dashboard.tsx'),
+  ]),
+  route('api/settings', 'routes/api.settings.ts'),
   route('webhooks/app/uninstalled', 'routes/uninstalled.tsx'),
   route('webhooks/app/scopes_update', 'routes/scopes-update.tsx'),
   route('proxy/v1/demo/checkout', 'routes/proxy.v1.demo.checkout.ts'),
