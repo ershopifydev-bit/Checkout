@@ -7,8 +7,8 @@ const eligible: MerchantCapabilityContext = {
   shopId: 'shop-a',
   installation: 'active',
   standardEntitled: true,
-  handoffEnabled: true,
-  handoffEvidence: {
+  standaloneCodEnabled: true,
+  standaloneCodEvidence: {
     shopId: 'shop-a',
     result: 'eligible',
     checkedAt: now - 1000,
@@ -17,11 +17,11 @@ const eligible: MerchantCapabilityContext = {
 };
 
 describe('server-side capability decisions', () => {
-  it('enables Standard handoff only with current tenant-specific evidence', () => {
+  it('enables Standard standalone COD only with current tenant-specific evidence', () => {
     const decision = resolveCapabilities(eligible, now);
     expect(CapabilitiesSchema.parse(decision)).toEqual({
       tier: 'standard',
-      shopifyCheckoutHandoff: { enabled: true, reason: 'ELIGIBLE' },
+      standaloneCodCheckout: { enabled: true, reason: 'ELIGIBLE' },
       checkoutUiExtension: { enabled: false, reason: 'NOT_IMPLEMENTED' },
       customPayment: { enabled: false, reason: 'APPROVAL_REQUIRED' },
     });
@@ -30,13 +30,13 @@ describe('server-side capability decisions', () => {
   it.each([
     [{ installation: 'uninstalled' }, 'MERCHANT_INACTIVE'],
     [{ installation: 'suspended' }, 'MERCHANT_INACTIVE'],
-    [{ handoffEnabled: false }, 'FEATURE_DISABLED'],
+    [{ standaloneCodEnabled: false }, 'FEATURE_DISABLED'],
     [{ standardEntitled: false }, 'NOT_ENTITLED'],
-    [{ handoffEvidence: null }, 'ELIGIBILITY_UNVERIFIED'],
+    [{ standaloneCodEvidence: null }, 'ELIGIBILITY_UNVERIFIED'],
   ] as const)('denies unavailable merchant state: %j', (change, reason) => {
     const decision = resolveCapabilities({ ...eligible, ...change }, now);
     expect(decision.tier).toBe('unavailable');
-    expect(decision.shopifyCheckoutHandoff).toEqual({ enabled: false, reason });
+    expect(decision.standaloneCodCheckout).toEqual({ enabled: false, reason });
     expect(decision.customPayment.enabled).toBe(false);
   });
 
@@ -49,7 +49,7 @@ describe('server-side capability decisions', () => {
     [{ checkedAt: NaN }, 'ELIGIBILITY_UNVERIFIED'],
     [{ expiresAt: Infinity }, 'ELIGIBILITY_UNVERIFIED'],
   ] as const)('denies invalid or expired evidence: %j', (change, reason) => {
-    const handoffEvidence = {
+    const standaloneCodEvidence = {
       shopId: 'shop-a',
       result: 'eligible' as const,
       checkedAt: now - 1000,
@@ -57,21 +57,21 @@ describe('server-side capability decisions', () => {
       ...change,
     };
     expect(
-      resolveCapabilities({ ...eligible, handoffEvidence }, now).shopifyCheckoutHandoff,
+      resolveCapabilities({ ...eligible, standaloneCodEvidence }, now).standaloneCodCheckout,
     ).toEqual({ enabled: false, reason });
   });
 
   it('denies evaluation with an invalid clock', () => {
-    expect(resolveCapabilities(eligible, NaN).shopifyCheckoutHandoff).toEqual({
+    expect(resolveCapabilities(eligible, NaN).standaloneCodCheckout).toEqual({
       enabled: false,
       reason: 'ELIGIBILITY_UNVERIFIED',
     });
   });
 
   it('re-evaluates revocation without reusing an earlier allowed result', () => {
-    expect(resolveCapabilities(eligible, now).shopifyCheckoutHandoff.enabled).toBe(true);
+    expect(resolveCapabilities(eligible, now).standaloneCodCheckout.enabled).toBe(true);
     expect(
-      resolveCapabilities({ ...eligible, installation: 'uninstalled' }, now).shopifyCheckoutHandoff
+      resolveCapabilities({ ...eligible, installation: 'uninstalled' }, now).standaloneCodCheckout
         .enabled,
     ).toBe(false);
   });

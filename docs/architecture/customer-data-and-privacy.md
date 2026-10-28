@@ -1,0 +1,71 @@
+# Customer data and privacy integration requirements
+
+Reviewed: 16 October 2026 (Asia/Kolkata). Scope: checklist **1.1.2.1.2**, **1.1.2.1.3**, and **1.1.2.2.3**. Source requirements: master specification §§1.3, 4, 7, 8, 12 and customer/address workstream 3.3.
+
+This document identifies data needs, access prerequisites, and webhook topics. It does not grant access, select an identity provider or distribution model, establish a legal retention schedule, or implement privacy handlers. The existing foundation has no customer/address persistence or customer-facing endpoints.
+
+## Minimum data inventory
+
+The following is our proposed implementation boundary, derived from the product requirements. Collect fields only when the named feature needs them. A field being optional in a UI does not make its stored value non-personal.
+
+| Feature                               | Minimum candidate data and purpose                                                                        | Source and access gate                                                                                               | Storage/sharing boundary and unavailable behavior                                                                                                                                  |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Guest contact entry                   | Email or phone needed for the selected journey; required consent record and opaque session reference      | Shopper entry; do not query Shopify customer records merely to accept contact input                                  | Keep within the authorized tenant/session. Do not imply an account match or marketing consent. Shopify checkout can collect unsupported fields.                                    |
+| Customer recognition                  | Tenant-scoped identity reference and verified contact; consent purpose, time and version                  | Selected identity provider; if reading Shopify customer data, separately authorize the chosen Shopify API and fields | Require verified identity before revealing saved information. Provider failure falls back to guest mode. OTP possession alone does not establish a Shopify-authenticated checkout. |
+| OTP send/verify                       | Destination phone/email, short-lived challenge reference, expiry and attempt counters                     | Selected OTP provider and approved contact use                                                                       | Share only the destination and required challenge metadata. Never retain plaintext OTPs in logs. Provider selection, limits and retention are open.                                |
+| Address entry/edit                    | Recipient name; address lines; locality, state, country and PIN; contact only where delivery requires it  | Shopper entry or an explicitly authorized saved-address source                                                       | Validate session/tenant ownership. Preserve input on quote failure; invalidate affected quotes after an edit. No geolocation collection by default.                                |
+| Saved-address selection               | Verified customer reference, address identifier and the address fields above                              | Shopify Customer Account API or a selected tenant-scoped address store; identity model unresolved                    | Return only the verified owner's addresses. Missing approval/identity disables saved-address lookup while manual entry remains possible.                                           |
+| PIN serviceability / delivery quote   | Country and PIN first; additional address fields only if the chosen carrier contract requires them        | Shopper input and selected delivery provider                                                                         | Do not send contact or a full address for a PIN-only lookup. Provider failure must not fabricate serviceability.                                                                   |
+| Checkout buyer context                | Only tested contact/address preferences and an authorized buyer identity where applicable                 | Supported Shopify cart/customer identity flow                                                                        | Field propagation and authenticated handoff require live tests. Never infer Shopify authentication from our recognition state.                                                     |
+| Loyalty recognition and address reuse | Tenant-scoped provider customer reference; only contact fields actually required by the selected provider | Separate provider contract and consent review                                                                        | Do not copy address books or purchase history for speculative personalization. Disable unavailable provider features independently.                                                |
+
+Customer identifiers, consent records, linked orders and event payloads can still identify a person even without a name. Treat them as personal in our inventory. Shopify-derived name, address (including PIN), email and phone require field-specific protected-data consideration; shopper-entered equivalents still require our own privacy controls. Do not interpret the Shopify approval workflow as permission to collect unrelated data.
+
+For each implemented feature, the engineer must record the exact API fields, purpose, source, recipient, tenant/customer lookup keys, retention period, deletion path and consent requirements. Unselected providers and retention durations remain explicit rollout dependencies. Never request customer-write or order-history access merely to render an address form; the full operation-to-scope mapping remains checklist 1.1.2.1.1.
+
+## Shopify access and review prerequisites
+
+Shopify distinguishes no customer data (level 0), customer data excluding identifying fields (level 1), and access including name/address/email/phone (level 2). Public apps require protected-data review; level 2 adds field requests and additional controls. Custom-app availability differs, including plan-dependent access for admin-created custom apps. Development-only installations still require selecting the data/fields but do not require review submission. A distribution method must be selected first. See [protected customer data](https://shopify.dev/docs/apps/launch/protected-customer-data).
+
+For a public app, use the app's **API access requests → Protected customer data access** in the Partner Dashboard. State the purpose, select required fields, complete data-protection details, and submit for review. Unapproved fields can be redacted; GraphQL can return access errors with HTTP 200. See the [request and response guidance](https://shopify.dev/docs/apps/launch/protected-customer-data).
+
+Our submission evidence must include:
+
+1. A feature-to-field justification using the inventory above, with unused fields omitted.
+2. The chosen distribution and customer identity model, exact API operations/scopes, and explicit separation of merchant installation authorization from buyer authorization.
+3. Implemented access controls, encryption, log redaction, consent handling, deletion/export flows, incident handling, and approved retention rules. A design document is not evidence these controls operate.
+4. Dashboard request status, approved fields, review date and evidence reference. Development-store success must not be recorded as production approval.
+5. Tests for denied access, redacted fields and partial GraphQL errors. Required unavailable data must produce a clear feature fallback, not fabricated identity or address values.
+
+The [Customer Account API](https://shopify.dev/docs/api/customer/latest) is a candidate for authenticated account/address operations. This document does not choose it over another identity model or claim OTP replaces its authorization flow. No new scopes or dashboard access requests are made by this change.
+
+## Lifecycle and privacy webhook inventory
+
+| Topic                    | Purpose and our required handling                                                                                                                         | Implementation evidence                                                                                                         |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `app/uninstalled`        | Disable the installation and remove credentials/sessions; future workers must stop new tenant work. This event is not a substitute for shop-data erasure. | Installation PR #2 authenticates the event and deletes shop sessions. Broader tenant revocation remains future work.            |
+| `app/scopes_update`      | Re-evaluate granted access; deny dependent features until authorized again.                                                                               | PR #2 authenticates the event and deletes shop sessions to force reauthentication. No customer-feature invalidation exists yet. |
+| `customers/data_request` | Assemble the requested customer data for the merchant through an authorized export path. Include data held by our selected processors.                    | Not implemented.                                                                                                                |
+| `customers/redact`       | Erase applicable customer data, with narrowly documented retention exceptions and auditable completion.                                                   | Not implemented.                                                                                                                |
+| `shop/redact`            | Erase applicable tenant data after uninstall; track completion across stores/processors.                                                                  | Not implemented.                                                                                                                |
+
+Shopify's [2026-10 topic reference](https://shopify.dev/docs/api/admin-graphql/2026-10/enums/WebhookSubscriptionTopic) defines the two app lifecycle topics. The installation branch's configuration and handlers were inspected at commit `d5d29b9` in [PR #2](https://github.com/ershopifydev-bit/Checkout/pull/2); it currently subscribes only to those two topics. The prior live uninstall evidence proves session removal, not complete shop erasure.
+
+App Store distribution requires all three compliance topics even when an app collects no personal data. Configure them with `compliance_topics` and working endpoints before review. Invalid HMAC must receive HTTP 401; acknowledge valid requests with 2xx. Shopify specifies completing the action within 30 days, subject to required retention exceptions, and sends `shop/redact` 48 hours after uninstall. See [Shopify privacy webhook requirements](https://shopify.dev/docs/apps/build/compliance/privacy-law-compliance). Treat those as platform requirements; the applicable retention obligations still need review for our selected data and jurisdictions.
+
+### Required implementation and verification
+
+These are project acceptance criteria, not claims about current functionality:
+
+- Verify the raw request signature before reading tenant identity or changing state; reject a valid signature delivered to the wrong topic handler. Privacy handling must work without an active installation session.
+- Persist an authenticated request and deduplication identity before acknowledging it. Queue durable work; retries must not recreate erased records or duplicate exports. Do not log raw payloads, contact details or export links.
+- Resolve all records by tenant plus subject identifiers. Include checkout sessions, saved addresses, provider references, queued messages, caches and derived indexes. Do not equate a cross-store matching email with authorization.
+- Define backup expiry and restore-time deletion replay, processor erasure confirmations, export delivery authorization and access expiry. Record a minimal completion audit without copying erased personal data back into it.
+- Distinguish acknowledgement from completed erasure. Alert on unfinished requests; an empty-data case still needs a verified outcome. Reinstall must not restore erased data through delayed messages or backup recovery.
+- Test valid/forged signatures, duplicate delivery, wrong topic, cross-tenant IDs, missing subjects, uninstall-before-redaction, storage/queue failure, processor failure and eventual completion. Verify real configured subscriptions as well as handler tests; CLI-triggered delivery alone does not establish subscription correctness. [Shopify testing guidance](https://shopify.dev/docs/apps/build/compliance/privacy-law-compliance)
+
+## Remaining decisions and completion boundary
+
+The three checklist steps named above are requirements-identification tasks and are complete when this document is reviewed. They do not close customer/address implementation, protected-data approval, privacy handler tests, merchant rollout, or Gate 0.
+
+Still open: full operation/scope matrix; distribution and billing decisions; identity/OTP/provider selection; named review owners and retention durations; actual dashboard requests; privacy subscriptions and durable workers; authenticated data-access tests; live cart/customer propagation. The API references were reviewed as 2026-10 where versioned; the protected-data and privacy requirement pages are unversioned and dated by this review. Recheck them before submission. Final project API-version selection remains pending the handoff spike.

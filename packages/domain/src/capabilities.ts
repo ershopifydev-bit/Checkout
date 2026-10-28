@@ -5,8 +5,8 @@ export interface MerchantCapabilityContext {
   readonly shopId: string;
   readonly installation: 'active' | 'uninstalled' | 'suspended';
   readonly standardEntitled: boolean;
-  readonly handoffEnabled: boolean;
-  readonly handoffEvidence: {
+  readonly standaloneCodEnabled: boolean;
+  readonly standaloneCodEvidence: {
     readonly shopId: string;
     readonly result: 'eligible' | 'ineligible';
     readonly checkedAt: number;
@@ -14,11 +14,14 @@ export interface MerchantCapabilityContext {
   } | null;
 }
 
-function resolveHandoff(merchant: MerchantCapabilityContext, now: number): CapabilityDecision {
+function resolveStandaloneCod(
+  merchant: MerchantCapabilityContext,
+  now: number,
+): CapabilityDecision {
   if (merchant.installation !== 'active') return { enabled: false, reason: 'MERCHANT_INACTIVE' };
-  if (!merchant.handoffEnabled) return { enabled: false, reason: 'FEATURE_DISABLED' };
+  if (!merchant.standaloneCodEnabled) return { enabled: false, reason: 'FEATURE_DISABLED' };
   if (!merchant.standardEntitled) return { enabled: false, reason: 'NOT_ENTITLED' };
-  const evidence = merchant.handoffEvidence;
+  const evidence = merchant.standaloneCodEvidence;
   if (
     !evidence ||
     !merchant.shopId ||
@@ -40,12 +43,13 @@ export function resolveCapabilities(
   merchant: MerchantCapabilityContext,
   now: number,
 ): Capabilities {
-  const shopifyCheckoutHandoff = resolveHandoff(merchant, now);
+  const standaloneCodCheckout = resolveStandaloneCod(merchant, now);
   return {
-    tier: shopifyCheckoutHandoff.enabled ? 'standard' : 'unavailable',
-    shopifyCheckoutHandoff,
+    tier: standaloneCodCheckout.enabled ? 'standard' : 'unavailable',
+    standaloneCodCheckout,
     // Plan membership alone does not authorize an extension. Separate integration gates remain open.
     checkoutUiExtension: { enabled: false, reason: 'NOT_IMPLEMENTED' },
+    // Prepaid/card capture only — COD Admin order write uses standaloneCodCheckout.
     customPayment: { enabled: false, reason: 'APPROVAL_REQUIRED' },
   };
 }

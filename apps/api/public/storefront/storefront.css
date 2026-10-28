@@ -1,0 +1,135 @@
+:root {
+  --sf-ink: #111111;
+  --sf-muted: #6b7280;
+  --sf-line: #e8e8e8;
+  --sf-bg: #fafafa;
+  --sf-green: #16a34a;
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  color: var(--sf-ink);
+  background: var(--sf-bg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.sf-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  background: #fff;
+  border-bottom: 1px solid var(--sf-line);
+}
+
+.sf-brand {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  font-size: 1.1rem;
+}
+
+.sf-nav {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.sf-nav a,
+.sf-cart-link {
+  color: var(--sf-ink);
+  text-decoration: none;
+  background: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.sf-product {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (min-width: 800px) {
+  .sf-product {
+    grid-template-columns: 1.1fr 1fr;
+    align-items: start;
+    padding-top: 2.5rem;
+  }
+}
+
+.sf-media {
+  aspect-ratio: 1;
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, #1a1a1a 0%, #2d2d2d 45%, #111 100%),
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.08), transparent 40%);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+}
+
+.sf-kicker {
+  margin: 0 0 0.35rem;
+  color: var(--sf-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.sf-info h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  letter-spacing: -0.03em;
+}
+
+.sf-price {
+  margin: 0.75rem 0 0.25rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.sf-variant,
+.sf-copy {
+  color: var(--sf-muted);
+  line-height: 1.5;
+}
+
+.sf-actions {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+@media (min-width: 480px) {
+  .sf-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.sf-primary,
+.sf-secondary {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.95rem 1.1rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sf-primary {
+  background: var(--sf-ink);
+  color: #fff;
+}
+
+.sf-secondary {
+  background: #fff;
+  border: 1px solid var(--sf-line);
+}
