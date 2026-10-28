@@ -6,7 +6,7 @@ Shopify checkout platform repository.
 
 The first increment provides a TypeScript/pnpm workspace, shared Zod contracts, a conservative merchant capability resolver, and a runnable Fastify process. The API exposes `GET /health/live`, `GET /health/ready`, and `GET /openapi.json`.
 
-This is a foundation, not a working shopper checkout. OAuth, tenant persistence, MongoDB/outbox, storefront handoff, and the customer UI remain upcoming. Health readiness describes this process only. Live merchant eligibility and Gate 0 require test-store evidence. Custom payments remain disabled.
+Product direction is a **standalone one-page COD checkout** (see [ADR 0002](docs/architecture/0002-standalone-cod-checkout.md)). After starting the API, open the demo storefront at `http://127.0.0.1:3000/` and click **Buy now** / **Checkout** — the checkout opens as an **in-page overlay** on the same origin (GoKwik-style), not a separate checkout site. Cash on Delivery only; local place-order stub (no Shopify Admin write yet). Prepaid/card capture remains disabled. Health readiness describes this process only. Live merchant eligibility and Gate 0 require test-store evidence.
 
 ## Local setup
 
@@ -34,7 +34,7 @@ For development, run `pnpm exec tsc -b tsconfig.build.json --watch` in one termi
 | `pnpm api:spec`                     | Build and regenerate `docs/api/openapi.json`                                         |
 | `pnpm audit --audit-level=moderate` | Check locked dependencies for known advisories                                       |
 
-See [foundation decisions](docs/architecture/0001-platform-foundation.md), [API contracts](docs/api/README.md), and [local operations](docs/runbooks/local-development.md). The local implementation tracker remains in ignored `tasks/` and must not be committed.
+See [foundation decisions](docs/architecture/0001-platform-foundation.md), [standalone COD direction](docs/architecture/0002-standalone-cod-checkout.md), [API contracts](docs/api/README.md), and [local operations](docs/runbooks/local-development.md). The local implementation tracker remains in ignored `tasks/` and must not be committed.
 
 ## Branch workflow
 

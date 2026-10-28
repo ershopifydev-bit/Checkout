@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "include": ["app/**/*.ts", "app/**/*.tsx", "*.ts", ".react-router/types/**/*", "tests/**/*.ts"],
+  "compilerOptions": {
+    "lib": ["DOM", "DOM.Iterable", "ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "types": ["node", "vite/client"],
+    "rootDirs": [".", "./.react-router/types"]
+  }
+}

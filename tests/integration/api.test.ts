@@ -46,8 +46,73 @@ describe('API foundation', () => {
     expect(response.statusCode).toBe(200);
     const spec = response.json<{ openapi: string; paths: Record<string, unknown> }>();
     expect(spec.openapi).toBe('3.1.0');
-    expect(Object.keys(spec.paths).sort()).toEqual(['/health/live', '/health/ready']);
+    expect(Object.keys(spec.paths).sort()).toEqual([
+      '/health/live',
+      '/health/ready',
+      '/v1/demo/checkout',
+      '/v1/demo/cod-orders',
+    ]);
     expect((await app.inject('/v1/merchant/capabilities?shopId=other-shop')).statusCode).toBe(404);
+  });
+
+  it('serves the storefront and opens checkout as a same-origin overlay asset', async () => {
+    const app = createApp();
+    const store = await app.inject('/');
+    expect(store.statusCode).toBe(200);
+    expect(store.headers['content-type']).toContain('text/html');
+    expect(store.body).toContain('/checkout/embed.js');
+    expect(store.body).toContain('Buy now');
+
+    const redirect = await app.inject({ url: '/checkout', method: 'GET' });
+    expect(redirect.statusCode).toBe(302);
+    expect(redirect.headers.location).toBe('/?checkout=open');
+
+    const panel = await app.inject('/checkout/panel.html');
+    expect(panel.statusCode).toBe(200);
+    expect(panel.body).toContain('Cash on Delivery');
+    expect(panel.body).toContain('Delivery Address');
+
+    const css = await app.inject('/checkout/checkout.css');
+    expect(css.statusCode).toBe(200);
+    expect(css.headers['content-type']).toContain('text/css');
+
+    const sessionResponse = await app.inject('/v1/demo/checkout');
+    expect(sessionResponse.statusCode).toBe(200);
+    const session = sessionResponse.json<{ sessionId: string; paymentMethod: string }>();
+    expect(session.paymentMethod).toBe('cod');
+
+    const placed = await app.inject({
+      method: 'POST',
+      url: '/v1/demo/cod-orders',
+      headers: { 'content-type': 'application/json' },
+      payload: {
+        sessionId: session.sessionId,
+        phone: '9876543210',
+        fullName: 'Ada Merchant',
+        addressLine1: '12 MG Road',
+        locality: 'Bengaluru',
+        region: 'KA',
+        postalCode: '560001',
+      },
+    });
+    expect(placed.statusCode).toBe(200);
+    expect(placed.json()).toMatchObject({ status: 'accepted_demo', paymentMethod: 'cod' });
+
+    const replay = await app.inject({
+      method: 'POST',
+      url: '/v1/demo/cod-orders',
+      headers: { 'content-type': 'application/json' },
+      payload: {
+        sessionId: session.sessionId,
+        phone: '9876543210',
+        fullName: 'Ada Merchant',
+        addressLine1: '12 MG Road',
+        locality: 'Bengaluru',
+        region: 'KA',
+        postalCode: '560001',
+      },
+    });
+    expect(replay.statusCode).toBe(404);
   });
 
   it('bounds payloads and uses a safe error envelope for parser failures', async () => {

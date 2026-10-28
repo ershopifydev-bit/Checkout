@@ -16,10 +16,23 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:runtime": "pnpm build && node --test tests/integration/runtime.test.mjs",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm test:runtime",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm test:runtime && pnpm typecheck:admin && pnpm build:admin",
     "dev:api": "pnpm build && node --watch apps/api/dist/server.js",
     "start:api": "node apps/api/dist/server.js",
-    "api:spec": "pnpm build && node scripts/export-openapi.mjs"
+    "api:spec": "pnpm build && node scripts/export-openapi.mjs",
+    "dev": "shopify app dev --path apps/shopify-admin --store codemadi.myshopify.com",
+    "mongo:dev": "mongod --dbpath tools/runtime/mongodb-dev --bind_ip 127.0.0.1 --port 27028 --logpath tools/runtime/mongodb-dev/mongod.log --fork",
+    "config:link": "shopify app config link --path apps/shopify-admin",
+    "build:admin": "pnpm --filter @checkout/shopify-admin build",
+    "typecheck:admin": "pnpm --filter @checkout/shopify-admin typecheck",
+    "build:dashboard": "pnpm --filter @checkout/dashboard build",
+    "typecheck:dashboard": "pnpm --filter @checkout/dashboard typecheck",
+    "dev:dashboard": "pnpm --filter @checkout/dashboard dev",
+    "build:dashboard-backend": "pnpm --filter @checkout/dashboard-backend build",
+    "typecheck:dashboard-backend": "pnpm --filter @checkout/dashboard-backend typecheck",
+    "dev:dashboard-backend": "pnpm --filter @checkout/dashboard-backend dev",
+    "start:dashboard-backend": "pnpm --filter @checkout/dashboard-backend start",
+    "test:admin:db": "vitest run --config vitest.mongo.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
@@ -29,6 +42,7 @@
     "prettier": "3.9.10",
     "typescript": "6.0.3",
     "typescript-eslint": "8.71.2",
-    "vitest": "5.0.4"
+    "vitest": "5.0.4",
+    "@shopify/cli": "4.9.3"
   }
 }
