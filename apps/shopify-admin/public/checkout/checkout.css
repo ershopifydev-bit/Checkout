@@ -10,9 +10,9 @@ html.ec-lock body {
   background: rgba(17, 17, 17, 0.45);
   display: flex;
   justify-content: center;
-  /* Dock shell to the bottom when there is spare viewport space. */
-  align-items: flex-end;
-  padding: 0 0 0.65em;
+  align-items: stretch;
+  padding: 0;
+  margin: 0;
   box-sizing: border-box;
 }
 
@@ -22,22 +22,23 @@ html.ec-lock body {
 
 .ec-shell {
   position: relative;
-  width: min(480px, 100%);
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   background: #fcfbf9;
   color: #111;
   font-family: 'DM Sans', 'Segoe UI', sans-serif;
   font-size: 16px; /* Dawn html rem is 10px — keep checkout readable */
   display: flex;
   flex-direction: column;
-  height: calc(100dvh - 0.65em);
-  max-height: calc(100dvh - 0.65em);
-  max-width: 100%;
+  height: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
   min-height: 0;
   overflow: hidden;
   border: 0;
+  border-radius: 0;
   box-shadow: none;
-  border-radius: 16px 16px 0 0;
 }
 
 /* Anything with the hidden attribute stays hidden, regardless of display rules */
@@ -57,17 +58,24 @@ html.ec-lock body {
   border: 0;
 }
 
-@media (min-width: 900px) {
+/* Tablet and Laptop / Desktop: center modal with comfortable surrounding space */
+@media (min-width: 641px) {
   .ec-root {
-    padding: 0.75em 1em 1em;
+    padding: 1.5rem 1rem !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(17, 17, 17, 0.5) !important;
   }
 
   .ec-shell {
-    width: min(520px, 100%);
-    height: calc(100dvh - 1.75em);
-    max-height: calc(100dvh - 1.75em);
-    border-radius: 16px;
-    overflow: hidden;
+    width: min(480px, calc(100vw - 2rem)) !important;
+    height: auto !important;
+    max-height: min(92dvh, 880px) !important;
+    margin: auto !important;
+    border-radius: 20px !important;
+    box-shadow:
+      0 20px 45px -10px rgba(0, 0, 0, 0.3),
+      0 0 0 1px rgba(0, 0, 0, 0.08) !important;
   }
 }
 
@@ -1371,7 +1379,7 @@ html.ec-lock body {
   border-color: #ececec;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 641px) {
   .ec-shell.is-address-focus .ec-address {
     max-height: calc(100vh - 11em);
   }
@@ -2829,7 +2837,7 @@ html.ec-lock body {
   display: block !important;
   padding: 0 !important;
   border: 1.5px solid #e5e7eb;
-  border-radius: 16px;
+  border-radius: 12px;
   background: #ffffff;
   overflow: visible !important;
   cursor: default !important;
@@ -2839,9 +2847,18 @@ html.ec-lock body {
 }
 
 .ec-pay-upi-card.is-selected {
-  border-color: #00baf2 !important;
-  box-shadow: 0 0 0 1px #00baf2;
+  border-color: #16a34a !important;
+  box-shadow: 0 0 0 1px #16a34a;
   background: #ffffff !important;
+}
+
+.ec-pay-upi-card.is-selected .ec-pay-dot {
+  border-color: #16a34a;
+  background: radial-gradient(circle at center, #16a34a 0 38%, #fff 42% 100%);
+}
+
+.ec-pay-upi-card.is-selected .ec-pay-icon {
+  background: #dcfce7;
 }
 
 /* Ribbon badges */
@@ -2912,26 +2929,21 @@ html.ec-lock body {
    -------------------------------------------------------------------------- */
 .ec-upi-desktop {
   display: block;
-  padding: 1.15rem 1.25rem 1.25rem;
+  padding: 0.75em 0.85em 1.15em;
 }
 
 .ec-upi-desk-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  cursor: pointer;
 }
 
 .ec-upi-brand-heading {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.7em;
   color: #111827;
-}
-
-.ec-upi-stylized-logo {
-  display: block;
-  color: #1f2937;
-  flex-shrink: 0;
 }
 
 .ec-upi-title-text {
@@ -3098,13 +3110,20 @@ html.ec-lock body {
 .ec-upi-timer-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background: #ecfdf5;
-  color: #059669;
-  font-size: 10.5px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 9999px;
+  justify-content: center;
+  gap: 5px;
+  background: #f1f5f9;
+  color: #1e293b;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ec-upi-timer-badge strong {
+  font-weight: 700;
 }
 
 .ec-upi-desk-info {
@@ -3113,12 +3132,12 @@ html.ec-lock body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .ec-upi-desk-inst {
   margin: 0;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
   color: #111827;
 }
@@ -3126,7 +3145,6 @@ html.ec-lock body {
 .ec-upi-brand-row {
   display: flex;
   align-items: center;
-  gap: 6px;
   flex-wrap: wrap;
 }
 
@@ -3134,21 +3152,26 @@ html.ec-lock body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: #ffffff;
-  border: 1px solid #e5e7eb;
+  border: 1.5px solid #ffffff;
   flex-shrink: 0;
   overflow: hidden;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  position: relative;
+}
+
+.ec-upi-brand-pill + .ec-upi-brand-pill {
+  margin-left: -6px;
 }
 
 .ec-upi-brand-pill.ec-upi-brand-paytm {
-  width: 44px;
-  border-radius: 9999px;
+  width: 28px;
+  border-radius: 50%;
   background: #f0f9ff;
-  border-color: #bae6fd;
+  border-color: #ffffff;
 }
 
 .ec-upi-brand-pill svg {
@@ -3161,7 +3184,7 @@ html.ec-lock body {
 .ec-upi-mobile {
   display: none;
   position: relative;
-  padding: 1rem;
+  padding: 0.75em 0.85em 1rem;
 }
 
 .ec-upi-mob-badge {
@@ -3191,7 +3214,7 @@ html.ec-lock body {
 .ec-upi-mob-head-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.7em;
   min-width: 0;
 }
 

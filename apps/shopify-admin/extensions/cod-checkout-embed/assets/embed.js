@@ -16,7 +16,7 @@
   var warmPromise = null;
   var STORAGE_SHOPPER = 'ec_shopper_v1';
   // Bump when public/checkout panel HTML changes so proxy fetch bypasses intermediary caches.
-  var PANEL_V = '20261018i';
+  var PANEL_V = '20261028a';
   var cachedSettings = null;
   var settingsPromise = null;
 
@@ -149,7 +149,10 @@
   }
 
   function desiredPanelUrl() {
-    return withCacheBust(config.panelUrl || apiBase + '/panel.html', PANEL_V);
+    return withCacheBust(
+      config.panelUrl || apiBase + '/panel.html',
+      config.assetVersion || PANEL_V,
+    );
   }
 
   function ensureStyles() {
@@ -217,6 +220,7 @@
       .then(function (html) {
         root.innerHTML = html;
         root.setAttribute('data-ec-panel-v', PANEL_V);
+        root.removeAttribute('style');
         // Handlers are delegated on root, so HTML refresh keeps working without re-bind.
         return loadCheckoutScript(jsUrl).then(function () {
           loaded = true;
@@ -375,11 +379,14 @@
   function showInstantCheckoutShell(settings) {
     ensureStyles();
     ensureRootNode();
-    // Inline critical layout so the shell is full-width even before checkout.css lands.
+    var isDesktop = typeof window !== 'undefined' && window.innerWidth > 640;
     root.setAttribute(
       'style',
-      'position:fixed;inset:0;z-index:9999;display:flex;justify-content:center;align-items:flex-end;' +
-        'background:rgba(17,17,17,.45);margin:0;padding:0 0 .65em;box-sizing:border-box;',
+      isDesktop
+        ? 'position:fixed;inset:0;z-index:9999;display:flex;justify-content:center;align-items:center;' +
+            'background:rgba(17,17,17,.5);margin:0;padding:1.5rem 1rem;box-sizing:border-box;'
+        : 'position:fixed;inset:0;z-index:9999;display:flex;justify-content:center;align-items:stretch;' +
+            'background:rgba(17,17,17,.45);margin:0;padding:0;box-sizing:border-box;',
     );
     root.hidden = false;
     document.documentElement.classList.add('ec-lock');
@@ -391,12 +398,14 @@
       return;
     }
     if (root.querySelector('.ec-shell')) return;
-    // Match .ec-shell width so the boot block is not a narrow content-sized strip.
+    var shellStyle = isDesktop
+      ? 'width:min(480px,calc(100vw - 2rem));height:auto;max-height:min(92dvh,880px);margin:auto;display:flex;align-items:center;justify-content:center;background:#fcfbf9;font-family:DM Sans,Segoe UI,sans-serif;padding:1.5em;box-sizing:border-box;flex:0 0 auto;border-radius:20px;box-shadow:0 20px 45px -10px rgba(0,0,0,.3);border:0;'
+      : 'width:100%;height:100dvh;max-height:100dvh;margin:0;display:flex;align-items:center;justify-content:center;background:#fcfbf9;font-family:DM Sans,Segoe UI,sans-serif;padding:1.5em;box-sizing:border-box;flex:1 1 auto;border-radius:0;box-shadow:none;border:0;';
+
     root.innerHTML =
-      '<div class="ec-boot" id="ec-boot-loader" style="width:min(480px,100%);height:calc(100dvh - .65em);max-height:calc(100dvh - .65em);' +
-      'margin:0 auto;display:flex;align-items:center;justify-content:center;background:#fcfbf9;' +
-      'font-family:DM Sans,Segoe UI,sans-serif;padding:1.5em;box-sizing:border-box;flex:0 0 auto;' +
-      'border-radius:16px 16px 0 0;box-shadow:none;border:0;">' +
+      '<div class="ec-boot" id="ec-boot-loader" style="' +
+      shellStyle +
+      '">' +
       '<div style="text-align:center;max-width:280px;width:100%">' +
       '<div style="width:56px;height:56px;margin:0 auto 1em;border:3px solid #e5e7eb;border-top-color:#111;border-radius:50%;animation:ec-boot-spin .8s linear infinite"></div>' +
       brandBootHtml(settings || cachedSettings) +

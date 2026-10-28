@@ -36,6 +36,68 @@
   let loadingTimer = null;
   let loadingIndex = 0;
 
+  // Funnel & event tracking
+  let orderCompleted = false;
+
+  function determineCurrentFunnelStep() {
+    if (!shopper?.token) return 'Login';
+    if (!addressComplete(shopper?.address)) return 'Address';
+    if (offersSheetMode) return 'Discounts';
+    return 'Payment';
+  }
+
+  function trackCheckoutEvent(eventName, data = {}) {
+    try {
+      const sessionId = activeSessionId || (data && data.sessionId) || '';
+      if (!sessionId && eventName !== 'started') return;
+      const stepMap = {
+        started: 'started',
+        logged_in: 'login',
+        address_added: 'address',
+        discount_applied: 'discounts',
+        payment_selected: 'payment',
+        checkout_completed: 'complete',
+        checkout_abandoned: 'payment',
+        step_viewed: 'started',
+      };
+      const step = stepMap[eventName] || 'started';
+      const payload = {
+        sessionId,
+        event: eventName,
+        step,
+        timestamp: new Date().toISOString(),
+        device: window.innerWidth > 640 ? 'desktop' : 'mobile',
+        ...(shopper?.phone ? { shopperPhone: shopper.phone } : {}),
+        ...(shopper?.customerId ? { customerId: shopper.customerId } : {}),
+        ...(basePayMinor ? { cartValueMinor: basePayMinor } : {}),
+        metadata: {
+          ...data,
+          url: window.location.href,
+        },
+      };
+      if (data.couponCode) payload.couponCode = data.couponCode;
+      if (data.paymentMethod || data.method) {
+        payload.paymentMethod = data.paymentMethod || data.method;
+      }
+      if (data.orderId) payload.orderId = data.orderId;
+      if (data.orderName) payload.orderName = data.orderName;
+
+      const endpoint = `${apiBase}/v1/events`;
+      if (eventName === 'checkout_abandoned' && typeof navigator.sendBeacon === 'function') {
+        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+        navigator.sendBeacon(endpoint, blob);
+      } else {
+        fetch(endpoint, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json', accept: 'application/json' },
+          body: JSON.stringify(payload),
+          keepalive: true,
+        }).catch(() => {});
+      }
+    } catch (_) {}
+  }
+
   const STORAGE_SHOPPER = 'ec_shopper_v1';
   const STORAGE_ADDRESSES = 'ec_addresses_v1';
 
@@ -228,205 +290,194 @@
   // QR Code generator for UPI payment URIs (zero external dependencies)
   // --------------------------------------------------------------------------
   function generateUpiQrSvg(text, pixelSize = 124) {
-    const EXP = new Uint8Array(512);
-    const LOG = new Uint8Array(256);
+    const GF256_EXP = new Uint8Array(512);
+    const GF256_LOG = new Uint8Array(256);
     let x = 1;
     for (let i = 0; i < 255; i++) {
-      EXP[i] = x;
-      EXP[i + 255] = x;
-      LOG[x] = i;
-      x = (x << 1) ^ (x >= 128 ? 0x11d : 0);
+      GF256_EXP[i] = x;
+      GF256_EXP[i + 255] = x;
+      GF256_LOG[x] = i;
+      x <<= 1;
+      if (x & 256) x ^= 0x11d;
     }
 
     function gfMul(a, b) {
-      return a === 0 || b === 0 ? 0 : EXP[LOG[a] + LOG[b]];
+      if (a === 0 || b === 0) return 0;
+      return GF256_EXP[GF256_LOG[a] + GF256_LOG[b]];
     }
 
-    function polyMul(p, q) {
-      const r = new Uint8Array(p.length + q.length - 1);
-      for (let i = 0; i < p.length; i++) {
-        for (let j = 0; j < q.length; j++) {
-          r[i + j] ^= gfMul(p[i], q[j]);
+    function rsGenPoly(n) {
+      let poly = [1];
+      for (let i = 0; i < n; i++) {
+        const next = new Array(poly.length + 1).fill(0);
+        for (let j = 0; j < poly.length; j++) {
+          next[j] ^= gfMul(poly[j], GF256_EXP[i]);
+          next[j + 1] ^= poly[j];
         }
+        poly = next;
       }
-      return r;
+      return poly;
     }
 
-    function rsCompute(data, eccLength) {
-      let g = new Uint8Array([1]);
-      for (let i = 0; i < eccLength; i++) {
-        g = polyMul(g, new Uint8Array([1, EXP[i]]));
-      }
-      const res = new Uint8Array(data.length + eccLength);
-      res.set(data);
+    function rsEncode(data, numEc) {
+      const gen = rsGenPoly(numEc);
+      const res = new Uint8Array(numEc);
       for (let i = 0; i < data.length; i++) {
-        const coef = res[i];
-        if (coef !== 0) {
-          for (let j = 0; j < g.length; j++) {
-            res[i + j] ^= gfMul(g[j], coef);
-          }
+        const factor = data[i] ^ res[0];
+        for (let j = 0; j < numEc - 1; j++) {
+          res[j] = res[j + 1] ^ gfMul(gen[j + 1], factor);
         }
+        res[numEc - 1] = gfMul(gen[numEc], factor);
       }
-      return res.slice(data.length);
+      return res;
     }
 
-    const QR_VERSIONS = [
+    const VERSIONS = [
       null,
-      { version: 1, size: 21, dataCap: 16, eccCap: 10, align: [] },
-      { version: 2, size: 25, dataCap: 28, eccCap: 16, align: [6, 18] },
-      { version: 3, size: 29, dataCap: 44, eccCap: 26, align: [6, 22] },
-      { version: 4, size: 33, dataCap: 64, eccCap: 36, align: [6, 26] },
-      { version: 5, size: 37, dataCap: 86, eccCap: 48, align: [6, 30] },
-      { version: 6, size: 41, dataCap: 108, eccCap: 64, align: [6, 34] },
-      { version: 7, size: 45, dataCap: 124, eccCap: 72, align: [6, 22, 38] },
-      { version: 8, size: 49, dataCap: 154, eccCap: 88, align: [6, 24, 42] },
+      { ver: 1, size: 21, dataCw: 16, ecCw: 10, align: [] },
+      { ver: 2, size: 25, dataCw: 28, ecCw: 16, align: [6, 18] },
+      { ver: 3, size: 29, dataCw: 44, ecCw: 26, align: [6, 22] },
+      { ver: 4, size: 33, dataCw: 64, ecCw: 36, align: [6, 26] },
+      { ver: 5, size: 37, dataCw: 86, ecCw: 48, align: [6, 30] },
+      { ver: 6, size: 41, dataCw: 108, ecCw: 64, align: [6, 34] },
+      { ver: 7, size: 45, dataCw: 124, ecCw: 72, align: [6, 22, 38] },
+      { ver: 8, size: 49, dataCw: 154, ecCw: 88, align: [6, 24, 42] },
     ];
 
-    const encoder = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
-    const rawBytes = encoder ? encoder.encode(text) : Array.from(text).map((c) => c.charCodeAt(0));
-    const dataLen = rawBytes.length;
+    const bytes =
+      typeof TextEncoder !== 'undefined'
+        ? new TextEncoder().encode(text)
+        : Array.from(text).map((c) => c.charCodeAt(0));
 
-    let chosen = null;
-    for (let v = 1; v < QR_VERSIONS.length; v++) {
-      if (dataLen + 2 <= QR_VERSIONS[v].dataCap) {
-        chosen = QR_VERSIONS[v];
+    let spec = VERSIONS[VERSIONS.length - 1];
+    for (let v = 1; v < VERSIONS.length; v++) {
+      if (bytes.length <= VERSIONS[v].dataCw - 2) {
+        spec = VERSIONS[v];
         break;
       }
     }
-    if (!chosen) chosen = QR_VERSIONS[QR_VERSIONS.length - 1];
-
-    const dataCap = chosen.dataCap;
-    const eccCap = chosen.eccCap;
 
     const bits = [];
-    function pushBits(val, count) {
-      for (let i = count - 1; i >= 0; i--) bits.push((val >> i) & 1);
+    function putBits(val, len) {
+      for (let i = len - 1; i >= 0; i--) bits.push((val >> i) & 1);
     }
-
-    pushBits(0b0100, 4);
-    pushBits(dataLen, 8);
-    for (let i = 0; i < rawBytes.length; i++) pushBits(rawBytes[i], 8);
-
-    const bitCap = dataCap * 8;
-    const termLen = Math.min(4, bitCap - bits.length);
-    for (let i = 0; i < termLen; i++) bits.push(0);
+    putBits(0b0100, 4); // Byte mode
+    putBits(bytes.length, 8); // 8-bit length
+    for (let b of bytes) putBits(b, 8);
+    const cap = spec.dataCw * 8;
+    for (let i = 0; i < 4 && bits.length < cap; i++) bits.push(0);
     while (bits.length % 8 !== 0) bits.push(0);
-
-    const padBytes = [0xec, 0x11];
-    let pIdx = 0;
-    while (bits.length < bitCap) {
-      pushBits(padBytes[pIdx], 8);
-      pIdx = (pIdx + 1) % 2;
+    const pad = [0xec, 0x11];
+    let padIdx = 0;
+    while (bits.length < cap) {
+      putBits(pad[padIdx++ % 2], 8);
     }
-
-    const dataCodewords = new Uint8Array(dataCap);
-    for (let i = 0; i < dataCap; i++) {
+    const dataCw = new Uint8Array(spec.dataCw);
+    for (let i = 0; i < spec.dataCw; i++) {
       let b = 0;
       for (let j = 0; j < 8; j++) b = (b << 1) | bits[i * 8 + j];
-      dataCodewords[i] = b;
+      dataCw[i] = b;
     }
 
-    const eccCodewords = rsCompute(dataCodewords, eccCap);
-    const total = new Uint8Array(dataCap + eccCap);
-    total.set(dataCodewords);
-    total.set(eccCodewords, dataCap);
+    const ecCw = rsEncode(dataCw, spec.ecCw);
+    const total = new Uint8Array(dataCw.length + ecCw.length);
+    total.set(dataCw);
+    total.set(ecCw, dataCw.length);
 
-    const size = chosen.size;
-    const matrix = Array.from({ length: size }, () => new Int8Array(size).fill(-1));
-    const reserved = Array.from({ length: size }, () => new Uint8Array(size));
+    const size = spec.size;
+    const mat = Array.from({ length: size }, () => new Int8Array(size).fill(-1));
 
-    function setModule(r, c, val, isRes = true) {
-      if (r >= 0 && r < size && c >= 0 && c < size) {
-        matrix[r][c] = val ? 1 : 0;
-        if (isRes) reserved[r][c] = 1;
-      }
-    }
-
-    function placeFinder(r, c) {
-      for (let dr = -1; dr <= 7; dr++) {
-        for (let dc = -1; dc <= 7; dc++) {
-          const nr = r + dr;
-          const nc = c + dc;
-          if (nr < 0 || nr >= size || nc < 0 || nc >= size) continue;
-          if (dr >= 0 && dr <= 6 && dc >= 0 && dc <= 6) {
-            const isBlack =
-              dr === 0 ||
-              dr === 6 ||
-              dc === 0 ||
-              dc === 6 ||
-              (dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4);
-            setModule(nr, nc, isBlack);
+    function finder(row, col) {
+      for (let r = -1; r <= 7; r++) {
+        for (let c = -1; c <= 7; c++) {
+          const mr = row + r;
+          const mc = col + c;
+          if (mr < 0 || mr >= size || mc < 0 || mc >= size) continue;
+          if (
+            (r >= 0 && r <= 6 && (c === 0 || c === 6)) ||
+            (c >= 0 && c <= 6 && (r === 0 || r === 6)) ||
+            (r >= 2 && r <= 4 && c >= 2 && c <= 4)
+          ) {
+            mat[mr][mc] = 1;
           } else {
-            setModule(nr, nc, 0);
+            mat[mr][mc] = 0;
           }
         }
       }
     }
+    finder(0, 0);
+    finder(0, size - 7);
+    finder(size - 7, 0);
 
-    placeFinder(0, 0);
-    placeFinder(0, size - 7);
-    placeFinder(size - 7, 0);
+    for (let i = 8; i < size - 8; i++) {
+      if (mat[6][i] === -1) mat[6][i] = i % 2 === 0 ? 1 : 0;
+      if (mat[i][6] === -1) mat[i][6] = i % 2 === 0 ? 1 : 0;
+    }
 
-    if (chosen.align.length > 0) {
-      const coords = chosen.align;
-      for (const ar of coords) {
-        for (const ac of coords) {
-          if (reserved[ar][ac]) continue;
+    if (spec.align.length > 1) {
+      for (let r of spec.align) {
+        for (let c of spec.align) {
+          if (mat[r][c] !== -1) continue;
           for (let dr = -2; dr <= 2; dr++) {
             for (let dc = -2; dc <= 2; dc++) {
-              const isBlack = Math.max(Math.abs(dr), Math.abs(dc)) !== 1;
-              setModule(ar + dr, ac + dc, isBlack);
+              const d = Math.max(Math.abs(dr), Math.abs(dc));
+              mat[r + dr][c + dc] = d === 1 ? 0 : 1;
             }
           }
         }
       }
     }
 
-    for (let i = 8; i < size - 8; i++) {
-      if (!reserved[6][i]) setModule(6, i, i % 2 === 0);
-      if (!reserved[i][6]) setModule(i, 6, i % 2 === 0);
-    }
-    setModule(size - 8, 8, 1);
-
-    for (let i = 0; i < 9; i++) {
-      if (!reserved[8][i]) reserved[8][i] = 1;
-      if (!reserved[i][8]) reserved[i][8] = 1;
+    for (let i = 0; i <= 8; i++) {
+      if (mat[8][i] === -1) mat[8][i] = -2;
+      if (mat[i][8] === -1) mat[i][8] = -2;
     }
     for (let i = size - 8; i < size; i++) {
-      if (!reserved[8][i]) reserved[8][i] = 1;
-      if (!reserved[i][8]) reserved[i][8] = 1;
+      if (mat[8][i] === -1) mat[8][i] = -2;
+      if (mat[i][8] === -1) mat[i][8] = -2;
     }
+    mat[size - 8][8] = 1;
 
-    let bitIdx = 0;
-    const allBits = [];
-    for (let i = 0; i < total.length; i++) {
-      for (let b = 7; b >= 0; b--) allBits.push((total[i] >> b) & 1);
-    }
-
-    for (let right = size - 1; right > 0; right -= 2) {
-      if (right === 6) right--;
-      const left = right - 1;
-      const upward = ((right + 1) & 2) !== 0;
-      const startRow = upward ? size - 1 : 0;
-      const endRow = upward ? -1 : size;
-      const step = upward ? -1 : 1;
-
-      for (let r = startRow; r !== endRow; r += step) {
-        for (const col of [right, left]) {
-          if (!reserved[r][col]) {
-            const bit = bitIdx < allBits.length ? allBits[bitIdx++] : 0;
-            const mask = (r + col) % 2 === 0;
-            matrix[r][col] = bit ^ (mask ? 1 : 0) ? 1 : 0;
+    let byteIdx = 0,
+      bitIdx = 7;
+    let dir = -1;
+    let col = size - 1;
+    while (col > 0) {
+      if (col === 6) col--;
+      for (let i = 0; i < size; i++) {
+        const r = dir === -1 ? size - 1 - i : i;
+        for (let c = 0; c < 2; c++) {
+          const currCol = col - c;
+          if (mat[r][currCol] === -1) {
+            let bit = 0;
+            if (byteIdx < total.length) {
+              bit = (total[byteIdx] >> bitIdx) & 1;
+              bitIdx--;
+              if (bitIdx < 0) {
+                bitIdx = 7;
+                byteIdx++;
+              }
+            }
+            if ((r + currCol) % 2 === 0) bit ^= 1;
+            mat[r][currCol] = bit;
           }
         }
       }
+      dir = -dir;
+      col -= 2;
     }
 
-    const fmt = 0x5412;
+    // Format bits for mask 0
+    let rem = 0 << 10;
+    const poly = 0x537;
+    for (let i = 14; i >= 10; i--) {
+      if (rem & (1 << i)) rem ^= poly << (i - 10);
+    }
+    const fmt = rem ^ 0x5412;
     const fmtBits = [];
     for (let i = 14; i >= 0; i--) fmtBits.push((fmt >> i) & 1);
 
-    const tlCoords = [
+    const fmtCoords1 = [
       [8, 0],
       [8, 1],
       [8, 2],
@@ -443,78 +494,190 @@
       [1, 8],
       [0, 8],
     ];
-    for (let i = 0; i < 15; i++) matrix[tlCoords[i][0]][tlCoords[i][1]] = fmtBits[i];
-    for (let i = 0; i < 7; i++) matrix[size - 1 - i][8] = fmtBits[i];
-    for (let i = 0; i < 8; i++) matrix[8][size - 8 + i] = fmtBits[7 + i];
+    for (let i = 0; i < 15; i++) {
+      const [r, c] = fmtCoords1[i];
+      mat[r][c] = fmtBits[i];
+    }
+    const fmtCoords2 = [
+      [size - 1, 8],
+      [size - 2, 8],
+      [size - 3, 8],
+      [size - 4, 8],
+      [size - 5, 8],
+      [size - 6, 8],
+      [size - 7, 8],
+      [8, size - 8],
+      [8, size - 7],
+      [8, size - 6],
+      [8, size - 5],
+      [8, size - 4],
+      [8, size - 3],
+      [8, size - 2],
+      [8, size - 1],
+    ];
+    for (let i = 0; i < 15; i++) {
+      const [r, c] = fmtCoords2[i];
+      mat[r][c] = fmtBits[i];
+    }
 
-    const border = 2;
-    const totalModules = size + border * 2;
-    const scale = pixelSize / totalModules;
-
-    let pathD = '';
+    const padSize = 2;
+    const fullSize = size + padSize * 2;
+    let d = '';
     for (let r = 0; r < size; r++) {
       for (let c = 0; c < size; c++) {
-        if (matrix[r][c] === 1) {
-          const mx = (c + border) * scale;
-          const my = (r + border) * scale;
-          pathD += `M${mx.toFixed(1)},${my.toFixed(1)}h${scale.toFixed(1)}v${scale.toFixed(1)}h-${scale.toFixed(1)}z `;
+        if (mat[r][c] === 1) {
+          d += `M${c + padSize},${r + padSize}h1v1h-1z `;
         }
       }
     }
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${pixelSize} ${pixelSize}" width="${pixelSize}" height="${pixelSize}" shape-rendering="crispEdges" aria-label="UPI QR Code"><rect width="100%" height="100%" fill="#ffffff"/><path d="${pathD.trim()}" fill="#111827"/></svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${fullSize} ${fullSize}" width="${pixelSize}" height="${pixelSize}" shape-rendering="crispEdges" aria-label="UPI QR Code"><rect width="100%" height="100%" fill="#ffffff"/><path d="${d.trim()}" fill="#111827"/></svg>`;
   }
 
-  const UPI_APPS = {
+  // --------------------------------------------------------------------------
+  // UPI App targets & Mobile OS deep-link handlers (Android & iOS)
+  // --------------------------------------------------------------------------
+  const UPI_APP_TARGETS = {
     paytm: {
       id: 'paytm',
       name: 'Paytm',
-      logo: `<svg width="36" height="18" viewBox="0 0 60 20" fill="none" aria-hidden="true"><path d="M2 5h8c2 0 3.5 1 3.5 3s-1.5 3-3.5 3H6v4H2V5zm4 4h3.5c.5 0 1-.3 1-.9 0-.6-.5-.9-1-.9H6V9z" fill="#002970"/><path d="M14 9c0-2.5 1.5-4 4-4s4 1.5 4 4v6h-3.5v-5.5c0-.6-.5-1-1-1s-1 .4-1 1V15H14V9z" fill="#002970"/><path d="M24 5h4l2 4.5 2-4.5h4l-4.5 8v2.5h-3.5V13L24 5z" fill="#002970"/><path d="M37 5h10v2.8h-3.2v7.2h-3.5V7.8H37V5z" fill="#00baf2"/><path d="M48 5h4v10h-4V5z" fill="#00baf2"/><path d="M20 18.5h20" stroke="#00baf2" stroke-width="1.5"/></svg>`,
+      androidPackage: 'net.one97.paytm',
+      iosScheme: 'paytmmp://pay',
+      logo: `<svg viewBox="0 0 48 18" width="42" height="16" fill="none"><path d="M6.2 3.8h2.3c1.5 0 2.5.9 2.5 2.2 0 1.4-1 2.3-2.5 2.3H6.2v3.9H4V3.8h2.2zm0 3.1h2.1c.6 0 1-.3 1-.9s-.4-.9-1-.9H6.2v1.8z" fill="#002970"/><path d="M14.5 12.2c-.3 0-.6-.1-.8-.3-.3-.2-.5-.6-.5-1v-4h2.2v3.7c0 .4.2.6.5.6.4 0 .7-.2.8-.5V6.9h2.2v4.4c-.4.5-.9.8-1.5 1-.3 0-.6-.1-.9-.1z" fill="#002970"/><path d="M22.5 4.8h2.2v2.1h1.5v1.8h-1.5v3.5h-2.2V8.7h-1.1V6.9h1.1V4.8z" fill="#002970"/><path d="M30.4 6.9l-1.9 4.3-1.8-4.3h-2.3l3.1 6.5-1.2 2.5h2.3l4.2-9h-2.4z" fill="#00BAF2"/><path d="M36.2 6.9h2.2v5.3h-2.2V6.9zm0-2.8h2.2v1.9h-2.2V4.1z" fill="#00BAF2"/></svg>`,
     },
     phonepe: {
       id: 'phonepe',
       name: 'PhonePe',
-      logo: `<svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#5f259f"/><path d="M12 9v14h3v-4.5h2.5c3.5 0 5.5-1.8 5.5-4.8 0-2.8-2-4.7-5.5-4.7H12zm3 2.5h2.5c1.8 0 2.8.8 2.8 2.2 0 1.5-1 2.3-2.8 2.3H15v-4.5z" fill="#fff"/><path d="M10 9h12" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>`,
+      androidPackage: 'com.phonepe.app',
+      iosScheme: 'phonepe://pay',
+      logo: `<svg viewBox="0 0 32 32" width="28" height="28"><circle cx="16" cy="16" r="15" fill="#5F259F"/><path d="M19.5 8.5h-5.2c-2.4 0-4.3 1.9-4.3 4.3v10.7h3.6v-4.1h2.9l3.8 4.1h4.6l-4.4-4.7c1.8-.7 3-2.4 3-4.4 0-3.3-2.4-5.9-5.4-5.9zm-2.3 8.3h-3.6v-5.2h3.6c1.4 0 2.6 1.2 2.6 2.6s-1.2 2.6-2.6 2.6z" fill="#FFFFFF"/></svg>`,
     },
     gpay: {
       id: 'gpay',
       name: 'G Pay',
-      logo: `<svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#fff" stroke="#e5e7eb" stroke-width="1.2"/><path d="M14 10.5a3.5 3.5 0 0 0-3.5 3.5v3a3.5 3.5 0 0 0 7 0v-3" stroke="#4285F4" stroke-width="2.5" stroke-linecap="round"/><path d="M17.5 14v3a3.5 3.5 0 0 0 7 0v-3a3.5 3.5 0 0 0-3.5-3.5" stroke="#34A853" stroke-width="2.5" stroke-linecap="round"/><path d="M14 17v.5a3.5 3.5 0 0 0 7 0V17" stroke="#FBBC05" stroke-width="2.5" stroke-linecap="round"/><path d="M17.5 10.5a3.5 3.5 0 0 0-3.5 3.5" stroke="#EA4335" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+      androidPackage: 'com.google.android.apps.nbu.paisa.user',
+      iosScheme: 'gpay://upi/pay',
+      logo: `<svg viewBox="0 0 32 32" width="28" height="28"><path d="M26.8 16.3c0-.8-.1-1.6-.2-2.3H16v4.4h6.1c-.3 1.4-1.1 2.6-2.4 3.4v2.8h3.9c2.3-2.1 3.2-5.2 3.2-8.3z" fill="#4285F4"/><path d="M16 27.2c3.3 0 6.1-1.1 8.1-3l-3.9-2.8c-1.1.7-2.5 1.2-4.2 1.2-3.2 0-6-2.2-7-5.1H5v3c2.1 4.1 6.3 6.7 11 6.7z" fill="#34A853"/><path d="M9 17.5c-.3-.8-.4-1.6-.4-2.5s.1-1.7.4-2.5V9.5H5c-.9 1.8-1.4 3.8-1.4 6s.5 4.2 1.4 6l4-3.5-.4-.5z" fill="#FBBC05"/><path d="M16 7.8c1.8 0 3.4.6 4.7 1.8l3.5-3.5C22.1 4.2 19.3 3 16 3 11.3 3 7.1 5.6 5 9.7l4 3.1c1-2.9 3.8-5 7-5z" fill="#EA4335"/></svg>`,
     },
     amazonpay: {
       id: 'amazonpay',
       name: 'Amazon Pay',
-      logo: `<svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#232f3e"/><text x="7" y="17" fill="#fff" font-family="sans-serif" font-weight="bold" font-size="10">pay</text><path d="M8 21c4.5 2.5 10.5 2.5 15 0" stroke="#FF9900" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+      androidPackage: 'in.amazon.mShop.android.shopping',
+      iosScheme: 'amazonpay://pay',
+      logo: `<svg viewBox="0 0 32 32" width="28" height="28"><circle cx="16" cy="16" r="15" fill="#232F3E"/><text x="16" y="15" fill="#FFFFFF" font-size="10" font-family="system-ui, sans-serif" font-weight="800" text-anchor="middle">pay</text><path d="M9 20c4 2.5 10 2.5 14 0" stroke="#FF9900" stroke-width="1.8" stroke-linecap="round" fill="none"/><path d="M21.5 19.2l1.8.8-.6 1.8" fill="#FF9900"/></svg>`,
     },
     bhim: {
       id: 'bhim',
       name: 'BHIM',
-      logo: `<svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#e6f9f0"/><path d="M14 8L10 24h3.5l3.5-12z" fill="#097939"/><path d="M18.5 8L14 24h3.5L21 8z" fill="#ED752E"/></svg>`,
+      androidPackage: 'in.org.npci.upiapp',
+      iosScheme: 'upi://pay',
+      logo: `<svg viewBox="0 0 32 32" width="26" height="26"><path d="M8 6l8 10-8 10h5l8-10-8-10H8z" fill="#FF9933"/><path d="M14 6l8 10-8 10h5l8-10-8-10h-5z" fill="#138808"/></svg>`,
     },
     cred: {
       id: 'cred',
       name: 'CRED',
-      logo: `<svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#111"/><path d="M10 10h12v12H10z" fill="none" stroke="#fff" stroke-width="2"/><path d="M13 13h6v6h-6z" fill="#fff"/></svg>`,
+      androidPackage: 'com.dreamplug.androidapp',
+      iosScheme: 'credpay://pay',
+      logo: `<svg viewBox="0 0 32 32" width="26" height="26"><rect width="32" height="32" rx="6" fill="#0F172A"/><path d="M16 6L7 11v8c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12v-8l-9-5z" stroke="#FFFFFF" stroke-width="2" fill="none"/></svg>`,
+    },
+    generic: {
+      id: 'generic',
+      name: 'Other UPI',
+      androidPackage: '',
+      iosScheme: 'upi://pay',
+      logo: `<span style="font-size:18px;">⚡</span>`,
     },
   };
+
+  function getMobilePlatform() {
+    const ua = (navigator.userAgent || navigator.vendor || window.opera || '').toLowerCase();
+    if (/android/i.test(ua)) return 'android';
+    if (/iphone|ipad|ipod/i.test(ua)) return 'ios';
+    return 'other';
+  }
+
+  function buildUpiParams(customVpa) {
+    const payableEl = document.querySelector('[data-ec-pay="upi"]');
+    const payableMinor = payableEl ? payAmountForMethod(payableEl, basePayMinor) : basePayMinor;
+    const amountStr = (payableMinor / 100).toFixed(2);
+    const vpa = (customVpa || currentUpiConfig?.vpa || 'merchant@upi').trim();
+    const merchantName = (
+      currentUpiConfig?.merchantName ||
+      currentSettings?.brandName ||
+      'Tezvix Store'
+    ).trim();
+    const note = activeSessionId ? 'Order ' + activeSessionId.slice(-8) : 'Order payment';
+    return `pa=${encodeURIComponent(vpa)}&pn=${encodeURIComponent(merchantName)}&am=${encodeURIComponent(amountStr)}&cu=INR&tn=${encodeURIComponent(note)}`;
+  }
+
+  function getUpiLaunchUrl(appId, customVpa) {
+    const target = UPI_APP_TARGETS[appId] || UPI_APP_TARGETS.generic;
+    const queryString = buildUpiParams(customVpa);
+    const platform = getMobilePlatform();
+
+    if (platform === 'android') {
+      if (target.androidPackage) {
+        const fallbackUrl = encodeURIComponent('upi://pay?' + queryString);
+        return `intent://pay?${queryString}#Intent;scheme=upi;package=${target.androidPackage};S.browser_fallback_url=${fallbackUrl};end`;
+      }
+      return `upi://pay?${queryString}`;
+    }
+
+    if (platform === 'ios') {
+      if (target.iosScheme && target.iosScheme.includes('://')) {
+        return `${target.iosScheme}?${queryString}`;
+      }
+      return `upi://pay?${queryString}`;
+    }
+
+    return `upi://pay?${queryString}`;
+  }
+
+  function launchUpiApp(appId, customVpa) {
+    const url = getUpiLaunchUrl(appId, customVpa);
+    try {
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_top';
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (_) {}
+
+    setTimeout(() => {
+      try {
+        window.location.assign(url);
+      } catch (_) {
+        try {
+          window.location.href = url;
+        } catch (__) {}
+      }
+    }, 150);
+  }
 
   function renderMobileUpiApps(settings) {
     const grid = $('ec-upi-apps-grid');
     const drawer = $('ec-upi-all-drawer');
     if (!grid) return;
-    grid.replaceChildren();
-    if (drawer) drawer.replaceChildren();
 
     const configured =
       Array.isArray(settings?.upiConfig?.apps) && settings.upiConfig.apps.length > 0
         ? settings.upiConfig.apps
         : ['paytm', 'phonepe', 'gpay', 'amazonpay', 'bhim', 'cred'];
 
+    grid.replaceChildren();
+    if (drawer) drawer.replaceChildren();
+
     const topApps = configured.slice(0, 4);
     const extraApps = configured.slice(4);
 
     topApps.forEach((appId, index) => {
-      const item = UPI_APPS[appId] || { id: appId, name: appId.toUpperCase(), logo: '📱' };
+      const item = UPI_APP_TARGETS[appId] || {
+        id: appId,
+        name: appId.toUpperCase(),
+        logo: '📱',
+      };
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = index === 0 ? 'ec-upi-app-card is-selected' : 'ec-upi-app-card';
@@ -527,7 +690,11 @@
 
     if (drawer) {
       extraApps.forEach((appId) => {
-        const item = UPI_APPS[appId] || { id: appId, name: appId.toUpperCase(), logo: '📱' };
+        const item = UPI_APP_TARGETS[appId] || {
+          id: appId,
+          name: appId.toUpperCase(),
+          logo: '📱',
+        };
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'ec-upi-app-card';
@@ -547,29 +714,31 @@
     currentUpiConfig = settings.upiConfig || null;
     const discountText = settings.upiConfig?.discountBadge || '₹50 Off';
     const cashbackText = settings.upiConfig?.cashbackBadge || 'Win Cashback';
-    for (const el of document.querySelectorAll('[data-ec-upi-discount]')) {
-      el.textContent = discountText;
-    }
-    for (const el of document.querySelectorAll('[data-ec-upi-cashback] span')) {
-      el.textContent = cashbackText;
-    }
+
+    const deskDiscount = $('ec-upi-desk-discount-badge');
+    if (deskDiscount) deskDiscount.textContent = discountText;
+    const mobDiscount = $('ec-upi-mob-discount-badge');
+    if (mobDiscount) mobDiscount.textContent = discountText.toUpperCase();
+    const cashbackEl = $('ec-upi-mob-cashback-text');
+    if (cashbackEl) cashbackEl.textContent = cashbackText;
+
     renderMobileUpiApps(settings);
   }
 
-  function startUpiQrCountdown(seconds) {
+  function startUpiQrCountdown(seconds = 540) {
     if (upiTimerInterval) clearInterval(upiTimerInterval);
     let remaining = seconds;
-    const timerVal = $('ec-upi-timer-val');
+    const timerText = $('ec-upi-timer-text');
     function tick() {
-      if (!timerVal) return;
+      if (!timerText) return;
       const mins = Math.floor(remaining / 60)
         .toString()
         .padStart(2, '0');
       const secs = (remaining % 60).toString().padStart(2, '0');
-      timerVal.textContent = `Valid for ${mins}:${secs}`;
+      timerText.innerHTML = `QR valid for <strong>${mins}:${secs} mins</strong>`;
       if (remaining <= 0) {
         clearInterval(upiTimerInterval);
-        timerVal.textContent = 'QR expired — click to refresh';
+        timerText.innerHTML = `<span>QR expired · <u>Click to refresh</u></span>`;
       }
       remaining--;
     }
@@ -586,17 +755,7 @@
     }
     updatePayableDisplay();
 
-    const payableEl = document.querySelector('[data-ec-pay="upi"]');
-    const payableMinor = payableEl ? payAmountForMethod(payableEl, basePayMinor) : basePayMinor;
-    const amountStr = (payableMinor / 100).toFixed(2);
-    const vpa = (currentUpiConfig?.vpa || 'merchant@upi').trim();
-    const merchantName = (
-      currentUpiConfig?.merchantName ||
-      currentSettings?.brandName ||
-      'Store'
-    ).trim();
-    const upiUri = `upi://pay?pa=${encodeURIComponent(vpa)}&pn=${encodeURIComponent(merchantName)}&am=${amountStr}&cu=INR&tn=${encodeURIComponent(activeSessionId || 'Order')}`;
-
+    const upiUri = `upi://pay?${buildUpiParams()}`;
     const realEl = $('ec-upi-qr-real');
     const blurredEl = $('ec-upi-qr-blurred');
     const showBtn = $('ec-upi-show-qr-btn');
@@ -607,32 +766,12 @@
     if (blurredEl) blurredEl.hidden = true;
     if (showBtn) showBtn.hidden = true;
 
-    // Show item details ("generate the qr for the order and show the item")
-    const firstLine = sessionLines && sessionLines[0];
-    const itemCard = $('ec-upi-desk-item-card');
-    if (itemCard) {
-      itemCard.hidden = false;
-      const titleEl = $('ec-upi-item-title');
-      const subEl = $('ec-upi-item-sub');
-      const imgWrap = $('ec-upi-item-img-wrap');
-      if (titleEl) titleEl.textContent = firstLine?.title || 'Order item';
-      const count = (sessionLines || []).reduce((sum, l) => sum + (l.quantity || 1), 0) || 1;
-      if (subEl)
-        subEl.textContent = `${count} item${count > 1 ? 's' : ''} · ${formatInr(payableMinor)}`;
-      if (imgWrap) {
-        if (firstLine?.imageUrl) {
-          imgWrap.innerHTML = `<img src="${firstLine.imageUrl}" alt="" />`;
-        } else {
-          imgWrap.innerHTML = `<span class="ec-upi-item-fallback-img">📦</span>`;
-        }
-      }
-    }
-
-    startUpiQrCountdown(600);
+    startUpiQrCountdown(540);
   }
 
   function handleUpiAppSelect(btn) {
     selectedPay = 'upi';
+    const appId = btn.getAttribute('data-ec-upi-app') || 'generic';
     for (const b of document.querySelectorAll('[data-ec-upi-app]')) {
       const on = b === btn;
       b.classList.toggle('is-selected', on);
@@ -644,6 +783,7 @@
       row.setAttribute('aria-checked', on ? 'true' : 'false');
     }
     updatePayableDisplay();
+    launchUpiApp(appId);
   }
 
   function handleUpiVpaSubmit() {
@@ -666,6 +806,7 @@
     }
     updatePayableDisplay();
     input?.blur();
+    launchUpiApp('generic', val);
   }
 
   function applyBrand(settings) {
@@ -1222,6 +1363,9 @@
           upiCard.classList.remove('is-collapsed');
           upiCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
+        const selectedAppBtn = document.querySelector('.ec-upi-app-card.is-selected');
+        const appId = selectedAppBtn?.getAttribute('data-ec-upi-app') || 'paytm';
+        launchUpiApp(appId);
       }
       return;
     }
@@ -1617,6 +1761,13 @@
     const reason =
       document.querySelector('input[name="ec-exit-reason"]:checked')?.value || 'no_reason';
     const note = $('ec-exit-note')?.value?.trim() || '';
+    if (!orderCompleted && activeSessionId) {
+      trackCheckoutEvent('checkout_abandoned', {
+        droppedAt: determineCurrentFunnelStep(),
+        reason,
+        note,
+      });
+    }
     console.info('[EasyCheckout] exit feedback', { reason, note });
     hideExitFeedback();
     window.EasyCheckout?.close();
@@ -1665,7 +1816,7 @@
   function loyaltyData(loyalty) {
     if (loyalty && typeof loyalty.points === 'number') return loyalty;
     return {
-      partnerName: 'EasyRewardz',
+      partnerName: 'Tezvix',
       points: 1250,
       redeemableMinor: 12500,
     };
@@ -1779,7 +1930,7 @@
     const appliedWorth = loyaltyWorthMinor(loyaltyAppliedPoints);
     row.hidden = false;
     row.classList.toggle('is-applied', applied);
-    if (partner) partner.textContent = data.partnerName || 'EasyRewardz';
+    if (partner) partner.textContent = data.partnerName || 'Tezvix';
     if (brandSub) {
       brandSub.textContent = applied
         ? `${formatPoints(loyaltyAppliedPoints)} points applied on this order`
@@ -1871,6 +2022,10 @@
     try {
       const session = await patchSession({ couponCode: code });
       applySession(session);
+      trackCheckoutEvent('discount_applied', {
+        couponCode: code,
+        discountMinor: session?.totals?.discountMinor,
+      });
       showErr(mainErr, '');
       showErr(sheetErr, '');
       if (input && !codeOverride) input.value = '';
@@ -2346,6 +2501,11 @@
     persistShopper({ ...shopper, address, needsAddress: false, isNew: false });
     renderDeliverTo(address);
     void quotePin(address.postalCode);
+    trackCheckoutEvent('address_added', {
+      postalCode: address.postalCode,
+      locality: address.locality,
+      region: address.region,
+    });
     return true;
   }
 
@@ -2486,7 +2646,7 @@
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'content-type': 'application/json', accept: 'application/json' },
-        body: JSON.stringify({ phone, code }),
+        body: JSON.stringify({ phone, code, sessionId: activeSessionId }),
       });
       const body = await response.json().catch(() => null);
       if (!response.ok) {
@@ -2495,6 +2655,11 @@
         return;
       }
       stopResendTimer();
+      trackCheckoutEvent('logged_in', {
+        phone: body?.phone || phone,
+        customerId: body?.customerId,
+        isNew: body?.isNew,
+      });
       routeAfterAuth(body);
     } catch (error) {
       failed = true;
@@ -2536,6 +2701,11 @@
     }
     persistShopper(body);
     renderDeliverTo(body.address || address);
+    trackCheckoutEvent('address_added', {
+      postalCode: address.postalCode,
+      locality: address.locality,
+      region: address.region,
+    });
     setStep('checkout');
   }
 
@@ -2672,7 +2842,7 @@
     if (sub) sub.textContent = 'Creating your order in the store — hang tight';
     try {
       await quotePin(address.postalCode);
-      const response = await fetch(
+      let response = await fetch(
         `${apiBase}/v1/sessions/${encodeURIComponent(activeSessionId)}/place-cod`,
         {
           method: 'POST',
@@ -2687,16 +2857,55 @@
       );
       let body = await response.json().catch(() => null);
 
-      if (!response.ok) {
+      // Handle in-progress or reconciling state via graceful polling
+      let pollCount = 0;
+      while (
+        pollCount < 5 &&
+        (response.status === 202 ||
+          body?.status === 'RECONCILING' ||
+          (response.status === 409 && body?.error?.code === 'ORDER_IN_PROGRESS'))
+      ) {
+        pollCount++;
+        const waitMs = body?.retryAfterMs || (response.status === 202 ? 2000 : 1500);
+        if (text) text.textContent = 'Confirming your order…';
+        if (sub) sub.textContent = 'Verifying confirmation with the store — please wait';
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+
+        response = await fetch(
+          `${apiBase}/v1/sessions/${encodeURIComponent(activeSessionId)}/place-cod`,
+          {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              accept: 'application/json',
+              ...(shopper.token ? { 'x-ec-shopper': shopper.token } : {}),
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(address),
+          },
+        );
+        body = await response.json().catch(() => null);
+        if (response.ok && body?.orderId) break;
+      }
+
+      if (!response.ok || !body?.orderId) {
         const errorMsg =
           body?.error?.code === 'NOT_FOUND'
             ? 'Checkout session expired. Please close and reopen checkout.'
-            : body?.error?.message || 'Could not place the order.';
+            : body?.message || body?.error?.message || 'Could not place the order.';
         showErr('ec-error', errorMsg);
         return;
       }
       // Keep last-used address as default for next checkout.
       persistShopper({ ...shopper, address, needsAddress: false, isNew: false });
+      const completedSessionId = activeSessionId;
+      orderCompleted = true;
+      trackCheckoutEvent('checkout_completed', {
+        sessionId: completedSessionId,
+        orderId: body?.orderId,
+        orderName: body?.orderName,
+        paymentMethod: 'cod',
+      });
       activeSessionId = '';
       // Cart checkout: clear bag so purchased lines don't linger.
       // Buy now: leave the cart alone — other items may still be in it.
@@ -2836,6 +3045,12 @@
         return;
       }
       if (target.closest('[data-ec-close]') && window.EasyCheckout) {
+        if (!orderCompleted && activeSessionId) {
+          trackCheckoutEvent('checkout_abandoned', {
+            droppedAt: determineCurrentFunnelStep(),
+            reason: 'close_button',
+          });
+        }
         window.EasyCheckout.close();
         return;
       }
@@ -2860,9 +3075,26 @@
         handleShowUpiQr();
         return;
       }
-      if (target.closest('#ec-upi-mob-head')) {
+      if (
+        target.closest('#ec-upi-timer-badge') &&
+        $('ec-upi-timer-text')?.textContent.includes('expired')
+      ) {
+        handleShowUpiQr();
+        return;
+      }
+      if (target.closest('#ec-upi-mob-toggle')) {
         const upiCard = target.closest('.ec-pay-upi-card');
-        if (upiCard) upiCard.classList.toggle('is-collapsed');
+        if (upiCard) {
+          upiCard.classList.toggle('is-collapsed');
+          selectedPay = 'upi';
+          for (const row of document.querySelectorAll('[data-ec-pay]')) {
+            const on = row === upiCard;
+            row.classList.toggle('is-selected', on);
+            row.setAttribute('aria-checked', on ? 'true' : 'false');
+          }
+          updatePayableDisplay();
+          trackCheckoutEvent('payment_selected', { method: 'upi' });
+        }
         return;
       }
       const upiAppBtn = target.closest('[data-ec-upi-app]');
@@ -2885,26 +3117,36 @@
         }
         return;
       }
-      if (target.closest('#ec-upi-vpa-btn')) {
+      if (target.closest('#ec-upi-vpa-submit')) {
         handleUpiVpaSubmit();
         return;
       }
-
       const payRow = target.closest('[data-ec-pay]');
       if (payRow) {
         if (payRow.disabled || payRow.getAttribute('data-ec-pay-enabled') !== '1') return;
-        const newPay = payRow.getAttribute('data-ec-pay') || 'cod';
-        selectedPay = newPay;
+        selectedPay = payRow.getAttribute('data-ec-pay') || 'cod';
         for (const row of document.querySelectorAll('[data-ec-pay]')) {
           const on = row === payRow;
           row.classList.toggle('is-selected', on);
           row.setAttribute('aria-checked', on ? 'true' : 'false');
         }
         updatePayableDisplay();
-        // If clicking on UPI card, don't popup modal — user interacts directly with inline UPI UI
-        if (newPay !== 'upi') {
-          void beginPlaceOrder();
+        trackCheckoutEvent('payment_selected', { method: selectedPay });
+
+        if (selectedPay === 'upi') {
+          const isMobile = window.innerWidth <= 640;
+          if (!isMobile) {
+            handleShowUpiQr();
+          } else {
+            const upiCard =
+              target.closest('.ec-pay-upi-card') || document.querySelector('.ec-pay-upi-card');
+            if (upiCard) upiCard.classList.remove('is-collapsed');
+          }
+          return;
         }
+
+        // Place / confirm on payment method tap — no separate pay button.
+        void beginPlaceOrder();
         return;
       }
       const qtyBtn = target.closest('[data-ec-qty-delta]');
@@ -3188,11 +3430,6 @@
         void applyCouponCode(undefined, { keepSheet: true });
         return;
       }
-      if (event.key === 'Enter' && target.id === 'ec-upi-vpa-input') {
-        event.preventDefault();
-        handleUpiVpaSubmit();
-        return;
-      }
       if (!target.matches('[data-ec-otp]')) return;
       if (event.key !== 'Backspace' || target.value) return;
       const inputs = otpInputs();
@@ -3211,16 +3448,32 @@
     });
   }
 
+  window.addEventListener('beforeunload', () => {
+    if (!orderCompleted && activeSessionId && boundRoot && !boundRoot.hidden) {
+      trackCheckoutEvent('checkout_abandoned', {
+        droppedAt: determineCurrentFunnelStep(),
+        reason: 'page_unload',
+      });
+    }
+  });
+
   window.EasyCheckoutApp = {
     setLoading,
     startLoading() {
       setLoading(true);
     },
     reset() {
+      if (!orderCompleted && activeSessionId) {
+        trackCheckoutEvent('checkout_abandoned', {
+          droppedAt: determineCurrentFunnelStep(),
+          reason: 'modal_reset',
+        });
+      }
       resetOrderSuccessUi();
       setLoading(false);
     },
     async mount(root, options = {}) {
+      orderCompleted = false;
       apiBase = (options.apiBase || window.EasyCheckout?.apiBase || '').replace(/\/$/, '');
       bindRoot(root);
       // Panel DOM is reused across opens — always leave the previous thank-you state.
@@ -3233,6 +3486,14 @@
         // Session first (already created in parallel by embed) — paint totals immediately.
         if (options.session) applySession(options.session);
         else await loadSession(options.sessionId);
+
+        const initSessionId = activeSessionId || options.sessionId || options.session?.sessionId;
+        if (initSessionId) {
+          trackCheckoutEvent('started', {
+            sessionId: initSessionId,
+            source: sessionSource,
+          });
+        }
 
         // Auth: prefer warm/cached shopper so checkout does not wait on network.
         const warm =
