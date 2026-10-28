@@ -74,3 +74,5 @@ Thumbs.db
 /tasks/
 /Doc/
 /tools/
+Checkout-load-test
+localDependency/
