@@ -5,6 +5,7 @@ import { Header } from './components/Header';
 import { TopBar } from './components/TopBar';
 import { Rail } from './components/Rail';
 import { Toast } from './components/Toast';
+import { LoginModal } from './components/auth/LoginModal';
 
 import { DashboardView } from './views/DashboardView';
 import { OrdersView } from './views/OrdersView';
@@ -113,6 +114,7 @@ export const App: React.FC = () => {
         <main id="view">{renderActiveView()}</main>
       </div>
       <Toast />
+      <LoginModal />
     </>
   );
 };

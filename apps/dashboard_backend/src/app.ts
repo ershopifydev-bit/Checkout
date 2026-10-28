@@ -12,6 +12,8 @@ import { ordersRouter } from './routes/orders.routes.js';
 import { analyticsRouter } from './routes/analytics.routes.js';
 import { settingsRouter } from './routes/settings.routes.js';
 import { auditRouter } from './routes/audit.routes.js';
+import { integrationsRouter } from './routes/integrations.routes.js';
+import { storesRouter } from './routes/stores.routes.js';
 
 export function createApp(): express.Application {
   const app = express();
@@ -69,6 +71,8 @@ export function createApp(): express.Application {
   app.use('/api/analytics', analyticsRouter);
   app.use('/api/settings', settingsRouter);
   app.use('/api/audit-logs', auditRouter);
+  app.use('/api/integrations', integrationsRouter);
+  app.use('/api/stores', storesRouter);
 
   // 404 Handler
   app.use((req, res) => {

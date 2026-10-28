@@ -40,6 +40,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
     couponCode?: string;
     giftVoucher?: { code?: string; pin?: string };
     loyaltyRedeemPoints?: number;
+    lineQuantity?: { variantId?: string; lineKey?: string; quantity: number };
   } = {};
   const addressRaw = body['address'];
   if (addressRaw && typeof addressRaw === 'object') {
@@ -62,6 +63,14 @@ export async function action({ request, params }: ActionFunctionArgs) {
   }
   if (body['loyaltyRedeemPoints'] != null) {
     patch.loyaltyRedeemPoints = Number(body['loyaltyRedeemPoints']);
+  }
+  if (body['lineQuantity'] && typeof body['lineQuantity'] === 'object') {
+    const lq = body['lineQuantity'] as Record<string, unknown>;
+    const quantity = Math.max(0, Math.min(99, Number(lq['quantity']) || 0));
+    const lineQ: { variantId?: string; lineKey?: string; quantity: number } = { quantity };
+    if (lq['variantId']) lineQ.variantId = String(lq['variantId']);
+    if (lq['lineKey']) lineQ.lineKey = String(lq['lineKey']);
+    patch.lineQuantity = lineQ;
   }
   try {
     const sessionId = String(params['sessionId'] || '');
@@ -107,6 +116,16 @@ export async function action({ request, params }: ActionFunctionArgs) {
     if (code === 'SESSION_STORE_UNAVAILABLE') return storeUnavailableResponse();
     if (code === 'INVALID_COUPON' || code === 'COUPON_INACTIVE') {
       return errorResponse(code, 'That coupon code is not valid.', 400);
+    }
+    if (code === 'COUPON_LIMIT_REACHED') {
+      return errorResponse(code, 'You can apply up to five discount codes.', 400);
+    }
+    if (code === 'COUPON_COMBINATION_NOT_ALLOWED') {
+      return errorResponse(
+        code,
+        'This code cannot combine with your applied discounts. Remove them first to use this code.',
+        400,
+      );
     }
     if (code === 'COUPON_UNSUPPORTED') {
       return errorResponse(code, 'This coupon type is not supported in COD checkout yet.', 400);

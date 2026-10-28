@@ -68,14 +68,22 @@ html.ec-lock body {
   }
 
   .ec-shell {
-    width: min(480px, calc(100vw - 2rem)) !important;
-    height: auto !important;
-    max-height: min(92dvh, 880px) !important;
+    width: min(450px, calc(100vw - 2rem)) !important;
+    height: min(840px, 94dvh) !important;
+    min-height: min(840px, 94dvh) !important;
+    max-height: min(840px, 94dvh) !important;
     margin: auto !important;
-    border-radius: 20px !important;
+    border-radius: 18px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
     box-shadow:
       0 20px 45px -10px rgba(0, 0, 0, 0.3),
       0 0 0 1px rgba(0, 0, 0, 0.08) !important;
+  }
+
+  .ec-summary-panel {
+    max-height: calc(min(840px, 94dvh) * 0.7) !important;
   }
 }
 
@@ -324,26 +332,60 @@ html.ec-lock body {
 
 .ec-summary-bar {
   width: 100%;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  display: flex;
   align-items: center;
-  column-gap: 0.5em;
+  gap: 0.6em;
   border: 0;
   border-top: 1px solid #f0f0f0;
   background: #fafafa;
-  padding: 0.55em 0.75em;
+  padding: 0.55em 0.8em;
   font: inherit;
   cursor: pointer;
   text-align: left;
+  box-sizing: border-box;
 }
 
 .ec-summary-save {
-  justify-self: start;
+  flex: 1 1 auto;
   min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.ec-save-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  max-width: 100%;
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+  border-radius: 999px;
+  padding: 0.25em 0.65em;
+  font-size: 0.72em;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+#ec-save-pill-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ec-popper-icon {
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+.ec-save-pill[hidden] {
+  display: none !important;
 }
 
 .ec-summary-cart {
-  justify-self: center;
+  flex-shrink: 0;
+  margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 0.35em;
@@ -355,45 +397,44 @@ html.ec-lock body {
   font-size: 0.82em;
   font-weight: 600;
   white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .ec-summary-cart .ec-bag {
-  flex-shrink: 0;
-  color: #4b5563;
+  display: none !important;
 }
 
 .ec-summary-pay {
-  justify-self: end;
-  display: grid;
-  justify-items: end;
-  gap: 0.05em;
-  min-width: 0;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  text-align: right;
   line-height: 1.15;
+  min-width: 0;
+}
+
+.ec-header-pay-label {
+  font-size: 10px;
+  color: #6b7280;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
 .ec-summary-pay strong {
   font-size: 1.05em;
   font-weight: 800;
+  color: #111827;
+}
+
+.ec-shell .ec-compare {
+  color: #6b7280;
+  text-decoration: line-through;
 }
 
 .ec-summary-pay .ec-compare {
   font-size: 0.7em;
-}
-
-.ec-save-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.28em;
-  max-width: 100%;
-  background: #dcfce7;
-  color: #15803d;
-  border-radius: 999px;
-  padding: 0.22em 0.55em 0.22em 0.4em;
-  font-size: 0.68em;
-  font-weight: 700;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .ec-save-pill .ec-ico {
@@ -410,23 +451,22 @@ html.ec-lock body {
 }
 
 .ec-summary-panel {
-  /* Overlay below the bag bar — must scroll on touch (iOS needs overflow-y + touch) */
+  /* Overlay below the bag bar — container uses flex column so lines scroll while totals remain static */
   position: absolute;
   left: 0;
   right: 0;
   top: 100%;
   height: auto;
-  max-height: min(72dvh, calc(100dvh - 5.5rem));
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  touch-action: pan-y;
-  padding: 0.65em 0.85em 0.85em;
-  border-top: 1px solid #f3f3f3;
-  background: #fff;
+  max-height: 70dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 12px 14px 14px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
   z-index: 7;
+  box-sizing: border-box;
 }
 
 .ec-summary-scrim {
@@ -769,10 +809,11 @@ html.ec-lock body {
 }
 
 .ec-login-card > .ec-sub {
-  margin: 0 auto 1.3em;
-  max-width: 24em;
-  font-size: 0.95em;
+  margin: 0 auto 1.2em;
+  max-width: 28em;
+  font-size: 0.92em;
   color: #6b7280;
+  line-height: 1.45;
 }
 
 .ec-login-banner {
@@ -828,13 +869,24 @@ html.ec-lock body {
 }
 
 .ec-cc {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.4em;
-  padding: 0 1em;
+  gap: 0.35em;
+  padding: 0 0.85em;
   font-weight: 600;
+  color: #111827;
   border-right: 1px solid #e3e3e3;
   outline: none !important;
+  user-select: none;
+}
+
+.ec-cc-chevron {
+  display: block;
+  width: 11px;
+  height: 11px;
+  stroke: #6b7280;
+  flex-shrink: 0;
+  margin-top: 1px;
 }
 
 #ec-login-phone,
@@ -842,14 +894,31 @@ html.ec-lock body {
 .ec-login-card .ec-phone-input input {
   border: 0 !important;
   border-left: 0 !important;
-  background: transparent;
-  padding: 1em;
+  background: #ffffff !important;
+  padding: 0.9em 1em;
   outline: none !important;
   outline-offset: 0 !important;
   box-shadow: none !important;
   font-size: 1em;
   -webkit-appearance: none;
   appearance: none;
+  color: #111827;
+}
+
+#ec-login-phone:-webkit-autofill,
+#ec-login-phone:-webkit-autofill:hover,
+#ec-login-phone:-webkit-autofill:focus,
+#ec-login-phone:-webkit-autofill:active,
+.ec-phone-input input:-webkit-autofill,
+.ec-phone-input input:-webkit-autofill:hover,
+.ec-phone-input input:-webkit-autofill:focus,
+.ec-phone-input input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #111827 !important;
+  caret-color: #111827 !important;
+  background-color: #ffffff !important;
+  transition: background-color 9999s ease-in-out 0s !important;
 }
 
 #ec-login-phone:focus,
@@ -866,6 +935,7 @@ html.ec-lock body {
   outline: none !important;
   outline-offset: 0 !important;
   box-shadow: none !important;
+  background: #ffffff !important;
 }
 
 .ec-login-card .ec-phone-input input:disabled {
@@ -942,36 +1012,101 @@ html.ec-lock body {
   cursor: not-allowed;
 }
 
-.ec-change-number {
-  font-weight: 500;
-  font-size: 0.85em;
+.ec-otp-phone-display {
+  font-weight: 600;
+  color: #111827;
 }
 
-.ec-change-number:disabled {
+.ec-otp-phone-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.ec-phone-edit-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-left: 0.25em;
+  padding: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #4b5563;
+  cursor: pointer;
+  flex-shrink: 0;
+  vertical-align: middle;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.ec-phone-edit-icon:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #111827;
+}
+
+.ec-phone-edit-icon:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.ec-resend-btn {
-  width: 100%;
+.ec-otp-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0.5em 0 0.85em;
+  min-height: 1.4em;
+}
+
+.ec-otp-dev-hint {
+  font-size: 0.8em;
+  color: #059669;
+  font-weight: 600;
+}
+
+.ec-resend-link {
+  margin-left: auto;
+  background: none;
   border: 0;
-  border-radius: 10px;
-  background: #efefef;
-  color: #111;
-  padding: 1em;
+  padding: 0.2em 0.2em;
   font: inherit;
-  font-size: 0.9em;
+  font-size: 0.84em;
+  color: #111827;
+  font-weight: 600;
+  text-decoration: underline;
   cursor: pointer;
 }
 
-.ec-resend-btn:disabled {
+.ec-resend-link:disabled {
   color: #9ca3af;
+  text-decoration: none;
   cursor: not-allowed;
+  font-weight: 400;
 }
 
-.ec-otp-note {
-  margin: 0 0 1em !important;
-  font-size: 0.8em;
+.ec-otp-reassurance {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45em;
+  margin: 0.85em auto 0.4em;
+  max-width: 320px;
+  text-align: center;
+  font-size: 0.82em;
+  line-height: 1.35;
+  color: #6b7280;
+}
+
+.ec-otp-reassurance svg {
+  flex-shrink: 0;
+  stroke: #9ca3af;
 }
 
 /* Primary button + spinner */
@@ -983,13 +1118,13 @@ html.ec-lock body {
   justify-content: center;
   gap: 0.7em;
   border: 0;
-  border-radius: 999px;
+  border-radius: 12px;
   background: #111;
   color: #fff;
   font: inherit;
   font-weight: 600;
-  font-size: 1.1em;
-  padding: 1.05em 1em;
+  font-size: 1.05em;
+  padding: 0.9em 1em;
   cursor: pointer;
   transition:
     opacity 0.15s,
@@ -1160,7 +1295,7 @@ html.ec-lock body {
 
 .ec-deliver-title {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 0.45em;
   min-width: 0;
@@ -1169,28 +1304,60 @@ html.ec-lock body {
 .ec-ship-free-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.25em;
+  justify-content: center;
+  gap: 4px;
   flex-shrink: 0;
   background: #dcfce7;
   color: #15803d;
   border: 1px solid #bbf7d0;
   border-radius: 999px;
-  padding: 0.2em 0.65em;
-  font-size: 0.72em;
+  padding: 2px 7px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
+  line-height: 1;
+  vertical-align: middle;
 }
 
 .ec-ship-free-badge .ec-ico {
+  display: block;
   flex-shrink: 0;
+  width: 11px;
+  height: 11px;
+  margin-top: -1px;
+}
+
+.ec-ship-free-badge span {
+  display: inline-block;
+  line-height: 1;
 }
 
 .ec-address-summary {
   display: grid;
-  gap: 0.25em;
-  font-size: 0.9em;
-  line-height: 1.4;
+  gap: 0.15em;
+  font-size: 0.8em;
+  line-height: 1.35;
+  color: #475569;
+}
+
+.ec-address-summary strong {
+  font-size: 0.95em;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.ec-address-summary div {
+  font-size: 0.92em;
+  color: #475569;
+  word-break: break-word;
+}
+
+.ec-address-summary .ec-phone {
+  font-size: 0.88em;
+  color: #64748b;
+  font-weight: 500;
+  margin-top: 1px;
 }
 
 .ec-address-picker {
@@ -1342,7 +1509,7 @@ html.ec-lock body {
   flex: 1;
   min-width: 6em;
   padding: 0.5em 0.85em;
-  border-radius: 999px;
+  border-radius: 12px;
   font-size: 0.85em;
 }
 
@@ -1360,7 +1527,13 @@ html.ec-lock body {
 
 /* Don't let .ec-body scroll the address card away (looked blank; Save unreachable). */
 .ec-shell.is-address-focus .ec-body {
-  overflow: hidden;
+  overflow-y: auto;
+}
+
+.ec-shell.is-address-focus .ec-main {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .ec-shell.is-address-focus .ec-main > :not(.ec-address) {
@@ -1370,19 +1543,16 @@ html.ec-lock body {
 .ec-shell.is-address-focus .ec-address {
   position: relative;
   z-index: 6;
-  max-height: calc(100dvh - 9.5em);
+  flex: 1 1 auto;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   box-shadow: none;
   border-color: #ececec;
-}
-
-@media (min-width: 641px) {
-  .ec-shell.is-address-focus .ec-address {
-    max-height: calc(100vh - 11em);
-  }
 }
 
 .ec-phone {
@@ -1406,6 +1576,24 @@ html.ec-lock body {
 .ec-offers-head h2 {
   margin: 0;
   font-size: 0.95em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  line-height: 1.25;
+}
+
+.ec-section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  line-height: 1.25;
+  vertical-align: middle;
+}
+
+.ec-section-title svg,
+.ec-section-title .ec-ico {
+  display: block;
+  flex-shrink: 0;
 }
 
 .ec-card-head h2.ec-section-title {
@@ -1525,15 +1713,33 @@ html.ec-lock body {
 
 .ec-loyalty-redeem-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 0.35em;
+  width: 100%;
+}
+
+.ec-loyalty-redeem-row.is-compact .ec-loyalty-presets {
+  display: none !important;
+}
+
+.ec-loyalty-redeem-row.is-compact .ec-loyalty-input-wrap {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 380px) {
+  .ec-loyalty-presets {
+    display: none !important;
+  }
+  .ec-loyalty-input-wrap {
+    flex: 1 1 auto;
+  }
 }
 
 .ec-loyalty-input-wrap {
   position: relative;
-  flex: 1 1 7.5em;
-  min-width: 6.5em;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .ec-loyalty-input-wrap input {
@@ -1817,24 +2023,24 @@ html.ec-lock body {
   min-height: 0;
 }
 
-.ec-coupons-sheet-inner {
+.ec-shell .ec-coupons-sheet-inner {
   display: grid;
-  gap: 0.65em;
+  gap: 12px;
 }
 
-.ec-sheet-coupon-field {
+.ec-shell .ec-sheet-coupon-field {
   display: flex;
   align-items: center;
   gap: 0.45em;
   border: 1px solid #e5e7eb;
-  border-radius: 999px;
+  border-radius: 12px;
   padding: 0.2em 0.25em 0.2em 0.85em;
   background: #fff;
 }
 
-.ec-sheet-coupon-field input,
-.ec-sheet-coupon-field input:focus,
-.ec-sheet-coupon-field input:focus-visible {
+.ec-shell .ec-sheet-coupon-field input,
+.ec-shell .ec-sheet-coupon-field input:focus,
+.ec-shell .ec-sheet-coupon-field input:focus-visible {
   flex: 1;
   min-width: 0;
   border: 0 !important;
@@ -1846,7 +2052,7 @@ html.ec-lock body {
   padding: 0.45em 0;
 }
 
-.ec-sheet-coupon-apply {
+.ec-shell .ec-sheet-coupon-apply {
   border: 0;
   border-radius: 999px;
   background: #111;
@@ -1859,7 +2065,7 @@ html.ec-lock body {
   flex-shrink: 0;
 }
 
-.ec-sheet-coupon-apply:disabled {
+.ec-shell .ec-sheet-coupon-apply:disabled {
   opacity: 0.55;
   cursor: wait;
 }
@@ -1868,7 +2074,7 @@ html.ec-lock body {
   margin: 0;
 }
 
-.ec-sheet-tabs {
+.ec-shell .ec-sheet-tabs {
   display: flex;
   flex-wrap: nowrap;
   gap: 0.4em;
@@ -1877,11 +2083,11 @@ html.ec-lock body {
   padding: 0.05em 0;
 }
 
-.ec-sheet-tabs::-webkit-scrollbar {
+.ec-shell .ec-sheet-tabs::-webkit-scrollbar {
   display: none;
 }
 
-.ec-sheet-tab {
+.ec-shell .ec-sheet-tab {
   flex: 0 0 auto;
   border: 1px solid #e5e7eb;
   border-radius: 999px;
@@ -1895,19 +2101,19 @@ html.ec-lock body {
   white-space: nowrap;
 }
 
-.ec-sheet-tab.is-active {
+.ec-shell .ec-sheet-tab.is-active {
   border-color: #111;
   background: #111;
   color: #fff;
 }
 
-.ec-sheet-section-title {
+.ec-shell .ec-sheet-section-title {
   margin: 0.15em 0 0;
   font-size: 0.92em;
   font-weight: 700;
 }
 
-.ec-offer-banner {
+.ec-shell .ec-offer-banner {
   margin: 0;
   padding: 0.55em 0.7em;
   border-radius: 8px;
@@ -1917,72 +2123,74 @@ html.ec-lock body {
   line-height: 1.35;
 }
 
-.ec-coupon-card-list {
+.ec-shell .ec-coupon-card-list {
   display: grid;
   gap: 0.55em;
 }
 
-.ec-coupon-card {
+.ec-shell .ec-coupon-card {
   border: 1px solid #e8e8e8;
   border-radius: 12px;
   background: #fff;
-  padding: 0.65em 0.7em;
+  padding: 14px;
 }
 
-.ec-coupon-card.is-applied {
+.ec-shell .ec-coupon-card.is-applied {
   border-color: #86efac;
   background: #f0fdf4;
 }
 
-.ec-coupon-card-hint {
+.ec-shell .ec-coupon-card-hint {
   margin: 0 0 0.4em;
   font-size: 0.68em;
   font-weight: 600;
   color: #b45309;
 }
 
-.ec-coupon-card-hint.is-muted {
-  color: #9ca3af;
+.ec-shell .ec-coupon-card-hint.is-muted {
+  color: #6b7280;
   font-weight: 500;
 }
 
-.ec-coupon-card.is-best .ec-coupon-card-hint {
+.ec-shell .ec-coupon-card.is-best .ec-coupon-card-hint {
   color: #15803d;
 }
 
-.ec-coupon-card-row {
+.ec-shell .ec-coupon-card-row {
   display: flex;
   align-items: center;
   gap: 0.55em;
 }
 
-.ec-coupon-card-icon {
+.ec-shell .ec-coupon-card-icon {
   flex-shrink: 0;
-  width: 1.7em;
-  height: 1.7em;
+  width: 34px;
+  height: 34px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: #f3f4f6;
-  color: #6b7280;
+  background: #eef8f1;
+  color: #166534;
   font-size: 0.72em;
   font-weight: 800;
 }
 
-.ec-coupon-card-main {
+.ec-shell .ec-coupon-card-main {
   flex: 1;
   min-width: 0;
   display: grid;
   gap: 0.2em;
 }
 
-.ec-coupon-code-box {
+.ec-shell .ec-coupon-code-box {
   display: inline-block;
   max-width: 100%;
-  border: 1px dashed #d1d5db;
+  border: 0;
+  width: fit-content;
+  background: #f3f4f6;
   border-radius: 6px;
-  padding: 0.15em 0.4em;
+  padding: 4px 8px;
   font-size: 0.78em;
   font-weight: 800;
   letter-spacing: 0.03em;
@@ -1991,13 +2199,13 @@ html.ec-lock body {
   white-space: nowrap;
 }
 
-.ec-coupon-card-main small {
+.ec-shell .ec-coupon-card-main small {
   color: #6b7280;
   font-size: 0.72em;
   line-height: 1.25;
 }
 
-.ec-coupon-card-apply {
+.ec-shell .ec-coupon-card-apply {
   flex-shrink: 0;
   border: 1px solid #d1d5db;
   border-radius: 999px;
@@ -2006,15 +2214,57 @@ html.ec-lock body {
   font: inherit;
   font-size: 0.72em;
   font-weight: 700;
-  padding: 0.4em 0.85em;
+  padding: 10px 14px;
   cursor: pointer;
 }
 
-.ec-coupon-card-apply:disabled {
+.ec-shell .ec-coupon-card-apply:disabled {
   border-color: #86efac;
   background: #dcfce7;
   color: #15803d;
   cursor: default;
+}
+
+.ec-shell .ec-coupon-intro {
+  margin: 0;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ec-shell .ec-coupon-saving {
+  font-size: 15px;
+  color: #111827;
+  line-height: 1.4;
+}
+
+.ec-shell .ec-coupon-applied-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  color: #166534;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.ec-shell .ec-coupon-applied-summary button {
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ec-shell .ec-sheet-coupon-field:focus-within {
+  outline: 2px solid #166534;
+  outline-offset: 2px;
 }
 
 .ec-sheet-empty {
@@ -2070,27 +2320,36 @@ html.ec-lock body {
 
 .ec-pay-list {
   display: grid;
-  gap: 0.45em;
+  gap: 0.4em;
 }
 
 .ec-pay-row {
   display: flex;
-  gap: 0.7em;
+  gap: 0.65em;
   align-items: center;
   width: 100%;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 0.75em 0.85em;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.58em 0.8em;
+  min-height: 48px;
   background: #fff;
   font: inherit;
   text-align: left;
   cursor: pointer;
   color: inherit;
+  box-sizing: border-box;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.ec-pay-row:hover {
+  border-color: #d1d5db;
 }
 
 .ec-pay-dot {
-  width: 1.15em;
-  height: 1.15em;
+  width: 1.1em;
+  height: 1.1em;
   border-radius: 50%;
   border: 2px solid #d1d5db;
   flex-shrink: 0;
@@ -2102,20 +2361,22 @@ html.ec-lock body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2em;
-  height: 2em;
+  width: 1.85em;
+  height: 1.85em;
   flex-shrink: 0;
-  border-radius: 8px;
+  border-radius: 7px;
   background: #f3f4f6;
   color: #374151;
 }
 
 .ec-pay-icon svg {
   display: block;
+  width: 17px;
+  height: 17px;
 }
 
 .ec-pay-row.is-selected {
-  border-color: #16a34a;
+  border: 1.5px solid #16a34a;
   background: #f0fdf4;
 }
 
@@ -2138,33 +2399,44 @@ html.ec-lock body {
 
 .ec-pay-main {
   display: grid;
-  gap: 0.15em;
+  gap: 0.1em;
   min-width: 0;
   flex: 1;
 }
 
 .ec-pay-row strong {
   display: block;
-  font-size: 0.92em;
+  font-size: 0.88em;
+  font-weight: 600;
+  color: #111827;
+  letter-spacing: -0.01em;
 }
 
 .ec-pay-row small {
   color: #6b7280;
-  font-size: 0.78em;
+  font-size: 0.74em;
+  line-height: 1.25;
 }
 
 .ec-pay-side {
-  display: grid;
-  justify-items: end;
-  gap: 0.2em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
   flex-shrink: 0;
   text-align: right;
+  margin-left: auto;
 }
 
 .ec-pay-amount {
   font-weight: 700;
-  font-size: 0.92em;
+  font-size: 0.88em;
+  color: #111827;
   white-space: nowrap;
+}
+
+.ec-pay-chevron {
+  color: #9ca3af;
+  flex-shrink: 0;
 }
 
 .ec-pay-badge {
@@ -2187,7 +2459,7 @@ html.ec-lock body {
 }
 
 .ec-upsell {
-  overflow: hidden;
+  overflow: visible;
 }
 
 .ec-upsell-rail {
@@ -2197,12 +2469,12 @@ html.ec-lock body {
   max-width: 100%;
   min-width: 0;
   overflow-x: auto;
-  overflow-y: hidden;
-  overscroll-behavior-x: contain;
-  padding-bottom: 0.15em;
-  scroll-snap-type: x mandatory;
+  overflow-y: visible;
+  padding-bottom: 0.35em;
+  scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
+  touch-action: auto;
+  overscroll-behavior-x: auto;
 }
 
 .ec-upsell-card {
@@ -2251,12 +2523,15 @@ html.ec-lock body {
 .ec-upsell-add {
   border: 1px solid #111;
   background: #fff;
-  border-radius: 999px;
-  padding: 0.4em 0.6em;
+  border-radius: 10px;
+  padding: 0.45em 0.7em;
   font: inherit;
   font-size: 0.78em;
   font-weight: 700;
   cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .ec-upsell-add.is-added {
@@ -2335,186 +2610,380 @@ html.ec-lock body {
   gap: 0.45em;
 }
 
-.ec-lines {
-  display: grid;
-  gap: 0;
-  margin: 0.35em 0 0.65em;
-}
-
-.ec-line {
-  display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
-  gap: 0.65em;
-  align-items: start;
-  padding: 0.75em 0;
-  border-bottom: 1px solid #e8e8e8;
-}
-
-.ec-line:last-child {
-  border-bottom: 1px solid #e8e8e8;
-  margin-bottom: 0.15em;
-}
-
-.ec-line-title-row {
+.ec-shell .ec-lines {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 10px;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.ec-shell .ec-lines::-webkit-scrollbar {
+  width: 4px;
+}
+
+.ec-shell .ec-lines::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ec-shell .ec-lines::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.ec-shell .ec-line {
+  --ec-card-ui-version: 20261029-card-2;
+  display: flex;
+  gap: 10px;
   align-items: flex-start;
-  gap: 0.35em 0.5em;
+  background: #ffffff;
+  border: 1px solid #edf0f3;
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: none;
+  box-sizing: border-box;
 }
 
-.ec-deal-badge {
-  display: inline-flex;
-  align-items: center;
+.ec-shell .ec-thumb {
+  width: 94px;
+  height: 96px;
+  border-radius: 12px;
+  background: #f4f5f6;
+  border: 0;
+  overflow: hidden;
   flex-shrink: 0;
-  background: #dcfce7;
-  color: #15803d;
-  border-radius: 999px;
-  padding: 0.12em 0.45em;
-  font-size: 0.68em;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  box-sizing: border-box;
 }
 
-.ec-qty-stepper {
+.ec-shell .ec-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.ec-shell .ec-thumb-fallback {
+  width: 100%;
+  height: 100%;
+  background: #f1f5f9;
+}
+
+.ec-shell .ec-line-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.ec-shell .ec-line-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.ec-shell .ec-line-title {
+  max-width: 240px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.25;
+  letter-spacing: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ec-shell .ec-line-delete {
   display: inline-flex;
   align-items: center;
-  gap: 0;
-  border: 1px solid #d1d5db;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  padding: 3px;
+  margin: 0;
+  color: #94a3b8;
+  cursor: pointer;
+  border-radius: 4px;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.ec-shell .ec-line-delete:hover:not(:disabled) {
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+.ec-shell .ec-line-delete:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ec-shell .ec-line-variant {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 3px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ec-shell .ec-line-pricing {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 4px 6px;
+  margin-top: 3px;
+}
+
+.ec-shell .ec-mrp-strike {
+  font-size: 11.5px;
+  text-decoration: line-through;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.ec-shell .ec-mrp-pct {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #16a34a;
+}
+
+.ec-shell .ec-offer-wrap {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.ec-shell .ec-offer-price {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ec-shell .ec-line-coupon-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #e4f8eb;
+  border: 0;
+  border-radius: 6px;
+  padding: 2px 8px;
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #166534;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+  width: fit-content;
+}
+
+.ec-shell .ec-ticket-icon {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.ec-shell .ec-line-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ec-shell .ec-qty-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #e2e8f0;
   border-radius: 999px;
   overflow: hidden;
-  background: #fff;
+  background: #ffffff;
+  height: 28px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
-.ec-qty-btn {
-  width: 1.85em;
-  height: 1.85em;
+.ec-shell .ec-qty-btn {
+  width: 28px;
+  height: 28px;
   border: 0;
   background: transparent;
   font: inherit;
-  font-size: 1em;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
   line-height: 1;
   cursor: pointer;
-  color: #111;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background-color 0.15s ease;
 }
 
-.ec-qty-btn:disabled {
+.ec-shell .ec-qty-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+
+.ec-shell .ec-qty-btn:disabled {
   opacity: 0.35;
   cursor: not-allowed;
 }
 
-.ec-qty-btn:hover:not(:disabled) {
-  background: #f3f4f6;
-}
-
-.ec-qty-value {
-  min-width: 1.4em;
+.ec-shell .ec-qty-value {
+  min-width: 22px;
   text-align: center;
-  font-size: 0.85em;
+  font-size: 12px;
   font-weight: 700;
+  color: #0f172a;
 }
 
-.ec-thumb {
-  width: 72px;
-  height: 72px;
-  border-radius: 10px;
-  background: #f3f4f6;
-  overflow: hidden;
-  border: 1px solid #ececec;
-}
-
-.ec-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.ec-thumb-fallback {
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(145deg, #1a1a1a, #444);
-}
-
-.ec-line-meta {
-  display: grid;
-  gap: 0.15em;
-  min-width: 0;
-}
-
-.ec-line-meta strong {
-  font-size: 0.92em;
-  line-height: 1.3;
-}
-
-.ec-line-meta .ec-variant,
-.ec-line-meta .ec-sku {
-  color: #6b7280;
-  font-size: 0.78em;
-}
-
-.ec-sku {
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-}
-
-.ec-line-foot {
+.ec-shell .ec-line-final-price {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.4em 0.65em;
-  margin-top: 0.3em;
-}
-
-.ec-line-qty {
-  font-size: 0.82em;
-  font-weight: 600;
-  color: #374151;
-}
-
-.ec-line-discount {
-  color: #16a34a;
-  font-size: 0.8em;
-  font-weight: 600;
-}
-
-.ec-line-prices {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.4em;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
   margin-left: auto;
+  line-height: 1.2;
 }
 
-.ec-line-prices strong {
-  font-size: 0.95em;
+.ec-shell .ec-final-label {
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 400;
+  letter-spacing: normal;
 }
 
-.ec-compare {
-  text-decoration: line-through;
-  color: #9ca3af;
-  font-size: 0.85em;
-  font-weight: 500;
+.ec-shell .ec-final-amount {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+/* Keep the same hierarchy when the overlay fills a narrow phone screen. */
+@media (max-width: 380px) {
+  .ec-shell .ec-thumb {
+    width: 72px;
+    height: 80px;
+  }
 }
 
 .ec-totals {
+  flex-shrink: 0;
   margin: 0;
+  margin-top: auto;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   display: grid;
-  gap: 0.35em;
+  gap: 6px;
+  box-sizing: border-box;
 }
 
 .ec-totals div {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 1em;
-  font-size: 0.92em;
+  font-size: 12px;
+  color: #475569;
 }
 
 .ec-totals dt {
   margin: 0;
-  color: #6b7280;
+  color: #64748b;
+  font-weight: 500;
 }
 
 .ec-totals dd {
   margin: 0;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.ec-shell .ec-discount-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: #475569;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ec-shell .ec-discount-toggle:focus-visible {
+  outline: 2px solid #0f766e;
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+.ec-shell .ec-discount-toggle .ec-caret {
+  transition: transform 150ms ease;
+}
+
+.ec-shell .ec-discount-toggle[aria-expanded='true'] .ec-caret {
+  transform: rotate(180deg);
+}
+
+.ec-shell .ec-discount-breakdown {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f6faf8;
+}
+
+.ec-shell .ec-discount-breakdown[hidden] {
+  display: none !important;
+}
+
+.ec-shell #ec-discount-items {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.ec-shell .ec-discount-subrow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 11px;
+}
+
+.ec-shell .ec-discount-subrow dt {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #475569;
+}
+
+.ec-shell .ec-discount-subrow dd {
+  flex-shrink: 0;
+  color: #15803d;
   font-weight: 600;
 }
 
@@ -2523,27 +2992,32 @@ html.ec-lock body {
 }
 
 .ec-total-row {
-  margin-top: 0.25em;
-  padding-top: 0.45em;
-  border-top: 1px solid #ececec;
-  font-size: 1.05em !important;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed #cbd5e1;
+  font-size: 14px !important;
 }
 
-.ec-total-row dt,
+.ec-total-row dt {
+  font-weight: 800;
+  color: #0f172a;
+}
+
 .ec-total-row dd {
-  color: #111 !important;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
 }
 
 .ec-place {
   width: 100%;
   border: 0;
-  border-radius: 999px;
+  border-radius: 12px;
   background: #111;
   color: #fff;
   font: inherit;
   font-weight: 700;
-  padding: 0.75em 1em;
+  padding: 0.8em 1em;
   cursor: pointer;
 }
 
@@ -2552,6 +3026,84 @@ html.ec-lock body {
   font-weight: 600;
   margin: 0;
   font-size: 0.88em;
+}
+
+/* Top Slide-in Error Alert Banner */
+.ec-top-alert {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  background: #fef2f2;
+  border-bottom: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 0.65rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.35;
+  z-index: 25;
+  position: relative;
+  flex-shrink: 0;
+  animation: ecAlertSlideDown 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(185, 28, 28, 0.08);
+}
+
+.ec-top-alert[hidden] {
+  display: none !important;
+}
+
+@keyframes ecAlertSlideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.ec-top-alert-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.ec-top-alert-icon {
+  flex-shrink: 0;
+  color: #dc2626;
+  width: 16px;
+  height: 16px;
+}
+
+.ec-top-alert-text {
+  flex: 1;
+  word-break: break-word;
+  color: #991b1b;
+}
+
+.ec-top-alert-close {
+  background: none;
+  border: none;
+  padding: 4px;
+  margin: -4px;
+  cursor: pointer;
+  color: #991b1b;
+  opacity: 0.7;
+  font-size: 15px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.ec-top-alert-close:hover {
+  opacity: 1;
+  background: rgba(185, 28, 28, 0.1);
 }
 
 .ec-success {
@@ -2604,112 +3156,88 @@ html.ec-lock body {
   display: none !important;
 }
 
-.ec-trust-footer {
-  display: grid;
-  justify-items: center;
-  gap: 0.55em;
-  margin: 0.2em 0 0;
-  padding: 0.55em 0.35em 0.35em;
-  background: transparent;
-  border: 0;
-  text-align: center;
-  color: #6b7280;
-}
-
-.ec-powered {
-  display: grid;
-  justify-items: center;
-  gap: 0.2em;
-}
-
-.ec-powered-label {
-  font-size: 0.68em;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #9ca3af;
-}
-
-.ec-powered-brand {
-  display: inline-flex;
+.ec-shell .ec-trust-footer {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.4em;
-  color: #1e3a5f;
+  gap: 16px;
+  margin: 24px 0 0;
+  padding: 20px 12px 16px;
+  border-top: 1px solid #e5e7eb;
+  text-align: center;
+  color: #64748b;
 }
 
-.ec-powered-brand strong {
-  font-size: 1.05em;
-  font-weight: 800;
-  letter-spacing: -0.01em;
+.ec-shell .ec-powered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
 
-.ec-powered-mark {
-  display: grid;
-  place-items: center;
-  width: 1.15em;
-  height: 1.15em;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #fbbf24, #2563eb);
-  color: #fff;
-  font-size: 0.7em;
-  font-weight: 800;
+.ec-shell .ec-powered-label {
+  font-size: 11px;
+  color: #64748b;
+  letter-spacing: normal;
 }
 
-.ec-trust-badges {
+.ec-shell .ec-platform-logo {
+  display: block;
+  width: 104px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.ec-shell .ec-trust-badges {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px 18px;
   list-style: none;
-  margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.5em;
-  width: 100%;
-  max-width: 22em;
-}
-
-.ec-trust-badges li {
-  display: grid;
-  justify-items: center;
-  gap: 0.3em;
-  font-size: 0.62em;
-  font-weight: 600;
-  color: #9ca3af;
-  line-height: 1.25;
-}
-
-.ec-trust-icon {
-  color: #9ca3af;
-  display: grid;
-  place-items: center;
-  min-height: 1.75em;
-}
-
-.ec-trust-secure {
-  border: 1.5px solid currentColor;
-  border-radius: 4px;
-  padding: 0.25em 0.35em;
-  font-size: 0.72em;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
-
-.ec-trust-ref {
   margin: 0;
-  font-size: 0.72em;
-  color: #c4c4c4;
-  letter-spacing: 0.04em;
-  min-height: 1em;
 }
 
-.ec-trust-legal {
-  margin: 0;
-  font-size: 0.72em;
-  color: #9ca3af;
-  max-width: 22em;
+.ec-shell .ec-trust-badges li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 500;
   line-height: 1.4;
+  letter-spacing: normal;
+  text-align: left;
 }
 
-.ec-trust-legal a {
-  color: inherit;
+.ec-shell .ec-trust-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.ec-shell .ec-trust-icon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.ec-shell .ec-trust-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ec-shell .ec-trust-legal {
+  max-width: 320px;
+  margin: 0;
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.6;
+  letter-spacing: normal;
+}
+
+.ec-shell .ec-trust-legal a {
+  color: #475569;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -2811,7 +3339,7 @@ html.ec-lock body {
 .ec-logout-confirm-btn {
   width: 100%;
   padding: 0.8em 1em;
-  border-radius: 999px;
+  border-radius: 12px;
   text-align: center;
   color: #dc2626;
   border: 1px solid #fecaca;
@@ -2836,11 +3364,12 @@ html.ec-lock body {
   position: relative !important;
   display: block !important;
   padding: 0 !important;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
   background: #ffffff;
   overflow: visible !important;
   cursor: default !important;
+  box-sizing: border-box;
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
@@ -2861,53 +3390,6 @@ html.ec-lock body {
   background: #dcfce7;
 }
 
-/* Ribbon badges */
-.ec-upi-desk-ribbon-wrap,
-.ec-card-ribbon-wrap {
-  position: absolute;
-  top: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 3;
-  pointer-events: none;
-}
-
-.ec-upi-badge-ribbon {
-  display: inline-block;
-  position: relative;
-  background: #0da589;
-  color: #ffffff;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 14px;
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-  white-space: nowrap;
-  letter-spacing: 0.02em;
-}
-
-.ec-upi-badge-ribbon::before,
-.ec-upi-badge-ribbon::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  width: 0;
-  height: 0;
-  border-style: solid;
-}
-
-.ec-upi-badge-ribbon::before {
-  left: -4px;
-  border-width: 0 4px 4px 0;
-  border-color: transparent #075f4e transparent transparent;
-}
-
-.ec-upi-badge-ribbon::after {
-  right: -4px;
-  border-width: 0 0 4px 4px;
-  border-color: transparent transparent transparent #075f4e;
-}
-
 .ec-pay-card-row {
   position: relative !important;
   overflow: visible !important;
@@ -2920,7 +3402,7 @@ html.ec-lock body {
 }
 
 .ec-pay-chevron {
-  color: #111827;
+  color: #9ca3af;
   flex-shrink: 0;
 }
 
@@ -2929,7 +3411,7 @@ html.ec-lock body {
    -------------------------------------------------------------------------- */
 .ec-upi-desktop {
   display: block;
-  padding: 0.75em 0.85em 1.15em;
+  padding: 0.58em 0.8em 1em;
 }
 
 .ec-upi-desk-header {
@@ -2937,18 +3419,19 @@ html.ec-lock body {
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
+  min-height: 34px;
 }
 
 .ec-upi-brand-heading {
   display: inline-flex;
   align-items: center;
-  gap: 0.7em;
+  gap: 0.65em;
   color: #111827;
 }
 
 .ec-upi-title-text {
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 0.88em;
+  font-weight: 600;
   letter-spacing: -0.01em;
   color: #111827;
 }
@@ -3013,7 +3496,7 @@ html.ec-lock body {
   font-size: 12px;
   font-weight: 700;
   padding: 6px 14px;
-  border-radius: 9999px;
+  border-radius: 8px;
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
   transition:
@@ -3184,7 +3667,11 @@ html.ec-lock body {
 .ec-upi-mobile {
   display: none;
   position: relative;
-  padding: 0.75em 0.85em 1rem;
+  padding: 0.58em 0.8em 0.85em;
+}
+
+.ec-pay-upi-card.is-collapsed .ec-upi-mobile {
+  padding: 0.58em 0.8em;
 }
 
 .ec-upi-mob-badge {
@@ -3193,13 +3680,13 @@ html.ec-lock body {
   left: 14px;
   background: #059669;
   color: #ffffff;
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
-  padding: 2px 10px;
-  border-radius: 5px;
+  padding: 2px 8px;
+  border-radius: 4px;
   z-index: 3;
   letter-spacing: 0.02em;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .ec-upi-mob-head {
@@ -3209,26 +3696,28 @@ html.ec-lock body {
   width: 100%;
   cursor: pointer;
   user-select: none;
+  min-height: 34px;
 }
 
 .ec-upi-mob-head-left {
   display: flex;
   align-items: center;
-  gap: 0.7em;
+  gap: 0.65em;
   min-width: 0;
 }
 
 .ec-upi-mob-title {
   display: block;
-  font-size: 14.5px;
-  font-weight: 700;
+  font-size: 0.88em;
+  font-weight: 600;
   color: #111827;
+  letter-spacing: -0.01em;
   line-height: 1.2;
 }
 
 .ec-upi-mob-sub {
   display: block;
-  font-size: 11.5px;
+  font-size: 0.74em;
   color: #6b7280;
   line-height: 1.2;
 }
@@ -3236,21 +3725,21 @@ html.ec-lock body {
 .ec-upi-mob-head-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
 }
 
 .ec-upi-cashback-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   background: #e6f9f0;
   border: 1px solid #10b981;
   color: #059669;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
   border-radius: 9999px;
-  padding: 3px 9px;
+  padding: 2px 7px;
   white-space: nowrap;
 }
 
@@ -3262,7 +3751,7 @@ html.ec-lock body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #111827;
+  color: #9ca3af;
   transition: transform 0.2s ease;
 }
 
@@ -3275,16 +3764,16 @@ html.ec-lock body {
 }
 
 .ec-upi-mob-body {
-  margin-top: 1rem;
+  margin-top: 0.85rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
 .ec-upi-apps-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
 }
 
 .ec-upi-app-card {
@@ -3292,17 +3781,18 @@ html.ec-lock body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 10px 4px 8px;
-  border-radius: 12px;
+  gap: 4px;
+  padding: 8px 2px 6px;
+  border-radius: 9px;
   border: 1px solid #e5e7eb;
   background: #ffffff;
   cursor: pointer;
   transition: all 0.15s ease;
-  min-height: 74px;
+  min-height: 60px;
   color: inherit;
   font: inherit;
   outline: none;
+  box-sizing: border-box;
 }
 
 .ec-upi-app-card:hover {
@@ -3319,72 +3809,28 @@ html.ec-lock body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 28px;
-  min-width: 28px;
+  height: 26px;
+  min-width: 26px;
 }
 
 .ec-upi-app-name {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: #111827;
-  white-space: nowrap;
-}
-
-.ec-upi-all-btn {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 10px 14px;
-  border-radius: 10px;
-  background: #f9fafb;
-  border: 1px solid #f3f4f6;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  color: #111827;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-}
-
-.ec-upi-all-btn:hover {
-  background: #f3f4f6;
-}
-
-.ec-upi-all-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.ec-upi-grid-dots {
-  color: #111827;
-  flex-shrink: 0;
-}
-
-.ec-upi-arrow-right {
-  color: #6b7280;
-  flex-shrink: 0;
-}
-
-.ec-upi-all-drawer {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  padding: 8px;
-  border-radius: 10px;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  text-align: center;
+  line-height: 1.15;
+  white-space: normal;
 }
 
 .ec-upi-divider {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   color: #9ca3af;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
   user-select: none;
+  margin: 3px 0 5px;
 }
 
 .ec-upi-divider-line {
@@ -3414,7 +3860,7 @@ html.ec-lock body {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 11px 14px;
+  padding: 9px 12px;
   background: none;
   border: none;
   font: inherit;
@@ -3426,27 +3872,34 @@ html.ec-lock body {
 .ec-upi-vpa-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .ec-upi-tricolor-icon {
   flex-shrink: 0;
+  width: 16px;
+  height: 16px;
 }
 
 .ec-upi-vpa-title {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
   color: #111827;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .ec-upi-vpa-placeholder {
-  font-size: 12px;
+  font-size: 11px;
   color: #9ca3af;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1;
 }
 
 .ec-upi-vpa-form {
@@ -3493,6 +3946,96 @@ html.ec-lock body {
   }
   .ec-upi-mobile {
     display: block;
+    padding: 0.5em 0.75em 0.75em;
+  }
+  .ec-upi-mob-badge,
+  .ec-upi-cashback-badge,
+  #ec-upi-mob-discount-badge,
+  #ec-upi-cashback-badge {
+    display: none !important;
+  }
+  .ec-card {
+    padding: 0.6em 0.75em !important;
+    border-radius: 10px !important;
+  }
+  .ec-card-head {
+    margin-bottom: 0.25em !important;
+  }
+  .ec-card h2,
+  .ec-card-head h2.ec-section-title {
+    font-size: 0.88em !important;
+  }
+  .ec-deliver-title {
+    flex-wrap: nowrap !important;
+    gap: 0.35em !important;
+  }
+  .ec-ship-free-badge {
+    font-size: 9.5px !important;
+    padding: 2px 6px !important;
+    gap: 3.5px !important;
+    line-height: 1 !important;
+  }
+  .ec-ship-free-badge .ec-ico {
+    width: 10.5px !important;
+    height: 10.5px !important;
+    margin-top: -1px !important;
+  }
+  .ec-address-summary {
+    font-size: 0.76em !important;
+    line-height: 1.3 !important;
+    gap: 0.1em !important;
+  }
+  .ec-address-summary strong {
+    font-size: 0.9em !important;
+  }
+  .ec-address-summary div {
+    font-size: 0.86em !important;
+  }
+  .ec-address-summary .ec-phone {
+    font-size: 0.84em !important;
+  }
+  .ec-link {
+    font-size: 0.8em !important;
+  }
+  .ec-pay-row {
+    padding: 0.55em 0.7em !important;
+  }
+  .ec-pay-icon {
+    width: 28px !important;
+    height: 28px !important;
+  }
+  .ec-pay-title {
+    font-size: 0.86em !important;
+  }
+  .ec-pay-sub {
+    font-size: 0.72em !important;
+  }
+  .ec-pay-amount {
+    font-size: 0.86em !important;
+  }
+  .ec-upi-mob-head {
+    padding: 0.55em 0.7em !important;
+  }
+  .ec-upi-mob-title {
+    font-size: 0.86em !important;
+  }
+  .ec-upi-mob-sub {
+    font-size: 0.72em !important;
+  }
+  .ec-upi-apps-grid {
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 4px !important;
+    margin: 0.35em 0 !important;
+  }
+  .ec-upi-app-card {
+    padding: 6px 2px !important;
+    min-height: 52px !important;
+  }
+  .ec-upi-app-label {
+    font-size: 10px !important;
+  }
+  .ec-loyalty-block {
+    padding: 0.5em 0.65em !important;
   }
 }
 

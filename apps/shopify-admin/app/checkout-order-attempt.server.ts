@@ -37,6 +37,7 @@ export interface CheckoutOrderAttempt {
   shopifyOrderId?: string | undefined;
   shopifyOrderName?: string | undefined;
   shopifyOrderTotalMinor?: number | undefined;
+  shopifyOrderStatusUrl?: string | undefined;
 
   attemptCount: number;
 
@@ -371,6 +372,7 @@ export async function markAttemptConfirmed(
     shopifyOrderId: string;
     shopifyOrderName: string;
     shopifyOrderTotalMinor: number;
+    shopifyOrderStatusUrl?: string | undefined;
   },
 ): Promise<CheckoutOrderAttempt> {
   const now = new Date();
@@ -383,6 +385,9 @@ export async function markAttemptConfirmed(
         att.shopifyOrderId = details.shopifyOrderId;
         att.shopifyOrderName = details.shopifyOrderName;
         att.shopifyOrderTotalMinor = details.shopifyOrderTotalMinor;
+        if (details.shopifyOrderStatusUrl) {
+          att.shopifyOrderStatusUrl = details.shopifyOrderStatusUrl;
+        }
         att.completedAt = now;
         att.leaseOwner = undefined;
         att.leaseExpiresAt = undefined;
@@ -403,6 +408,9 @@ export async function markAttemptConfirmed(
         shopifyOrderId: details.shopifyOrderId,
         shopifyOrderName: details.shopifyOrderName,
         shopifyOrderTotalMinor: details.shopifyOrderTotalMinor,
+        ...(details.shopifyOrderStatusUrl
+          ? { shopifyOrderStatusUrl: details.shopifyOrderStatusUrl }
+          : {}),
         completedAt: now,
         updatedAt: now,
       },

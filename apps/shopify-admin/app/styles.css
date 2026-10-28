@@ -335,3 +335,11 @@ button:disabled {
     padding: 1.15rem;
   }
 }
+
+.tezvix-brand-logo {
+  display: block;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: left center;
+  margin-bottom: 12px;
+}

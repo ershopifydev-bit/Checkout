@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="71 69 209 209" role="img" aria-labelledby="iconTitle iconDesc">
+<title id="iconTitle">Tezvix primary logomark</title>
+<desc id="iconDesc">Standalone angled T with lightning bolt, without wordmark, designed for compact branding.</desc>
+<defs>
+<linearGradient id="tealNavy" gradientUnits="userSpaceOnUse" x1="96" y1="113" x2="251" y2="116"><stop stop-color="#03C7BA"/><stop offset=".40" stop-color="#009A9C"/><stop offset="1" stop-color="#061C3D"/></linearGradient>
+<linearGradient id="orange" gradientUnits="userSpaceOnUse" x1="120" y1="245" x2="180" y2="128"><stop stop-color="#F59105"/><stop offset="1" stop-color="#FFAE12"/></linearGradient>
+</defs>
+
+<path d="M160,127 L157,127 L121,181 L145,181 L146,183 L139,197 L137,199 L124,226 L122,228 L109,255 L204,158 L162,158 L161,156 L169,145 L169,141 L164,135Z" fill="url(#orange)" fill-rule="evenodd"/>
+<path d="M98,126 L161,126 L167,135 L174,135 L175,136 L170,144 L171,145 L211,145 L253,93 L252,92 L120,92Z" fill="url(#tealNavy)" fill-rule="evenodd"/>
+</svg>

@@ -80,6 +80,134 @@ describe('checkout sessions', () => {
     expect(cleared.totals.amountMinor).toBe(90000);
   });
 
+  it('retains compatible coupons, avoids duplicates, and preserves them on rejection', async () => {
+    const store = createMemorySessionStore();
+    const session = await createCheckoutSession(
+      {
+        shop: 'codemadi.myshopify.com',
+        source: 'buy_now',
+        lines: [{ title: 'Bag', quantity: 1, amountMinor: 100000 }],
+      },
+      store,
+    );
+    const resolveCoupon = async ({ code }: { code: string }) => ({
+      code,
+      kind: 'fixed' as const,
+      value: 10000,
+      discountMinor: 10000,
+      summary: 'Save ₹100',
+      discountClass: 'ORDER' as const,
+      combinesWith: {
+        orderDiscounts: code !== 'NO',
+        productDiscounts: false,
+        shippingDiscounts: true,
+      },
+    });
+    await patchCheckoutSession(session.sessionId, { couponCode: 'ONE' }, store, { resolveCoupon });
+    const combined = await patchCheckoutSession(session.sessionId, { couponCode: 'TWO' }, store, {
+      resolveCoupon,
+    });
+    expect(combined.totals.discountMinor).toBe(20000);
+    expect(publicSessionView(combined).coupons.map((c) => c.code)).toEqual(['ONE', 'TWO']);
+    const duplicate = await patchCheckoutSession(session.sessionId, { couponCode: 'one' }, store, {
+      resolveCoupon,
+    });
+    expect(duplicate.totals.discountMinor).toBe(20000);
+    await expect(
+      patchCheckoutSession(session.sessionId, { couponCode: 'NO' }, store, { resolveCoupon }),
+    ).rejects.toThrow('COUPON_COMBINATION_NOT_ALLOWED');
+    expect((await getCheckoutSession(session.sessionId, store))?.totals.discountMinor).toBe(20000);
+    const cleared = await patchCheckoutSession(session.sessionId, { couponCode: '' }, store);
+    expect(publicSessionView(cleared).coupons).toEqual([]);
+    expect(cleared.totals.discountMinor).toBe(0);
+  });
+
+  it('combines percentage and shipping codes, recalculates quantities, and caps savings', async () => {
+    const store = createMemorySessionStore();
+    const session = await createCheckoutSession(
+      {
+        shop: 'codemadi.myshopify.com',
+        source: 'buy_now',
+        lines: [{ variantId: '123', title: 'Bag', quantity: 1, amountMinor: 100000 }],
+      },
+      store,
+    );
+    const resolveCoupon = async ({ code }: { code: string }) => ({
+      code,
+      kind: code === 'SHIP' ? ('free_shipping' as const) : ('percentage' as const),
+      value: code === 'SHIP' ? 0 : 60,
+      discountMinor: 0,
+      summary: code,
+      discountClass: code === 'SHIP' ? ('SHIPPING' as const) : ('ORDER' as const),
+      combinesWith: { orderDiscounts: true, productDiscounts: false, shippingDiscounts: true },
+    });
+    await patchCheckoutSession(session.sessionId, { couponCode: 'SIXTY' }, store, {
+      resolveCoupon,
+    });
+    const combined = await patchCheckoutSession(session.sessionId, { couponCode: 'SHIP' }, store, {
+      resolveCoupon,
+    });
+    expect(combined.totals.discountMinor).toBe(60000);
+    expect(combined.totals.shippingMinor).toBe(0);
+    expect(combined.coupon).toMatchObject({
+      kind: 'fixed',
+      discountMinor: 60000,
+      code: 'SIXTY + SHIP',
+    });
+    const resized = await patchCheckoutSession(
+      session.sessionId,
+      { lineQuantity: { variantId: '123', quantity: 2 } },
+      store,
+    );
+    expect(resized.totals.discountMinor).toBe(120000);
+    const capped = await patchCheckoutSession(session.sessionId, { couponCode: 'MORE' }, store, {
+      resolveCoupon,
+    });
+    expect(capped.totals.discountMinor).toBe(200000);
+    expect(capped.totals.amountMinor).toBe(0);
+  });
+
+  it('updates line quantity and recomputes totals when patched with lineQuantity', async () => {
+    const store = createMemorySessionStore();
+    const session = await createCheckoutSession(
+      {
+        shop: 'codemadi.myshopify.com',
+        source: 'buy_now',
+        lines: [
+          {
+            variantId: '12345',
+            title: 'Backpack',
+            variantTitle: 'Blue',
+            quantity: 1,
+            amountMinor: 237900,
+            compareAtAmountMinor: 400000,
+          },
+        ],
+      },
+      store,
+    );
+    expect(session.lines[0]?.quantity).toBe(1);
+    expect(session.totals.subtotalMinor).toBe(237900);
+
+    const patched = await patchCheckoutSession(
+      session.sessionId,
+      { lineQuantity: { variantId: '12345', quantity: 2 } },
+      store,
+    );
+    expect(patched.lines[0]?.quantity).toBe(2);
+    expect(patched.totals.subtotalMinor).toBe(475800);
+    expect(patched.totals.amountMinor).toBe(475800);
+
+    // Also handles GID format matching against numeric variantId
+    const patchedGid = await patchCheckoutSession(
+      session.sessionId,
+      { lineQuantity: { variantId: 'gid://shopify/ProductVariant/12345', quantity: 3 } },
+      store,
+    );
+    expect(patchedGid.lines[0]?.quantity).toBe(3);
+    expect(patchedGid.totals.subtotalMinor).toBe(713700);
+  });
+
   it('keeps cart discounts, sku, and line savings on the session', async () => {
     const store = createMemorySessionStore();
     const session = await createCheckoutSession(
@@ -140,11 +268,13 @@ describe('checkout sessions', () => {
           orderGid: 'gid://shopify/Order/1',
           orderId: '1',
           orderName: '#1001',
+          statusUrl: 'https://codemadi.myshopify.com/orders/token123',
         }),
       },
     );
     expect(placed.status).toBe('placed');
     expect(placed.orderName).toBe('#1001');
+    expect(placed.statusUrl).toBe('https://codemadi.myshopify.com/orders/token123');
     expect(placed.totals.amountMinor).toBe(1499900);
     expect(await store.get(created.sessionId)).toBeNull();
   });

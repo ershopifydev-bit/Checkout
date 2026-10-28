@@ -263,6 +263,21 @@ Header used after OTP login: `x-ec-shopper: <token>`
 
 ---
 
+Session discount behavior: `couponCode` adds a code to the applied set. Codes combine only
+when both Shopify `combinesWith` rules allow it; incompatible additions return
+`COUPON_COMBINATION_NOT_ALLOWED` without replacing the previous discounts. Supported
+combinations are order discounts (up to five) plus one shipping discount. Product-code
+combinations remain unsupported until line-level eligibility is implemented. Applying an
+already applied code updates it without duplicating it. An empty `couponCode` removes
+all applied codes. `COUPON_LIMIT_REACHED` reports the five-code limit.
+
+Session responses include `coupons: [{ code, kind, summary, discountMinor }]`.
+The existing `coupon` and `couponCode` fields remain as aggregate compatibility fields;
+combined codes are joined with ` + `. COD order creation uses the aggregate fixed
+amount because Shopify `orderCreate` accepts one discount input. Shipping savings are
+reflected in the shipping total. Gift voucher and loyalty redemption retain their
+existing replacement behavior.
+
 ### 4.5 Offers (coupons + loyalty + GV flags)
 
 |                   |                                                 |
@@ -312,6 +327,7 @@ Header used after OTP login: `x-ec-shopper: <token>`
   "source": "cart",
   "totals": {},
   "lines": [],
+  "statusUrl": "https://store.myshopify.com/orders/…",
   "message": "Order #1001 placed. Pay cash on delivery."
 }
 ```
@@ -507,6 +523,7 @@ Configured in `shopify.app.toml` → `[webhooks.subscriptions]`.
 | ------------------- | ----------------------------- | -------------------------- | ------------------------------------ |
 | `app/uninstalled`   | `/webhooks/app/uninstalled`   | `routes/uninstalled.tsx`   | Delete shop sessions                 |
 | `app/scopes_update` | `/webhooks/app/scopes_update` | `routes/scopes-update.tsx` | Delete shop sessions (force re-auth) |
+| GDPR compliance     | `/api/webhooks/shopify`       | `routes/api.webhooks.shopify.ts` | `compliance_topics`: data_request / redact |
 
 Auth: `authenticate.webhook`. API version: `2026-10` (toml).
 

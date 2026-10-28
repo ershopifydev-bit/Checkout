@@ -57,13 +57,7 @@ export type ShippingHandle = {
   etdText?: string;
 };
 
-export type SessionCoupon = {
-  code: string;
-  kind: 'percentage' | 'fixed' | 'free_shipping';
-  value: number;
-  discountMinor: number;
-  summary: string;
-};
+export type SessionCoupon = ResolvedCoupon;
 
 export type CheckoutSession = {
   sessionId: string;
@@ -86,6 +80,7 @@ export type CheckoutSession = {
   cartDiscountMinor: number;
   couponCode?: string;
   coupon?: SessionCoupon;
+  coupons?: SessionCoupon[];
   createdAt: string;
   updatedAt: string;
 };
@@ -126,6 +121,7 @@ export type PlacedOrder = {
   totals: CheckoutSession['totals'];
   lines: CheckoutLine[];
   message: string;
+  statusUrl?: string | undefined;
 };
 
 export type SessionStore = {
@@ -337,8 +333,45 @@ function subtotalOf(session: CheckoutSession): number {
 }
 
 function refreshCouponAmount(session: CheckoutSession) {
-  if (!session.coupon) return;
-  session.coupon.discountMinor = computeCouponDiscountMinor(session.coupon, subtotalOf(session));
+  if (!session.coupons?.length) {
+    if (session.coupon)
+      session.coupon.discountMinor = computeCouponDiscountMinor(
+        session.coupon,
+        subtotalOf(session),
+      );
+    return;
+  }
+  const subtotal = subtotalOf(session);
+  let remaining = subtotal;
+  for (const coupon of session.coupons) {
+    coupon.discountMinor = Math.min(remaining, computeCouponDiscountMinor(coupon, subtotal));
+    remaining -= coupon.discountMinor;
+  }
+  const discountMinor = subtotal - remaining;
+  session.couponCode = session.coupons.map((c) => c.code).join(' + ');
+  session.coupon =
+    session.coupons.length === 1
+      ? { ...session.coupons[0]! }
+      : {
+          code: session.couponCode,
+          kind: 'fixed',
+          value: discountMinor,
+          discountMinor,
+          summary: session.coupons.map((c) => c.summary).join(' + '),
+        };
+}
+
+function couponsCombine(a: SessionCoupon, b: SessionCoupon): boolean {
+  const keys = {
+    ORDER: 'orderDiscounts',
+    PRODUCT: 'productDiscounts',
+    SHIPPING: 'shippingDiscounts',
+  } as const;
+  if (!a.discountClass || !b.discountClass) return false;
+  // Product combinations need line-level eligibility/allocation support.
+  if (a.discountClass === 'PRODUCT' || b.discountClass === 'PRODUCT') return false;
+  if (a.discountClass === 'SHIPPING' && b.discountClass === 'SHIPPING') return false;
+  return !!a.combinesWith?.[keys[b.discountClass]] && !!b.combinesWith?.[keys[a.discountClass]];
 }
 
 function recomputeTotals(session: CheckoutSession): CheckoutSession['totals'] {
@@ -348,7 +381,11 @@ function recomputeTotals(session: CheckoutSession): CheckoutSession['totals'] {
   const couponDiscount = Math.max(0, Math.round(session.coupon?.discountMinor || 0));
   const discountMinor = Math.min(subtotalMinor, cartDiscount + couponDiscount);
   let shippingMinor = session.shipping?.priceMinor ?? 0;
-  if (session.coupon?.kind === 'free_shipping') shippingMinor = 0;
+  if (
+    session.coupon?.kind === 'free_shipping' ||
+    session.coupons?.some((c) => c.kind === 'free_shipping')
+  )
+    shippingMinor = 0;
   const codFeeMinor = session.shipping?.codExtraMinor ?? 0;
   return {
     currency: 'INR',
@@ -370,6 +407,9 @@ export function publicSessionView(session: CheckoutSession) {
     totals: session.totals,
     address: session.address,
     shipping: session.shipping,
+    coupons: (session.coupons || (session.coupon ? [session.coupon] : [])).map(
+      ({ code, kind, summary, discountMinor }) => ({ code, kind, summary, discountMinor }),
+    ),
     couponCode: session.couponCode || session.coupon?.code || '',
     coupon: session.coupon
       ? {
@@ -462,6 +502,11 @@ export async function patchCheckoutSession(
     giftVoucher?: { code?: string; pin?: string };
     /** ponytail: points→INR until loyalty partner API drives conversion (10 pts = ₹1). */
     loyaltyRedeemPoints?: number;
+    lineQuantity?: {
+      variantId?: string;
+      lineKey?: string;
+      quantity: number;
+    };
   },
   store: SessionStore = getCheckoutSessionStore(),
   options: PatchCheckoutSessionOptions = {},
@@ -498,6 +543,7 @@ export async function patchCheckoutSession(
     if (!code) {
       delete session.couponCode;
       delete session.coupon;
+      delete session.coupons;
     } else {
       const resolve = options.resolveCoupon || resolveShopifyCoupon;
       const resolved = await resolve({
@@ -505,14 +551,25 @@ export async function patchCheckoutSession(
         code,
         subtotalMinor: subtotalOf(session),
       });
-      session.couponCode = resolved.code;
-      session.coupon = {
-        code: resolved.code,
-        kind: resolved.kind,
-        value: resolved.value,
-        discountMinor: resolved.discountMinor,
-        summary: resolved.summary,
-      };
+      const existing = session.coupons || (session.coupon ? [session.coupon] : []);
+      const others = existing.filter((c) => c.code.toUpperCase() !== resolved.code.toUpperCase());
+      // Refresh the saved rules too, so merchant changes are respected on the next apply.
+      const refreshed = await Promise.all(
+        others.map((c) =>
+          resolve({
+            shop: session.shop,
+            code: c.code,
+            subtotalMinor: subtotalOf(session),
+          }),
+        ),
+      );
+      if (refreshed.some((c) => !couponsCombine(c, resolved))) {
+        throw new Error('COUPON_COMBINATION_NOT_ALLOWED');
+      }
+      if ([...refreshed, resolved].filter((c) => c.kind !== 'free_shipping').length > 5) {
+        throw new Error('COUPON_LIMIT_REACHED');
+      }
+      session.coupons = [...refreshed, resolved];
     }
   }
 
@@ -527,6 +584,7 @@ export async function patchCheckoutSession(
     // ponytail: demo balance ₹500 until Gift Card Admin API is wired.
     const balanceMinor = 50000;
     const discountMinor = Math.min(subtotalOf(session), balanceMinor);
+    delete session.coupons;
     session.couponCode = `GIFT:${code}`;
     session.coupon = {
       code: `GIFT:${code}`,
@@ -542,6 +600,7 @@ export async function patchCheckoutSession(
     if (points < 10) throw new Error('INVALID_LOYALTY_POINTS');
     const discountMinor = Math.min(subtotalOf(session), Math.floor(points / 10) * 100);
     if (discountMinor <= 0) throw new Error('INVALID_LOYALTY_POINTS');
+    delete session.coupons;
     session.couponCode = 'LOYALTY';
     session.coupon = {
       code: 'LOYALTY',
@@ -550,6 +609,28 @@ export async function patchCheckoutSession(
       discountMinor,
       summary: `${points} loyalty points`,
     };
+  }
+
+  if (patch.lineQuantity) {
+    const { variantId, lineKey, quantity } = patch.lineQuantity;
+    const match = session.lines.find(
+      (l) =>
+        (lineKey && l.lineKey === lineKey) ||
+        (variantId && String(l.variantId) === String(variantId)) ||
+        (variantId &&
+          l.variantId &&
+          String(l.variantId).replace(/\D/g, '') !== '' &&
+          String(l.variantId).replace(/\D/g, '') === String(variantId).replace(/\D/g, '')),
+    );
+    if (match) {
+      if (quantity <= 0) {
+        if (session.lines.length > 1) {
+          session.lines = session.lines.filter((l) => l !== match);
+        }
+      } else {
+        match.quantity = Math.max(1, Math.min(99, quantity));
+      }
+    }
   }
 
   session.updatedAt = new Date().toISOString();
@@ -632,6 +713,7 @@ export async function placeCodFromSession(
           amountMinor: attempt.expectedAmountMinor,
         },
         lines: [],
+        statusUrl: attempt.shopifyOrderStatusUrl || undefined,
         message: `Order ${attempt.shopifyOrderName} placed. Pay cash on delivery.`,
       };
     }
@@ -696,6 +778,7 @@ export async function placeCodFromSession(
       source: existing.source,
       totals: existing.totals,
       lines: existing.lines,
+      statusUrl: attempt.shopifyOrderStatusUrl || undefined,
       message: `Order ${attempt.shopifyOrderName} placed. Pay cash on delivery.`,
     };
     await store.setPlaced(sessionId, placed).catch(logStoreError);
@@ -719,6 +802,7 @@ export async function placeCodFromSession(
           source: existing.source,
           totals: existing.totals,
           lines: existing.lines,
+          statusUrl: recon.order.statusUrl || attempt.shopifyOrderStatusUrl || undefined,
           message: `Order ${recon.order.orderName} placed. Pay cash on delivery.`,
         };
         await store.setPlaced(sessionId, placed).catch(logStoreError);
@@ -808,6 +892,7 @@ export async function placeCodFromSession(
       shopifyOrderId: shopifyOrder.orderId,
       shopifyOrderName: shopifyOrder.orderName,
       shopifyOrderTotalMinor: session.totals.amountMinor,
+      shopifyOrderStatusUrl: shopifyOrder.statusUrl,
     });
 
     const placed: PlacedOrder = {
@@ -820,6 +905,7 @@ export async function placeCodFromSession(
       source: session.source,
       totals: session.totals,
       lines: session.lines,
+      statusUrl: shopifyOrder.statusUrl,
       message: `Order ${shopifyOrder.orderName} placed. Pay cash on delivery.`,
     };
 

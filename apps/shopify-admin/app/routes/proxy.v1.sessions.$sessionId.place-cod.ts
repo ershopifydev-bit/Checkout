@@ -10,6 +10,7 @@ import { placeCodFromSession, type CheckoutAddress } from '../checkout-session.s
 import { guardProxyRequest, storeUnavailableResponse } from '../proxy-guard.server';
 import {
   AmbiguousShopifyError,
+  ShopifyClientError,
   ShopifyThrottledError,
   ShopifyValidationError,
 } from '../shopify-client.server';
@@ -107,6 +108,14 @@ export async function action({ request, params }: ActionFunctionArgs) {
         'SHOPIFY_THROTTLED',
         'Store order creation capacity is currently busy. Please retry in a few seconds.',
         429,
+      );
+    }
+    if (error instanceof ShopifyClientError) {
+      console.error('[ShopifyCodOrder] Shopify client error during place COD:', error);
+      return errorResponse(
+        'ORDER_CREATE_FAILED',
+        'Could not create the Shopify order. Please try again.',
+        502,
       );
     }
 

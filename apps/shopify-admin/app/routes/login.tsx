@@ -16,6 +16,13 @@ export default function Login() {
   const pending = useNavigation().state !== 'idle';
   return (
     <main className="welcome">
+      <img
+        className="tezvix-brand-logo"
+        src="/branding/tezvix-logo.svg"
+        alt="Tezvix"
+        width="144"
+        height="50"
+      />
       <p className="eyebrow">Checkout · Shopify</p>
       <h1>Open your store</h1>
       <p>Use your store’s myshopify.com domain to continue securely through Shopify.</p>

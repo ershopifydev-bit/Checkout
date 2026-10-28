@@ -106,8 +106,24 @@ export const OrdersView: React.FC = () => {
             Loading order attempts from database...
           </div>
         ) : error ? (
-          <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--or)' }}>
-            {error} (Ensure <code>dashboard_backend</code> is running on port 3001)
+          <div
+            style={{
+              padding: '16px',
+              textAlign: 'center',
+              color: 'var(--or)',
+              background: 'rgba(234, 88, 12, 0.08)',
+              borderRadius: '8px',
+              margin: '12px 0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+            }}
+          >
+            <span>{error}</span>
+            <button className="btn l" onClick={() => void refresh()}>
+              Retry connection
+            </button>
           </div>
         ) : filteredOrders.length === 0 ? (
           <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--mut)' }}>
@@ -192,3 +208,4 @@ export const OrdersView: React.FC = () => {
     </>
   );
 };
+

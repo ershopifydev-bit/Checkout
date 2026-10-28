@@ -12,10 +12,20 @@ export function useLiveOrders() {
     try {
       const p = new URLSearchParams(window.location.search);
       const token = p.get('token') || '';
+      const shop = p.get('shop') || '';
+      const q =
+        token && shop
+          ? `?limit=50&shop=${encodeURIComponent(shop)}&token=${encodeURIComponent(token)}`
+          : shop
+            ? `?limit=50&shop=${encodeURIComponent(shop)}`
+            : '?limit=50';
       const headers: Record<string, string> = { accept: 'application/json' };
-      if (token) headers['authorization'] = `Bearer ${token}`;
+      if (token) {
+        headers['authorization'] = `Bearer ${token}`;
+        headers['x-dashboard-token'] = token;
+      }
 
-      const res = await fetch('/api/orders?limit=50', {
+      const res = await fetch('/api/orders' + q, {
         credentials: 'same-origin',
         headers,
       });
@@ -29,8 +39,9 @@ export function useLiveOrders() {
       setOrders(json.orders || []);
       setTotal(json.total || 0);
       setError('');
-    } catch {
-      setError('Orders service offline');
+    } catch (err) {
+      console.error('Failed to load orders:', err);
+      setError('Orders service offline or unreachable');
     } finally {
       setLoading(false);
     }
@@ -42,3 +53,4 @@ export function useLiveOrders() {
 
   return { orders, total, loading, error, refresh: fetchOrders };
 }
+

@@ -8,6 +8,13 @@ export function loader({ request }: LoaderFunctionArgs) {
 export default function Home() {
   return (
     <main className="welcome">
+      <img
+        className="tezvix-brand-logo"
+        src="/branding/tezvix-logo.svg"
+        alt="Tezvix"
+        width="144"
+        height="50"
+      />
       <p className="eyebrow">Checkout · Development</p>
       <h1>Connect your Shopify store</h1>
       <p>Open Checkout from Shopify Admin to view your store connection.</p>

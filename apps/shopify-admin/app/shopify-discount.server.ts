@@ -1,4 +1,9 @@
-export type ResolvedCoupon = {
+export type DiscountCombination = {
+  discountClass?: 'ORDER' | 'PRODUCT' | 'SHIPPING';
+  combinesWith?: { orderDiscounts: boolean; productDiscounts: boolean; shippingDiscounts: boolean };
+};
+
+export type ResolvedCoupon = DiscountCombination & {
   code: string;
   kind: 'percentage' | 'fixed' | 'free_shipping';
   /** Percentage 0–100, or fixed amount in minor units. */
@@ -8,7 +13,7 @@ export type ResolvedCoupon = {
   summary: string;
 };
 
-type DiscountLookup = {
+type DiscountLookup = DiscountCombination & {
   kind: 'percentage' | 'fixed' | 'free_shipping';
   value: number;
   summary: string;
@@ -67,6 +72,8 @@ async function lookupDiscountCode(shop: string, code: string): Promise<DiscountL
             ... on DiscountCodeBasic {
               status
               shortSummary
+              discountClasses
+              combinesWith { orderDiscounts productDiscounts shippingDiscounts }
               customerGets {
                 value {
                   ... on DiscountPercentage { percentage }
@@ -77,6 +84,8 @@ async function lookupDiscountCode(shop: string, code: string): Promise<DiscountL
             ... on DiscountCodeFreeShipping {
               status
               shortSummary
+              discountClasses
+              combinesWith { orderDiscounts productDiscounts shippingDiscounts }
             }
           }
         }
@@ -98,6 +107,8 @@ async function lookupDiscountCode(shop: string, code: string): Promise<DiscountL
           __typename?: string;
           status?: string;
           shortSummary?: string | null;
+          discountClasses?: Array<'ORDER' | 'PRODUCT' | 'SHIPPING'>;
+          combinesWith?: NonNullable<DiscountCombination['combinesWith']>;
           customerGets?: {
             value?: {
               percentage?: number | null;
@@ -123,9 +134,14 @@ async function lookupDiscountCode(shop: string, code: string): Promise<DiscountL
   const status = String(discount.status || '').toUpperCase();
   if (status && status !== 'ACTIVE') throw new Error('COUPON_INACTIVE');
 
+  const combination: DiscountCombination = {
+    ...(discount.discountClasses?.[0] ? { discountClass: discount.discountClasses[0] } : {}),
+    ...(discount.combinesWith ? { combinesWith: discount.combinesWith } : {}),
+  };
   const typename = discount.__typename || '';
   if (typename === 'DiscountCodeFreeShipping') {
     return {
+      ...combination,
       kind: 'free_shipping',
       value: 0,
       summary: discount.shortSummary || 'Free shipping',
@@ -140,9 +156,10 @@ async function lookupDiscountCode(shop: string, code: string): Promise<DiscountL
   const value = discount.customerGets?.value;
   if (value && typeof value.percentage === 'number' && value.percentage > 0) {
     return {
+      ...combination,
       kind: 'percentage',
-      value: value.percentage,
-      summary: discount.shortSummary || `${value.percentage}% off`,
+      value: value.percentage * 100,
+      summary: discount.shortSummary || `${value.percentage * 100}% off`,
       status,
     };
   }
@@ -150,6 +167,7 @@ async function lookupDiscountCode(shop: string, code: string): Promise<DiscountL
     const minor = moneyToMinor(value.amount.amount);
     if (minor <= 0) throw new Error('INVALID_COUPON');
     return {
+      ...combination,
       kind: 'fixed',
       value: minor,
       summary: discount.shortSummary || `₹${(minor / 100).toFixed(0)} off`,
@@ -170,6 +188,7 @@ export async function resolveShopifyCoupon(input: {
   const lookup = await lookupDiscountCode(input.shop.trim().toLowerCase(), code);
   const discountMinor = computeCouponDiscountMinor(lookup, input.subtotalMinor);
   return {
+    ...lookup,
     code,
     kind: lookup.kind,
     value: lookup.value,
@@ -205,6 +224,8 @@ export async function listShopifyCoupons(input: {
               ... on DiscountCodeBasic {
                 status
                 shortSummary
+              discountClasses
+              combinesWith { orderDiscounts productDiscounts shippingDiscounts }
                 codes(first: 1) { nodes { code } }
                 customerGets {
                   value {
@@ -216,6 +237,8 @@ export async function listShopifyCoupons(input: {
               ... on DiscountCodeFreeShipping {
                 status
                 shortSummary
+              discountClasses
+              combinesWith { orderDiscounts productDiscounts shippingDiscounts }
                 codes(first: 1) { nodes { code } }
               }
             }
@@ -234,6 +257,8 @@ export async function listShopifyCoupons(input: {
             __typename?: string;
             status?: string;
             shortSummary?: string | null;
+            discountClasses?: Array<'ORDER' | 'PRODUCT' | 'SHIPPING'>;
+            combinesWith?: NonNullable<DiscountCombination['combinesWith']>;
             codes?: { nodes?: Array<{ code?: string | null }> | null } | null;
             customerGets?: {
               value?: {
@@ -271,7 +296,7 @@ export async function listShopifyCoupons(input: {
       const v = discount.customerGets?.value;
       if (v && typeof v.percentage === 'number' && v.percentage > 0) {
         kind = 'percentage';
-        value = v.percentage;
+        value = v.percentage * 100;
       } else if (v?.amount?.amount != null) {
         kind = 'fixed';
         value = moneyToMinor(v.amount.amount);

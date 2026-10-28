@@ -122,17 +122,31 @@ header {
   text-align: left;
 }
 
-.logo b {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
-  background: var(--ink);
-  color: var(--inv);
-  font-size: 20px;
-  font-weight: 700;
-  flex: none;
+.tezvix-brand {
+  display: block;
+  object-fit: contain;
+  margin-bottom: 4px;
+}
+
+.tezvix-brand-dark {
+  display: none;
+}
+
+:root[data-theme='dark'] .tezvix-brand-light {
+  display: none;
+}
+
+:root[data-theme='dark'] .tezvix-brand-dark {
+  display: block;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .tezvix-brand-light {
+    display: none;
+  }
+  :root:not([data-theme='light']) .tezvix-brand-dark {
+    display: block;
+  }
 }
 
 .logo span {
