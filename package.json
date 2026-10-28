@@ -32,7 +32,9 @@
     "typecheck:dashboard-backend": "pnpm --filter @checkout/dashboard-backend typecheck",
     "dev:dashboard-backend": "pnpm --filter @checkout/dashboard-backend dev",
     "start:dashboard-backend": "pnpm --filter @checkout/dashboard-backend start",
-    "test:admin:db": "vitest run --config vitest.mongo.config.ts"
+    "test:admin:db": "vitest run --config vitest.mongo.config.ts",
+    "test:cart-spike": "node --test tests/integration/cart-spike.test.mjs",
+    "spike:cart": "node --env-file-if-exists=.env.cart-spike scripts/shopify-cart-spike.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
