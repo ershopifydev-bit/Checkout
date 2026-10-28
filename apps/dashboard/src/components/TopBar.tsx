@@ -20,7 +20,8 @@ export const TopBar: React.FC<TopBarProps> = ({ shopName }) => {
     return () => clearInterval(interval);
   }, []);
 
-  const merchantLabel = shopName || 'Sahyadri Group';
+  const merchantLabel = shopName || 'Tezvix Store';
+  const scopes = [merchantLabel, 'All brands'];
 
   return (
     <div className="top">
@@ -38,7 +39,7 @@ export const TopBar: React.FC<TopBarProps> = ({ shopName }) => {
                   showToast('Showing ' + e.target.value);
                 }}
               >
-                {SCOPES.map((s) => (
+                {scopes.map((s) => (
                   <option key={s} value={s}>
                     {s}
                   </option>
@@ -57,10 +58,10 @@ export const TopBar: React.FC<TopBarProps> = ({ shopName }) => {
         <span className="dot" title="Operational" />
         <span id="clock">{timeStr}</span>
         <span id="stat">
-          {portal === 'm' ? '4 stores live · 1 degraded' : '412 stores live · 5 flagged'}
+          {portal === 'm' ? `${merchantLabel} · Sync active` : 'Internal Telemetry · Connected'}
         </span>
         <span className="pb" title="Shopify sync health">
-          <i style={{ width: '85%' }} />
+          <i style={{ width: '100%' }} />
         </span>
       </div>
     </div>

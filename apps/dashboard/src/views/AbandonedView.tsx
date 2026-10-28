@@ -3,9 +3,6 @@ import { useDashboard } from '../context/DashboardContext';
 import { KpiCard } from '../components/common/KpiCard';
 import { useLiveAnalytics } from '../hooks/useLiveAnalytics';
 
-const rs = (n: number) =>
-  [...Array(n)].map((_, i) => Math.round(50 + 30 * Math.sin(i * 0.9) + ((i * 37) % 17)));
-
 function formatPhoneMasked(phone?: string) {
   if (!phone) return 'No phone';
   const clean = phone.replace(/\D/g, '').slice(-10);
@@ -38,115 +35,57 @@ function dropPillClass(droppedAt: string) {
 
 export const AbandonedView: React.FC = () => {
   const { showToast } = useDashboard();
-  const { data } = useLiveAnalytics();
+  const { data, loading, error, refresh } = useLiveAnalytics();
   const [subTab, setSubTab] = useState<
     'Abandoned carts' | 'Recovery flows' | 'Drop-off and recovered'
   >('Abandoned carts');
 
   const funnel = data?.funnel;
-  const abandonedList = data?.abandoned;
+  const abandonedList = data?.abandoned || [];
 
-  const totalAbandonedStr =
-    funnel?.totalAbandoned != null && funnel.totalAbandoned > 0
-      ? String(funnel.totalAbandoned)
-      : '1,240';
-  const recoveryRateStr =
-    funnel?.conversionRatePercent != null && funnel.conversionRatePercent > 0
-      ? `${funnel.conversionRatePercent}%`
-      : '14.6%';
+  const totalAbandoned = funnel?.totalAbandoned || 0;
+  const recoveryRate = funnel?.conversionRatePercent || 0;
 
-  const fallbackRows: Array<
-    [string, string, string, string, string, string, string, string, string]
-  > = [
-    [
-      'Meera Joshi',
-      '98•••• 4021',
-      '2 items',
-      '₹3,240',
-      'Payment',
-      'o',
-      '12 min ago',
-      'Message 1 sent',
-      'b',
-    ],
-    ['Kabir Rao', '91•••• 7782', '1 item', '₹899', 'Address', 'b', '34 min ago', 'Queued', 'n'],
-    [
-      'Sana Qureshi',
-      '99•••• 1203',
-      '4 items',
-      '₹6,480',
-      'Payment',
-      'o',
-      '1 h ago',
-      'Message 2 sent',
-      'b',
-    ],
-    [
-      'Rohan Iyer',
-      '90•••• 5521',
-      '3 items',
-      '₹2,150',
-      'Shipping',
-      'n',
-      '3 h ago',
-      'Email sent',
-      'b',
-    ],
-    ['Diya Nair', '97•••• 3018', '1 item', '₹1,299', 'Login', 'n', '5 h ago', 'No phone', 'o'],
-  ];
+  const reachableCount = abandonedList.filter((a) => Boolean(a.shopperPhone)).length;
+  const reachablePercent =
+    abandonedList.length > 0 ? Math.round((reachableCount / abandonedList.length) * 100) : 0;
 
-  const tableRows =
-    abandonedList && abandonedList.length > 0
-      ? abandonedList.map(
-          (a): [string, string, string, string, string, string, string, string, string] => {
-            const cust =
-              a.shopperName ||
-              (a.shopperPhone ? `Shopper ${a.shopperPhone.slice(-4)}` : 'Guest Shopper');
-            const ph = formatPhoneMasked(a.shopperPhone);
-            const cart = `${a.itemCount || 1} item${(a.itemCount || 1) > 1 ? 's' : ''}`;
-            const val = `₹${((a.cartValueMinor || 0) / 100).toLocaleString('en-IN')}`;
-            const drop = a.droppedAt || 'Payment';
-            const dropCl = dropPillClass(drop);
-            const when = a.updatedAt ? timeAgo(a.updatedAt) : 'Recently';
-            const rec = a.shopperPhone ? 'Queued' : 'No phone';
-            const recCl = a.shopperPhone ? 'n' : 'o';
-            return [cust, ph, cart, val, drop, dropCl, when, rec, recCl];
-          },
-        )
-      : fallbackRows;
+  const totalAbandonedValueMinor = abandonedList.reduce(
+    (acc, curr) => acc + (curr.cartValueMinor || 0),
+    0,
+  );
+  const formattedAbandonedValue = `₹${(totalAbandonedValueMinor / 100).toLocaleString('en-IN', {
+    maximumFractionDigits: 2,
+  })}`;
 
   return (
     <>
       <div className="g g4">
         <KpiCard
           icon="🛒"
-          label="Abandoned today"
-          value={totalAbandonedStr}
-          sub="Cart value ₹31.4L"
+          label="Abandoned carts"
+          value={String(totalAbandoned)}
+          sub={`Value ${formattedAbandonedValue}`}
           variant="dk"
-          sparkline={rs(10)}
         />
         <KpiCard
           icon="↺"
-          label="Recovery rate"
-          value={recoveryRateStr}
-          sub="↗ 2.1 pts vs last week"
+          label="Checkout conversion"
+          value={`${recoveryRate}%`}
+          sub="Storefront completion rate"
           variant="bl"
-          sparkline={rs(10)}
         />
         <KpiCard
           icon="₹"
-          label="Recovered revenue"
-          value="₹6.2L"
-          sub="This month"
-          sparkline={rs(10)}
+          label="Abandoned value"
+          value={formattedAbandonedValue}
+          sub={`Across ${abandonedList.length} sessions`}
         />
         <KpiCard
           icon="☎"
-          label="Reachable"
-          value="82%"
-          sub="Phone or email captured"
-          sparkline={rs(10)}
+          label="Reachable phone"
+          value={`${reachablePercent}%`}
+          sub={`${reachableCount} of ${abandonedList.length} have phone`}
         />
       </div>
 
@@ -160,47 +99,116 @@ export const AbandonedView: React.FC = () => {
 
       {subTab === 'Abandoned carts' && (
         <div className="card">
-          <div className="wide">
-            <table>
-              <thead>
-                <tr>
-                  <th>Customer</th>
-                  <th>Phone</th>
-                  <th>Cart</th>
-                  <th>Value</th>
-                  <th>Dropped at</th>
-                  <th>When</th>
-                  <th>Recovery</th>
-                  <th className="n">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tableRows.map(([cust, ph, cart, val, drop, dropCl, when, rec, recCl]) => (
-                  <tr key={cust + when} className="r">
-                    <td>{cust}</td>
-                    <td>{ph}</td>
-                    <td>{cart}</td>
-                    <td>{val}</td>
-                    <td>
-                      <span className={`pill ${dropCl}`}>{drop}</span>
-                    </td>
-                    <td>{when}</td>
-                    <td>
-                      <span className={`pill ${recCl}`}>{rec}</span>
-                    </td>
-                    <td className="n">
-                      <button
-                        className="btn l"
-                        onClick={() => showToast(`Recovery message sent to ${cust}`)}
-                      >
-                        Send now
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '16px',
+            }}
+          >
+            <div>
+              <h3 style={{ margin: 0 }}>
+                Abandoned Checkout Sessions<em>{abandonedList.length} in database</em>
+              </h3>
+              <span style={{ fontSize: '12px', color: 'var(--mut)' }}>
+                Real-time sessions from <code>checkoutFunnels</code>
+              </span>
+            </div>
+            <button className="btn" onClick={() => void refresh()}>
+              ↻ Refresh
+            </button>
           </div>
+
+          {loading ? (
+            <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--mut)' }}>
+              Loading abandoned sessions...
+            </div>
+          ) : error ? (
+            <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--or)' }}>
+              {error}
+            </div>
+          ) : abandonedList.length === 0 ? (
+            <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--mut)' }}>
+              <div style={{ fontSize: '24px', marginBottom: '8px' }}>🛒</div>
+              <strong>No abandoned checkout sessions recorded yet</strong>
+              <p style={{ margin: '6px 0 0', fontSize: '13px' }}>
+                When shoppers abandon checkout at login, address, or payment step, their details and
+                cart contents will appear here automatically.
+              </p>
+            </div>
+          ) : (
+            <div className="wide">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Customer / Session</th>
+                    <th>Phone</th>
+                    <th>Cart Items</th>
+                    <th>Value</th>
+                    <th>Dropped at</th>
+                    <th>When</th>
+                    <th>Recovery status</th>
+                    <th className="n">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {abandonedList.map((a) => {
+                    const cust =
+                      a.shopperName ||
+                      (a.shopperPhone ? `Shopper (${a.shopperPhone.slice(-4)})` : 'Guest Shopper');
+                    const ph = formatPhoneMasked(a.shopperPhone);
+                    const cart = `${a.itemCount || 1} item${(a.itemCount || 1) > 1 ? 's' : ''}`;
+                    const val = `₹${((a.cartValueMinor || 0) / 100).toLocaleString('en-IN')}`;
+                    const drop = a.droppedAt || 'Payment';
+                    const dropCl = dropPillClass(drop);
+                    const when = a.updatedAt ? timeAgo(a.updatedAt) : 'Recently';
+                    const rec = a.shopperPhone ? 'Queued' : 'No phone';
+                    const recCl = a.shopperPhone ? 'n' : 'o';
+
+                    return (
+                      <tr key={a.sessionId} className="r">
+                        <td>
+                          <strong>{cust}</strong>
+                          <br />
+                          <small style={{ color: 'var(--mut)' }}>
+                            {a.sessionId.slice(0, 16)}...
+                          </small>
+                        </td>
+                        <td>{ph}</td>
+                        <td>
+                          {cart}
+                          {a.items && a.items.length > 0 && (
+                            <small style={{ display: 'block', color: 'var(--mut)' }}>
+                              {a.items[0]?.title}
+                            </small>
+                          )}
+                        </td>
+                        <td>
+                          <strong>{val}</strong>
+                        </td>
+                        <td>
+                          <span className={`pill ${dropCl}`}>{drop}</span>
+                        </td>
+                        <td style={{ fontSize: '12px', color: 'var(--mut)' }}>{when}</td>
+                        <td>
+                          <span className={`pill ${recCl}`}>{rec}</span>
+                        </td>
+                        <td className="n">
+                          <button
+                            className="btn l"
+                            onClick={() => showToast(`Recovery notification triggered for ${cust}`)}
+                          >
+                            Send now
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -208,29 +216,19 @@ export const AbandonedView: React.FC = () => {
         <div className="g g2e">
           <div className="card">
             <h3>
-              Automated flow<em>Stops when order placed</em>
+              Automated recovery sequence<em>Active for {reachableCount} reachable carts</em>
             </h3>
             {[
-              [
-                '15 minutes',
-                'WhatsApp',
-                'Your cart is waiting, free shipping inside',
-                '4,120',
-                '310',
-              ],
-              ['2 hours', 'SMS', 'Reminder with a one-tap checkout link', '2,860', '140'],
-              ['24 hours', 'Email', '₹100 off if you complete today', '2,200', '95'],
-            ].map(([time, ch, desc, sent, rec]) => (
+              ['15 minutes', 'WhatsApp', 'Cart reminder with one-tap checkout link'],
+              ['2 hours', 'SMS', 'Reminder with exclusive discount code'],
+              ['24 hours', 'Email', 'Special offer before cart expires'],
+            ].map(([time, ch, desc]) => (
               <div className="row" key={time}>
                 <div>
                   <b>
                     After {time} · {ch}
                   </b>
                   <small>{desc}</small>
-                </div>
-                <div style={{ flex: 'none', textAlign: 'right' }}>
-                  Sent {sent}
-                  <small>Recovered {rec}</small>
                 </div>
                 <button
                   className="tg on"
@@ -239,7 +237,7 @@ export const AbandonedView: React.FC = () => {
                   onClick={(e) => {
                     const btn = e.currentTarget;
                     btn.classList.toggle('on');
-                    showToast('Step updated');
+                    showToast(`${ch} flow updated`);
                   }}
                 />
               </div>
@@ -247,85 +245,49 @@ export const AbandonedView: React.FC = () => {
           </div>
 
           <div className="card">
-            <h3>Rules</h3>
-            {[
-              ['Only carts above', '₹500'],
-              ['Maximum messages', '3'],
-              ['Quiet hours', '10 PM–8 AM'],
-              ['Discount cap', '₹100'],
-            ].map(([label, val]) => (
-              <div className="fld" key={label}>
-                {label}
-                <input defaultValue={val} aria-label={label} />
-              </div>
-            ))}
-            <button
-              className="btn"
-              style={{ marginTop: '14px' }}
-              onClick={() => showToast('Recovery flow saved')}
-            >
-              Save flow
-            </button>
+            <h3>Rules & suppression</h3>
+            <div style={{ color: 'var(--mut)', fontSize: '13px', lineHeight: 1.6 }}>
+              • Stop sequence immediately upon Shopify order placement.
+              <br />
+              • Never send notifications between 10 PM and 8 AM.
+              <br />• Only message shoppers who completed the mobile OTP step.
+            </div>
           </div>
         </div>
       )}
 
       {subTab === 'Drop-off and recovered' && (
-        <div className="g g2e">
-          <div className="card">
-            <h3>
-              Where customers leave<em>Today</em>
-            </h3>
-            {[
-              ['Login', 18],
-              ['Address', 34],
-              ['Shipping', 12],
-              ['Payment', 36],
-            ].map(([stage, pct]) => (
-              <div className="bar" key={stage as string}>
-                <span>{stage}</span>
-                <div>
-                  <i style={{ width: `${(pct as number) * 2.5}%` }} />
-                </div>
-                <b>{pct}%</b>
-              </div>
-            ))}
-            <div style={{ color: 'var(--mut)', fontSize: '12px', marginTop: '10px' }}>
-              Payment failures lead the drop-off. 62% were UPI timeouts.
-            </div>
-          </div>
-
-          <div className="card">
-            <h3>
-              Recovered orders<em>Last 24 hours</em>
-            </h3>
-            <div className="wide">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Order</th>
-                    <th>Channel</th>
-                    <th>Discount</th>
-                    <th className="n">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    ['#KW-10470', 'WhatsApp', 'None', '₹3,240'],
-                    ['#KW-10466', 'SMS', 'None', '₹1,899'],
-                    ['#KW-10459', 'Email', '₹100', '₹2,450'],
-                    ['#KW-10452', 'WhatsApp', 'None', '₹5,120'],
-                  ].map(([ord, ch, disc, amt]) => (
-                    <tr key={ord} className="r">
-                      <td>{ord}</td>
-                      <td>{ch}</td>
-                      <td>{disc}</td>
-                      <td className="n">{amt}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        <div className="card">
+          <h3>
+            Drop-off step breakdown<em>Live checkout analytics</em>
+          </h3>
+          <div className="wide">
+            <table>
+              <thead>
+                <tr>
+                  <th>Funnel Step</th>
+                  <th className="n">Drop-offs</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="r">
+                  <td>Login / OTP</td>
+                  <td className="n">{funnel?.dropOffByStep.login ?? 0}</td>
+                </tr>
+                <tr className="r">
+                  <td>Address details</td>
+                  <td className="n">{funnel?.dropOffByStep.address ?? 0}</td>
+                </tr>
+                <tr className="r">
+                  <td>Coupon & discounts</td>
+                  <td className="n">{funnel?.dropOffByStep.discounts ?? 0}</td>
+                </tr>
+                <tr className="r">
+                  <td>Payment method selection</td>
+                  <td className="n">{funnel?.dropOffByStep.payment ?? 0}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       )}

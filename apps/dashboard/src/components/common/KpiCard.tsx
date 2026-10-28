@@ -6,7 +6,7 @@ interface KpiCardProps {
   label: string;
   value: string;
   sub: string;
-  variant?: 'dk' | 'bl' | '';
+  variant?: 'dk' | 'bl' | 'or' | '' | undefined;
   sparkline?: number[];
 }
 

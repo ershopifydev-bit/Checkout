@@ -30,7 +30,7 @@ export default defineConfig({
   },
   build: {
     outDir: '../shopify-admin/public/dashboard',
-    emptyOutDir: true,
+    emptyOutDir: false,
     assetsDir: 'assets',
   },
 });

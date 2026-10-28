@@ -33,7 +33,7 @@ const NAV_CONFIG: Record<'m' | 'i', NavItem[]> = {
 export const Header: React.FC<HeaderProps> = ({ shopName }) => {
   const { portal, setPortal, tab, setTab, showToast } = useDashboard();
   const navList = NAV_CONFIG[portal];
-  const brandLabel = shopName || 'Sahyadri Group';
+  const brandLabel = shopName || 'Tezvix Store';
 
   return (
     <header>

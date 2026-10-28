@@ -1,29 +1,33 @@
 import React, { useState } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { KpiCard } from '../components/common/KpiCard';
-
-const rs = (n: number) =>
-  [...Array(n)].map((_, i) => Math.round(50 + 30 * Math.sin(i * 0.9) + ((i * 37) % 17)));
+import { useLiveAnalytics } from '../hooks/useLiveAnalytics';
 
 export const CustomersView: React.FC = () => {
   const { showToast } = useDashboard();
+  const { data: analytics } = useLiveAnalytics();
   const [blocks, setBlocks] = useState([
-    { val: '98•••• 1144', reason: 'Fake orders', term: 'Permanent' },
-    { val: 'Pincode 110099', reason: 'Zero deliveries', term: '30 days' },
-    { val: 'IP 49.36.•••', reason: 'Card testing', term: '7 days' },
+    { val: 'Pincode 110099', reason: 'Repeated zero delivery area', term: '30 days' },
   ]);
   const [newVal, setNewVal] = useState('');
+  const [reason, setReason] = useState('High RTO risk');
+
+  const funnel = analytics?.funnel;
+  const loggedInCount = funnel?.totalLoggedIn || 0;
+  const totalStarted = funnel?.totalStarted || 0;
+  const abandonedList = analytics?.abandoned || [];
+  const knownShoppersCount = abandonedList.filter((a) => Boolean(a.shopperPhone)).length;
 
   const handleRemove = (val: string) => {
     setBlocks(blocks.filter((b) => b.val !== val));
-    showToast(`${val} removed from blocklist`);
+    showToast(`${val} removed from risk blocklist`);
   };
 
   const handleAdd = () => {
     if (!newVal.trim()) return;
-    setBlocks([...blocks, { val: newVal.trim(), reason: 'Manual block', term: 'Permanent' }]);
+    setBlocks([...blocks, { val: newVal.trim(), reason, term: 'Permanent' }]);
     setNewVal('');
-    showToast('Added to blocklist');
+    showToast(`${newVal} added to risk blocklist`);
   };
 
   return (
@@ -31,104 +35,108 @@ export const CustomersView: React.FC = () => {
       <div className="g g4">
         <KpiCard
           icon="☺"
-          label="Customers"
-          value="48,210"
-          sub="+1,420 this month"
+          label="OTP verified shoppers"
+          value={String(loggedInCount)}
+          sub={`From ${totalStarted} total sessions`}
           variant="dk"
-          sparkline={rs(10)}
         />
         <KpiCard
-          icon="↻"
-          label="Repeat rate"
-          value="31%"
-          sub="↗ 2 pts vs September"
+          icon="📱"
+          label="Identified phones"
+          value={String(knownShoppersCount)}
+          sub="Stored in checkout session"
           variant="bl"
-          sparkline={rs(10)}
-        />
-        <KpiCard
-          icon="₹"
-          label="Average lifetime value"
-          value="₹4,180"
-          sub="Across all brands"
-          sparkline={rs(10)}
         />
         <KpiCard
           icon="⚑"
-          label="High RTO risk"
-          value="612"
-          sub="Prepaid only or blocked"
-          sparkline={rs(10).reverse()}
+          label="Active blocklist"
+          value={String(blocks.length)}
+          sub="Blocked for COD"
         />
+        <KpiCard icon="↺" label="RTO risk score" value="Normal" sub="No suspicious spikes" />
       </div>
 
-      <div className="g g2">
-        <div className="card">
-          <h3>
-            Customers<em>Segments: new, repeat, VIP, high RTO risk</em>
-          </h3>
-          <div className="wide">
-            <table>
-              <thead>
-                <tr>
-                  <th>Customer</th>
-                  <th>City</th>
-                  <th>Orders</th>
-                  <th>COD share</th>
-                  <th>Segment</th>
-                  <th className="n">Lifetime value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  ['Aarav Mehta', 'Mumbai', '14', '12%', 'VIP', 'g', '₹28,400'],
-                  ['Diya Nair', 'Kochi', '3', '100%', 'High RTO risk', 'o', '₹6,150'],
-                  ['Rohan Iyer', 'Pune', '6', '20%', 'Repeat', 'b', '₹11,900'],
-                  ['Meera Joshi', 'Jaipur', '1', '0%', 'New', 'n', '₹2,050'],
-                ].map(([cust, city, ords, cod, seg, segCl, ltv]) => (
-                  <tr key={cust} className="r">
-                    <td>{cust}</td>
-                    <td>{city}</td>
-                    <td>{ords}</td>
-                    <td>{cod}</td>
-                    <td>
-                      <span className={`pill ${segCl}`}>{seg}</span>
-                    </td>
-                    <td className="n">{ltv}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <div className="card">
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '16px',
+          }}
+        >
+          <div>
+            <h3 style={{ margin: 0 }}>RTO & Fraud Risk Blocklist</h3>
+            <span style={{ fontSize: '12px', color: 'var(--mut)' }}>
+              Phone numbers, pincodes, or IP addresses restricted from placing Cash on Delivery
+              (COD) orders
+            </span>
           </div>
         </div>
 
-        <div className="card">
-          <h3>Blocklist</h3>
-          {blocks.map((b) => (
-            <div className="row" key={b.val}>
-              <div>
-                {b.val}
-                <small>
-                  {b.reason} · {b.term}
-                </small>
-              </div>
-              <button className="btn l" onClick={() => handleRemove(b.val)}>
-                Remove
-              </button>
-            </div>
-          ))}
-          <div className="fld">
-            Add phone, pincode or IP
-            <input
-              style={{ width: '140px' }}
-              placeholder="Value to block"
-              value={newVal}
-              onChange={(e) => setNewVal(e.target.value)}
-              aria-label="Value to block"
-            />
-          </div>
-          <button className="btn" style={{ marginTop: '10px' }} onClick={handleAdd}>
-            Block
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+          <input
+            type="text"
+            placeholder="Add phone (+91...), pincode or IP"
+            value={newVal}
+            onChange={(e) => setNewVal(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: '1px solid var(--line)',
+              background: 'var(--card)',
+              flex: 1,
+              maxWidth: '320px',
+            }}
+          />
+          <select
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: '1px solid var(--line)',
+              background: 'var(--card)',
+            }}
+          >
+            <option value="High RTO risk">High RTO risk</option>
+            <option value="Fake order attempt">Fake order attempt</option>
+            <option value="Unserviceable pincode">Unserviceable pincode</option>
+          </select>
+          <button className="btn" onClick={handleAdd}>
+            + Add block
           </button>
+        </div>
+
+        <div className="wide">
+          <table>
+            <thead>
+              <tr>
+                <th>Identifier</th>
+                <th>Reason</th>
+                <th>Duration</th>
+                <th className="n">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {blocks.map((b) => (
+                <tr key={b.val} className="r">
+                  <td>
+                    <strong>{b.val}</strong>
+                  </td>
+                  <td>{b.reason}</td>
+                  <td>
+                    <span className="pill n">{b.term}</span>
+                  </td>
+                  <td className="n">
+                    <button className="btn l" onClick={() => handleRemove(b.val)}>
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </>

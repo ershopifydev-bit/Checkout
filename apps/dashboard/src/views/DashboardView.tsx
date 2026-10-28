@@ -1,47 +1,33 @@
 import React from 'react';
 import { KpiCard } from '../components/common/KpiCard';
-
-const rs = (n: number) =>
-  [...Array(n)].map((_, i) => Math.round(50 + 30 * Math.sin(i * 0.9) + ((i * 37) % 17)));
+import { useLiveMonitor } from '../hooks/useLiveMonitor';
+import { useLiveAnalytics } from '../hooks/useLiveAnalytics';
 
 export const DashboardView: React.FC = () => {
+  const { data: monitor, loading: monitorLoading } = useLiveMonitor();
+  const { data: analytics } = useLiveAnalytics();
+
   const todayStr = new Date()
     .toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })
     .toUpperCase();
 
-  const areaDataA = [90, 70, 75, 110, 150, 190, 220, 200, 170, 150, 130, 100];
-  const areaDataB = [40, 32, 36, 50, 70, 88, 103, 95, 80, 70, 62, 48];
-  const months = [
-    'Dec',
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
+  const ordersStats = monitor?.ordersAndAttempts;
+  const funnelStats = monitor?.funnelsAndCheckouts;
+  const dbInfo = monitor?.database;
+  const latestAttempts = monitor?.latestAttempts || [];
+
+  const funnel = analytics?.funnel;
+  const started = funnel?.totalStarted || 0;
+  const address = funnel?.totalAddressAdded || 0;
+  const discounts = funnel?.totalDiscountApplied || 0;
+  const completed = funnel?.totalCompleted || 0;
+
+  const funnelStages: Array<[string, number, number]> = [
+    ['Checkout started', started > 0 ? 100 : 0, started],
+    ['Address added', started > 0 ? Math.round((address / started) * 100) : 0, address],
+    ['Discounts applied', started > 0 ? Math.round((discounts / started) * 100) : 0, discounts],
+    ['Order placed', started > 0 ? Math.round((completed / started) * 100) : 0, completed],
   ];
-
-  const width = 640;
-  const height = 190;
-  const maxVal = 250;
-
-  const pointsA = areaDataA
-    .map(
-      (v, i) =>
-        `${((i * width) / (areaDataA.length - 1)).toFixed(0)},${(height - (v / maxVal) * height).toFixed(0)}`,
-    )
-    .join(' ');
-  const pointsB = areaDataB
-    .map(
-      (v, i) =>
-        `${((i * width) / (areaDataB.length - 1)).toFixed(0)},${(height - (v / maxVal) * height).toFixed(0)}`,
-    )
-    .join(' ');
 
   return (
     <>
@@ -49,127 +35,124 @@ export const DashboardView: React.FC = () => {
         <div className="card hero">
           <small>{todayStr}</small>
           <h2>Good day, Partner.</h2>
-          <div style={{ color: 'var(--mut)', maxWidth: '430px' }}>
-            212 orders placed today, 3 shipments need an address fix and 1 store has a slow payment
-            gateway.
+          <div style={{ color: 'var(--mut)', maxWidth: '480px' }}>
+            {monitorLoading ? (
+              'Connecting to database telemetry...'
+            ) : (
+              <>
+                {ordersStats?.totalAttempts ?? 0} order attempts ({ordersStats?.confirmed ?? 0}{' '}
+                confirmed, {ordersStats?.failed ?? 0} failed) and {funnelStats?.totalAbandoned ?? 0}{' '}
+                abandoned checkouts in <strong>{dbInfo?.databaseName || 'database'}</strong>.
+              </>
+            )}
           </div>
-          <svg viewBox="0 0 520 40" width="100%" style={{ marginTop: '18px' }}>
-            <line x1="0" y1="20" x2="520" y2="20" stroke="var(--line)" strokeWidth="2" />
-            <line x1="0" y1="20" x2="330" y2="20" stroke="var(--blue)" strokeWidth="2" />
-            {[40, 80, 120, 190, 230, 300].map((x, i) => (
-              <circle key={x} cx={x} cy="20" r="5" fill={i % 2 ? 'var(--or)' : 'var(--blue)'} />
-            ))}
-            <circle cx="330" cy="20" r="6" fill="none" stroke="var(--or)" strokeWidth="2" />
-          </svg>
+          <div style={{ marginTop: '14px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <span className={`pill ${dbInfo?.status === 'HEALTHY' ? 'g' : 'o'}`}>
+              DB: {dbInfo?.databaseName || 'MongoDB'} ({dbInfo?.status || 'ONLINE'} ·{' '}
+              {dbInfo?.latencyMs ?? 0}ms)
+            </span>
+            <span className="pill n">
+              {dbInfo?.totalCollections ?? 0} collections · {dbInfo?.storageStats.totalObjects ?? 0}{' '}
+              records
+            </span>
+          </div>
         </div>
 
         <div className="card">
           <h3>
-            Pending settlement<em>View payments</em>
+            Confirmed order revenue<em>Real-time DB aggregate</em>
           </h3>
           <div className="kv" style={{ fontSize: '32px' }}>
-            ₹8,42,300
+            {ordersStats?.confirmedRevenue.formatted || '₹0'}
           </div>
-          <span className="pill g">+₹2.1L in 14 days</span>
-          <svg viewBox="0 0 200 60" width="100%" style={{ marginTop: '10px' }}>
-            {rs(14).map((v, i) => (
-              <rect
-                key={i}
-                x={i * 14.2}
-                y={i % 4 === 3 ? 30 : 30 - v / 4}
-                width="10"
-                height={i % 4 === 3 ? v / 5 : v / 4}
-                rx="2"
-                fill={i % 4 === 3 ? 'var(--or)' : 'var(--gr)'}
-              />
-            ))}
-          </svg>
+          <span className="pill g">
+            {ordersStats?.confirmed ?? 0} confirmed order{ordersStats?.confirmed === 1 ? '' : 's'}
+          </span>
+          <div style={{ color: 'var(--mut)', fontSize: '12px', marginTop: '12px' }}>
+            Aggregated directly from confirmed <code>checkoutOrderAttempts</code> in MongoDB.
+          </div>
         </div>
       </div>
 
       <div className="g g4">
         <KpiCard
           icon="₹"
-          label="GMV this month"
-          value="₹93.4L"
-          sub="11 days in · pace for ₹2.5Cr"
+          label="Confirmed revenue"
+          value={ordersStats?.confirmedRevenue.formatted || '₹0'}
+          sub={`${ordersStats?.confirmed ?? 0} orders successful`}
           variant="dk"
-          sparkline={rs(12)}
         />
         <KpiCard
           icon="◔"
           label="Checkout conversion"
-          value="41.8%"
-          sub="↗ 3.2 pts vs last week"
+          value={`${funnelStats?.conversionRatePercent ?? 0}%`}
+          sub={`${ordersStats?.confirmed ?? 0} of ${funnelStats?.totalFunnelSessions ?? 0} sessions`}
           variant="bl"
-          sparkline={rs(12)}
         />
         <KpiCard
           icon="▤"
-          label="Prepaid share"
-          value="68%"
-          sub="COD 32% · was 38%"
-          sparkline={rs(12)}
+          label="Total attempts"
+          value={String(ordersStats?.totalAttempts ?? 0)}
+          sub={`${ordersStats?.manualReview ?? 0} flagged for review`}
         />
         <KpiCard
           icon="↺"
-          label="RTO rate"
-          value="9.2%"
-          sub="▲ 1.1 pts from September"
-          sparkline={rs(12).reverse()}
+          label="Attempt failure rate"
+          value={`${ordersStats?.failureRatePercent ?? 0}%`}
+          sub={`${ordersStats?.failed ?? 0} total failed`}
+          variant={ordersStats && ordersStats.failureRatePercent > 10 ? 'or' : undefined}
         />
       </div>
 
       <div className="g g2">
         <div className="card">
           <h3>
-            Revenue and cost of goods<em>Last 12 months</em>
+            Database storage & collections<em>Real-time MongoDB telemetry</em>
           </h3>
-          <svg
-            viewBox={`0 0 ${width} ${height + 24}`}
-            width="100%"
-            role="img"
-            aria-label="Revenue and cost of goods by month"
-          >
-            <polygon
-              points={`0,${height} ${pointsA} ${width},${height}`}
-              fill="var(--bs)"
-              opacity=".7"
-            />
-            <polyline points={pointsA} fill="none" stroke="var(--blue)" strokeWidth="2.4" />
-            <polyline
-              points={pointsB}
-              fill="none"
-              stroke="var(--mut)"
-              strokeWidth="2"
-              strokeDasharray="5 4"
-            />
-            {months.map((m, i) => (
-              <text
-                key={m}
-                x={(i * width) / 11}
-                y={height + 18}
-                fontSize="11"
-                fill="var(--mut)"
-                textAnchor={i === 0 ? 'start' : i === 11 ? 'end' : 'middle'}
-              >
-                {m}
-              </text>
-            ))}
-          </svg>
+          <div style={{ marginTop: '8px' }}>
+            <div className="wide">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    <th className="n">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="r">
+                    <td>Database Name</td>
+                    <td className="n">
+                      <code>{dbInfo?.databaseName || 'checkout_development'}</code>
+                    </td>
+                  </tr>
+                  <tr className="r">
+                    <td>Total Collections</td>
+                    <td className="n">{dbInfo?.totalCollections ?? 0}</td>
+                  </tr>
+                  <tr className="r">
+                    <td>Total Documents</td>
+                    <td className="n">{dbInfo?.storageStats.totalObjects ?? 0}</td>
+                  </tr>
+                  <tr className="r">
+                    <td>Storage Size</td>
+                    <td className="n">{dbInfo?.storageStats.storageSizeMb ?? 0} MB</td>
+                  </tr>
+                  <tr className="r">
+                    <td>Index Footprint</td>
+                    <td className="n">{dbInfo?.storageStats.indexSizeMb ?? 0} MB</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         <div className="card">
           <h3>
-            Checkout funnel<em>Today</em>
+            Checkout funnel<em>Live event counts</em>
           </h3>
-          {[
-            ['Cart viewed', 100, '5,820'],
-            ['Address added', 72, '4,190'],
-            ['Payment started', 55, '3,200'],
-            ['Order placed', 42, '2,430'],
-          ].map(([stage, pct, count]) => (
-            <div className="bar" key={stage as string}>
+          {funnelStages.map(([stage, pct, count]) => (
+            <div className="bar" key={stage}>
               <span>{stage}</span>
               <div>
                 <i style={{ width: `${pct}%` }} />
@@ -178,58 +161,58 @@ export const DashboardView: React.FC = () => {
             </div>
           ))}
           <div style={{ color: 'var(--mut)', fontSize: '12px', marginTop: '12px' }}>
-            Biggest drop is cart to address (28%). A phone-first OTP login lifts completion by up to
-            14%.
+            {started === 0
+              ? 'No shopper checkout sessions recorded yet. Funnel will update as shoppers interact with storefront checkout.'
+              : `Conversion rate is ${funnel?.conversionRatePercent ?? 0}% based on ${started} total session${started === 1 ? '' : 's'}.`}
           </div>
         </div>
       </div>
 
       <div className="card">
         <h3>
-          Orders that need a look<em>3 open</em>
+          Recent order attempts<em>Live DB records</em>
         </h3>
-        <div className="wide">
-          <table>
-            <thead>
-              <tr>
-                <th>Order</th>
-                <th>Customer</th>
-                <th>Mode</th>
-                <th>Risk check</th>
-                <th className="n">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="r">
-                <td>#KW-10481</td>
-                <td>Diya Nair</td>
-                <td>COD</td>
-                <td>
-                  <span className="pill o">High RTO risk</span>
-                </td>
-                <td className="n">₹3,150</td>
-              </tr>
-              <tr className="r">
-                <td>#KW-10479</td>
-                <td>Sana Qureshi</td>
-                <td>COD</td>
-                <td>
-                  <span className="pill b">Address fixed</span>
-                </td>
-                <td className="n">₹4,299</td>
-              </tr>
-              <tr className="r">
-                <td>#KW-10478</td>
-                <td>Kabir Rao</td>
-                <td>UPI</td>
-                <td>
-                  <span className="pill n">Retry sent</span>
-                </td>
-                <td className="n">₹899</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        {latestAttempts.length === 0 ? (
+          <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--mut)' }}>
+            No checkout order attempts recorded in database yet.
+          </div>
+        ) : (
+          <div className="wide">
+            <table>
+              <thead>
+                <tr>
+                  <th>Attempt ID</th>
+                  <th>Shop</th>
+                  <th>Status</th>
+                  <th>Shopify Order</th>
+                  <th className="n">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {latestAttempts.map((attempt) => {
+                  let pillClass = 'n';
+                  if (attempt.status === 'CONFIRMED') pillClass = 'g';
+                  else if (attempt.status === 'FAILED') pillClass = 'o';
+                  else if (attempt.status === 'MANUAL_REVIEW') pillClass = 'b';
+
+                  return (
+                    <tr key={attempt._id} className="r">
+                      <td>
+                        <code>{attempt._id.slice(0, 14)}...</code>
+                      </td>
+                      <td>{attempt.shop}</td>
+                      <td>
+                        <span className={`pill ${pillClass}`}>{attempt.status}</span>
+                      </td>
+                      <td>{attempt.shopifyOrderName || '—'}</td>
+                      <td className="n">{attempt.formattedAmount}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </>
   );

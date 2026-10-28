@@ -1,110 +1,91 @@
 import React from 'react';
 import { useDashboard } from '../context/DashboardContext';
-
-const STORES = [
-  {
-    brand: 'Nilgiri Tea Co.',
-    store: 'Mumbai Store',
-    domain: 'nilgiri-mumbai.myshopify.com',
-    color: 'blue',
-    stats: [2430, 41.8, 9.2],
-  },
-  {
-    brand: 'Nilgiri Tea Co.',
-    store: 'Pune Store',
-    domain: 'nilgiri-pune.myshopify.com',
-    color: 'blue',
-    stats: [1210, 39.5, 8.1],
-  },
-  {
-    brand: 'Kora Apparel',
-    store: 'D2C Store',
-    domain: 'kora.in',
-    color: 'or',
-    stats: [3180, 36.2, 12.4],
-  },
-  {
-    brand: 'Aarav Home',
-    store: 'Main Store',
-    domain: 'aaravhome.in',
-    color: 'gr',
-    stats: [960, 44.3, 6.7],
-  },
-];
+import { useLiveSettings } from '../hooks/useLiveSettings';
+import { useLiveMonitor } from '../hooks/useLiveMonitor';
 
 export const StoresView: React.FC = () => {
   const { showToast } = useDashboard();
+  const { settings } = useLiveSettings();
+  const { data: monitor } = useLiveMonitor();
+
+  const currentShop = settings.shop || 'codemadi.myshopify.com';
+  const currentBrand = settings.brandName || 'RARE';
+  const totalEvents = monitor?.eventStream.totalRecordedEvents || 0;
+  const attempts = monitor?.ordersAndAttempts.totalAttempts || 0;
+  const confirmed = monitor?.ordersAndAttempts.confirmed || 0;
 
   return (
-    <div className="g g3">
-      {STORES.map((s, k) => (
-        <div key={s.store} className="card" style={{ borderTop: `4px solid var(--${s.color})` }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <div>
-              <b>{s.store}</b>
-              <div style={{ color: 'var(--mut)', fontSize: '12px' }}>
-                {s.brand} · {s.domain}
-              </div>
-            </div>
-            <button
-              className="tg on"
-              role="switch"
-              aria-checked="true"
-              aria-label="Checkout live"
-              onClick={(e) => {
-                e.currentTarget.classList.toggle('on');
-                showToast('Store status updated');
-              }}
-            />
-          </div>
-          <div style={{ fontSize: '12px', color: 'var(--mut)', marginTop: '12px' }}>
-            Checkout health, last 60 days
-          </div>
-          <div className="grid">
-            {[...Array(60)].map((_, i) => (
-              <i
-                key={i}
-                className={
-                  (i * 7 + k * 5) % 11 === 0
-                    ? 'b'
-                    : (i * 3 + k) % 13 === 0
-                      ? ''
-                      : s.color === 'blue'
-                        ? 'a'
-                        : s.color === 'or'
-                          ? 'b'
-                          : 'c'
-                }
-              />
-            ))}
-          </div>
-          <div className="mini">
-            <div>
-              Orders<b>{s.stats[0]?.toLocaleString('en-IN')}</b>
-            </div>
-            <div>
-              Conversion<b>{s.stats[1]}%</b>
-            </div>
-            <div>
-              RTO<b>{s.stats[2]}%</b>
-            </div>
-          </div>
-        </div>
-      ))}
-
+    <div>
       <div
-        className="card"
-        style={{ display: 'grid', placeItems: 'center', textAlign: 'center', minHeight: '240px' }}
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '16px',
+        }}
       >
         <div>
-          <div style={{ fontSize: '30px' }}>+</div>
-          <b>Add a store</b>
-          <div style={{ color: 'var(--mut)', margin: '4px 0 12px' }}>
-            Connect Shopify, set payments, run a test order.
+          <h3 style={{ margin: 0 }}>Connected Shopify Stores</h3>
+          <span style={{ fontSize: '12px', color: 'var(--mut)' }}>
+            Stores linked with Tezvix OS COD checkout overlay and app proxy
+          </span>
+        </div>
+        <button
+          className="btn"
+          onClick={() =>
+            showToast('Install app on your development store using Shopify CLI: pnpm dev')
+          }
+        >
+          + Link new store
+        </button>
+      </div>
+
+      <div className="g g3">
+        <div className="card" style={{ borderTop: `4px solid var(--blue)` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div>
+              <b>{currentBrand}</b>
+              <div style={{ color: 'var(--mut)', fontSize: '12px' }}>
+                Primary Store · {currentShop}
+              </div>
+            </div>
+            <span className="pill g">Live</span>
           </div>
-          <button className="btn" onClick={() => showToast('Add store wizard opened')}>
-            Start setup
-          </button>
+
+          <div style={{ fontSize: '12px', color: 'var(--mut)', marginTop: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+              <span>Theme App Embed</span>
+              <strong style={{ color: 'var(--ink)' }}>Active (COD Checkout)</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+              <span>Recorded Events</span>
+              <strong style={{ color: 'var(--ink)' }}>{totalEvents}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+              <span>Orders Placed</span>
+              <strong style={{ color: 'var(--ink)' }}>
+                {confirmed} / {attempts} attempts
+              </strong>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
+            <a
+              href={`https://${currentShop}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn l"
+              style={{ textDecoration: 'none', textAlign: 'center', flex: 1 }}
+            >
+              Open store ↗
+            </a>
+            <button
+              className="btn l"
+              onClick={() => showToast('Syncing theme embed configuration...')}
+            >
+              Sync theme
+            </button>
+          </div>
         </div>
       </div>
     </div>
