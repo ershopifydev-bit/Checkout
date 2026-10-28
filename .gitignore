@@ -74,6 +74,5 @@ Thumbs.db
 /tasks/
 /Doc/
 /tools/
-
-# Shopify admin generated route types
-.react-router/
+Checkout-load-test
+localDependency/

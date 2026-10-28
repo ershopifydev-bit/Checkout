@@ -9,7 +9,7 @@ if (!uri) throw new Error('Set MONGODB_TEST_URI to an isolated test MongoDB serv
 const client = new MongoClient(uri, { serverSelectionTimeoutMS: 3000 });
 const database = `checkout_test_${randomUUID().replaceAll('-', '')}`;
 const key = randomBytes(32);
-const store = new EncryptedMongoSessionStorage(client.db(database), key);
+const store = new EncryptedMongoSessionStorage(() => client.db(database), key);
 function session(shop: string) {
   return new Session({
     id: `offline_${shop}`,
@@ -39,7 +39,7 @@ describe('real MongoDB session persistence', () => {
       .collection<{ _id: string; shop: string }>('shopifySessions')
       .findOne({ _id: original.id });
     expect(JSON.stringify(document)).not.toContain('private-');
-    const reopened = new EncryptedMongoSessionStorage(client.db(database), key);
+    const reopened = new EncryptedMongoSessionStorage(() => client.db(database), key);
     expect((await reopened.loadSession(original.id))?.toPropertyArray(true)).toEqual(
       original.toPropertyArray(true),
     );
@@ -88,7 +88,7 @@ describe('real MongoDB session persistence', () => {
       connectTimeoutMS: 100,
     });
     try {
-      const failedStore = new EncryptedMongoSessionStorage(unavailable.db(database), key);
+      const failedStore = new EncryptedMongoSessionStorage(() => unavailable.db(database), key);
       await expect(failedStore.deleteShopSessions('alpha.myshopify.com')).rejects.toThrow();
     } finally {
       await unavailable.close();

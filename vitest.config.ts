@@ -11,18 +11,10 @@ export default defineConfig({
     },
   },
   test: {
-    include: [
-      'tests/unit/**/*.test.ts',
-      'tests/integration/**/*.test.ts',
-      'apps/shopify-admin/tests/**/*.test.ts',
-    ],
+    include: ['tests/unit/**/*.test.ts', 'tests/integration/**/*.test.ts'],
     coverage: {
       provider: 'v8',
-      include: [
-        'packages/*/src/**/*.ts',
-        'apps/*/src/**/*.ts',
-        'apps/shopify-admin/app/*.server.ts',
-      ],
+      include: ['packages/*/src/**/*.ts', 'apps/*/src/**/*.ts'],
       reporter: ['text', 'lcov'],
     },
   },

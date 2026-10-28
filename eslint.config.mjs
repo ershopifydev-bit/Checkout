@@ -5,27 +5,28 @@ export default [
   {
     ignores: [
       '**/dist/**',
+      '**/build/**',
       '**/node_modules/**',
+      '**/.shopify/**',
+      '**/.react-router/**',
       'coverage/**',
       'tasks/**',
       'tools/**',
       'Doc/**',
-      '**/.react-router/**',
-      '**/build/**',
+      'apps/shopify-admin/**',
+      'apps/dashboard/**',
+      'apps/dashboard_backend/**',
+      'Checkout-load-test/**',
+      'localDependency/**',
+      'vitest.mongo.config.ts',
     ],
   },
   js.configs.recommended,
-  ...tseslint.configs.recommendedTypeChecked.map((config) => ({
-    ...config,
-    files: ['**/*.{ts,tsx}'],
-  })),
+  ...tseslint.configs.recommendedTypeChecked.map((config) => ({ ...config, files: ['**/*.ts'] })),
   {
-    files: ['**/*.{ts,tsx}'],
+    files: ['**/*.ts'],
     languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.json', './apps/shopify-admin/tsconfig.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
+      parserOptions: { project: './tsconfig.json', tsconfigRootDir: import.meta.dirname },
     },
     rules: {
       '@typescript-eslint/consistent-type-imports': 'error',
@@ -37,6 +38,27 @@ export default [
           ],
         },
       ],
+    },
+  },
+  {
+    files: ['tests/**/*.ts'],
+    rules: {
+      '@typescript-eslint/require-await': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+    },
+  },
+  {
+    files: ['apps/api/public/**/*.js'],
+    languageOptions: {
+      globals: {
+        document: 'readonly',
+        window: 'readonly',
+        console: 'readonly',
+        fetch: 'readonly',
+        FormData: 'readonly',
+        Intl: 'readonly',
+        URLSearchParams: 'readonly',
+      },
     },
   },
 ];

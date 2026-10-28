@@ -1,8 +1,8 @@
 # Shopify development-store setup
 
-The Shopify app lives in `apps/shopify-admin`. The Fastify API on port 3000 is a separate service; opening it does not install the Shopify app. This increment supports the app installation shell, authenticated merchant home, and session revocation. Shopper checkout, merchant settings, billing, and production rollout remain upcoming.
+The Shopify app lives in `apps/shopify-admin`. Run it with `pnpm dev` (Shopify CLI + tunnel). The Fastify API on port 3000 is a separate local demo only — it is **not** the storefront integration. Shopper COD checkout is injected on the live theme via the **COD Checkout** theme app embed (`extensions/cod-checkout-embed`) and the app proxy path `/apps/easy-checkout`.
 
-The tracked development app is Checkout Development in EasyRewardz Software Services Private Limited (130952356), linked to `codemadi.myshopify.com`. Live installation verification is still pending.
+The tracked development app is Tezvix in Shopify Partner organization (130952356), linked to `codemadi.myshopify.com`. Live installation verification is still pending.
 
 ## First-time setup
 
@@ -11,10 +11,12 @@ The tracked development app is Checkout Development in EasyRewardz Software Serv
 
    ```sh
    mkdir -p tools/runtime/mongodb-install-test
-   mongod --dbpath tools/runtime/mongodb-install-test --bind_ip 127.0.0.1 --port 27028
+   mongod --dbpath tools/runtime/mongodb-install-test --bind_ip 127.0.0.1 --port 27017
    ```
 
    Keep it running in a terminal. `tools/` is ignored. Production needs authenticated MongoDB with TLS and the separately planned durability configuration.
+
+   Also run Redis (`redis-server`, default `redis://127.0.0.1:6379`) and set `REDIS_URL` in `.env`. Checkout sessions and rate limits live there; production refuses to serve checkout without it.
 
 3. Copy `apps/shopify-admin/.env.example` to `apps/shopify-admin/.env`. Set the MongoDB URI/database and generate a stable 32-byte base64 encryption key using the command in the example. Keep `.env` private; never commit or paste its contents. Losing/changing the key requires reauthentication of stored sessions. Key rotation is not implemented in this increment.
 4. Run `npm run config:link` (or `pnpm config:link`). Select the organization owning `codemadi.myshopify.com`, then select/create the intended **development app**. Do not link an unrelated existing production app. The client ID is public configuration; the client secret belongs in the CLI-managed environment.
@@ -29,13 +31,20 @@ npm run dev
 
 This invokes Shopify CLI, starts the React Router app, and manages the development tunnel. Use the CLI preview URL (or press `p`) to install/open the app on the development store. Shopify CLI supplies the app URL and Shopify credentials. The Vite configuration accepts CLI versions that supply the tunnel URL as `HOST`, normalizing it to `SHOPIFY_APP_URL`. A running MongoDB service and the app-local `.env` are required. No separate TypeScript watcher is needed for this app.
 
-A bare `http://127.0.0.1:3000/` is still the separate API, not the Shopify app. Use the CLI preview for embedded authentication. The app home displays only the verified shop domain and development status; it does not expose session tokens or enable checkout.
+Use the CLI preview URL for embedded Admin authentication. After the app is running:
+
+1. Keep `pnpm dev` running. Copy the host theme id from the CLI line **Setup your theme app extension in the host theme** into `SHOPIFY_THEME_EXTENSION_HOST_THEME_ID` in `apps/shopify-admin/.env` (embeds are not on the published theme during local preview).
+2. In the embedded app home, click **Enable COD Checkout on theme** (deep-links to that host theme’s App embeds panel with block handle `cod-checkout`).
+3. Turn the embed on, then **Save**. Preview the storefront via the CLI host theme / local preview (`http://127.0.0.1:9293`), not only the published Dawn theme, until the extension is deployed.
+4. With **Open COD checkout on Checkout / Buy now** enabled, Checkout and Buy now must open the COD overlay on the same page. Shopify accelerated checkout hosts are removed and replaced with our Buy now control; native `/checkout` navigation is blocked in-page.
+
+`http://127.0.0.1:3000/` remains an optional local API playground only.
 
 ## Verification
 
 ```sh
 pnpm check
-MONGODB_TEST_URI=mongodb://127.0.0.1:27028 pnpm test:admin:db
+MONGODB_TEST_URI=mongodb://127.0.0.1:27027 pnpm test:admin:db
 pnpm audit --audit-level=moderate
 ```
 

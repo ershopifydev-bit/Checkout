@@ -5,7 +5,7 @@ const valid = {
   SHOPIFY_API_KEY: 'test-key',
   SHOPIFY_API_SECRET: 'test-secret',
   SHOPIFY_APP_URL: 'https://example.com',
-  MONGODB_URI: 'mongodb://127.0.0.1:27028',
+  MONGODB_URI: 'mongodb://127.0.0.1:27027',
   MONGODB_DATABASE: 'checkout_dev',
   SESSION_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
 };

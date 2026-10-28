@@ -1,0 +1,29 @@
+<script>
+  window.EasyCheckoutConfig = {
+    apiBase: '/apps/easy-checkout',
+    // Panel + JS/CSS from app proxy so public/checkout is always the live source (no stale CDN).
+    panelUrl: '/apps/easy-checkout/panel.html',
+    cssUrl: '/apps/easy-checkout/checkout.css',
+    jsUrl: '/apps/easy-checkout/checkout.js',
+    assetVersion: '20261028a',
+    hijackCheckout: {{ block.settings.hijack_checkout | json }},
+  };
+</script>
+<script src="{{ 'hijack-core.js' | asset_url }}" defer></script>
+<script src="{{ 'embed.js' | asset_url }}" defer></script>
+
+{% schema %}
+{
+  "name": "COD Checkout",
+  "target": "body",
+  "stylesheet": "checkout.css",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "hijack_checkout",
+      "label": "Open COD Checkout on Checkout / Buy now",
+      "default": true
+    }
+  ]
+}
+{% endschema %}
