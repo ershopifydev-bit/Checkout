@@ -1,10 +1,8 @@
 import type { ActionFunctionArgs } from 'react-router';
+import { recordCheckoutEvent } from '../checkout-events.server';
 import { verifyOtp } from '../checkout-auth.server';
+import { guardProxyRequest } from '../proxy-guard.server';
 import { authenticate } from '../shopify.server';
-
-function shopFromRequest(request: Request): string {
-  return (new URL(request.url).searchParams.get('shop') || '').trim().toLowerCase();
-}
 
 function errorResponse(code: string, message: string, status: number) {
   return Response.json({ error: { code, message } }, { status });
@@ -13,14 +11,28 @@ function errorResponse(code: string, message: string, status: number) {
 export async function action({ request }: ActionFunctionArgs) {
   await authenticate.public.appProxy(request);
   if (request.method !== 'POST') return errorResponse('INVALID_REQUEST', 'POST required.', 405);
-  const shop = shopFromRequest(request);
-  if (!shop) return errorResponse('INVALID_REQUEST', 'Missing shop.', 400);
+  const guard = await guardProxyRequest(request, 'otpVerify');
+  if (guard instanceof Response) return guard;
+  const { shop } = guard;
   const body = (await request.json().catch(() => null)) as {
     phone?: string;
     code?: string;
+    sessionId?: string;
   } | null;
   try {
     const shopper = await verifyOtp(shop, body?.phone || '', body?.code || '');
+    void recordCheckoutEvent({
+      shop,
+      sessionId: String(body?.sessionId || ''),
+      event: 'logged_in',
+      step: 'login',
+      shopperPhone: shopper.phone,
+      customerId: shopper.customerId,
+      metadata: {
+        isNew: shopper.isNew,
+        hasAddress: Boolean(shopper.address),
+      },
+    });
     return Response.json(shopper);
   } catch (error) {
     const code = error instanceof Error ? error.message : 'INVALID_REQUEST';

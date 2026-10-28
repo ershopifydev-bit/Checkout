@@ -21,9 +21,17 @@
     "start:api": "node apps/api/dist/server.js",
     "api:spec": "pnpm build && node scripts/export-openapi.mjs",
     "dev": "shopify app dev --path apps/shopify-admin --store codemadi.myshopify.com",
+    "mongo:dev": "mongod --dbpath tools/runtime/mongodb-dev --bind_ip 127.0.0.1 --port 27028 --logpath tools/runtime/mongodb-dev/mongod.log --fork",
     "config:link": "shopify app config link --path apps/shopify-admin",
     "build:admin": "pnpm --filter @checkout/shopify-admin build",
     "typecheck:admin": "pnpm --filter @checkout/shopify-admin typecheck",
+    "build:dashboard": "pnpm --filter @checkout/dashboard build",
+    "typecheck:dashboard": "pnpm --filter @checkout/dashboard typecheck",
+    "dev:dashboard": "pnpm --filter @checkout/dashboard dev",
+    "build:dashboard-backend": "pnpm --filter @checkout/dashboard-backend build",
+    "typecheck:dashboard-backend": "pnpm --filter @checkout/dashboard-backend typecheck",
+    "dev:dashboard-backend": "pnpm --filter @checkout/dashboard-backend dev",
+    "start:dashboard-backend": "pnpm --filter @checkout/dashboard-backend start",
     "test:admin:db": "vitest run --config vitest.mongo.config.ts"
   },
   "devDependencies": {

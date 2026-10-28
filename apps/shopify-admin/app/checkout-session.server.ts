@@ -1,4 +1,18 @@
 import { randomUUID } from 'node:crypto';
+import type { Redis } from 'ioredis';
+import {
+  claimAttemptForCreation,
+  createOrGetOrderAttempt,
+  findAttemptBySessionId,
+  markAttemptConfirmed,
+  markAttemptFailed,
+  markAttemptUnknown,
+  OrderInProgressError,
+  OrderReconciliationRequiredError,
+} from './checkout-order-attempt.server';
+import { reconcileCheckoutAttempt } from './checkout-order-reconciliation.server';
+import { AmbiguousShopifyError } from './shopify-client.server';
+import { getRedis } from './redis.server';
 import {
   computeCouponDiscountMinor,
   resolveShopifyCoupon,
@@ -100,32 +114,178 @@ export type CreateSessionInput = {
   }>;
 };
 
+/** Result returned to the shopper once an order exists; replayed on retries of the same session. */
+export type PlacedOrder = {
+  orderId: string;
+  orderName: string;
+  orderGid: string;
+  status: 'placed';
+  paymentMethod: 'cod';
+  sessionId: string;
+  source: CheckoutSession['source'];
+  totals: CheckoutSession['totals'];
+  lines: CheckoutLine[];
+  message: string;
+};
+
 export type SessionStore = {
   put(session: CheckoutSession): Promise<void>;
   get(sessionId: string): Promise<CheckoutSession | null>;
+  /** Removes the session and its order lock. */
   delete(sessionId: string): Promise<void>;
+  /** Atomically takes the one-order-per-session lock. False when another request holds it. */
+  claim(sessionId: string): Promise<boolean>;
+  release(sessionId: string): Promise<void>;
+  getPlaced(sessionId: string): Promise<PlacedOrder | null>;
+  setPlaced(sessionId: string, order: PlacedOrder): Promise<void>;
 };
 
-/** ponytail: process-local until Mongo checkout_sessions collection is wired; fine for single-replica pnpm dev. */
-const memory = new Map<string, CheckoutSession>();
+/** Sessions expire this long after their last write; override with CHECKOUT_SESSION_TTL_SECONDS. */
+function sessionTtlSeconds(): number {
+  const raw = Number(process.env['CHECKOUT_SESSION_TTL_SECONDS']);
+  return Number.isFinite(raw) && raw >= 60 ? Math.floor(raw) : 30 * 60;
+}
 
-export function createMemorySessionStore(): SessionStore {
+const ORDER_LOCK_TTL_SECONDS = 60;
+const PLACED_ORDER_TTL_SECONDS = 15 * 60;
+
+type MemorySessionState = {
+  sessions: Map<string, { value: CheckoutSession; expiresAt: number }>;
+  locks: Map<string, number>;
+  placed: Map<string, { value: PlacedOrder; expiresAt: number }>;
+};
+
+function newMemoryState(): MemorySessionState {
+  return { sessions: new Map(), locks: new Map(), placed: new Map() };
+}
+
+/**
+ * Dev/test fallback used when REDIS_URL is unset. Survives Vite HMR via globalThis so
+ * sessions are not wiped while a checkout modal is open.
+ */
+const sharedMemoryState: MemorySessionState =
+  (globalThis as typeof globalThis & { __ecSessionState?: MemorySessionState }).__ecSessionState ??
+  newMemoryState();
+(globalThis as typeof globalThis & { __ecSessionState?: MemorySessionState }).__ecSessionState =
+  sharedMemoryState;
+
+export function createMemorySessionStore(
+  state: MemorySessionState = newMemoryState(),
+): SessionStore {
+  const live = <T extends { expiresAt: number }>(entry: T | undefined) =>
+    entry && entry.expiresAt > Date.now() ? entry : undefined;
   return {
     async put(session) {
-      memory.set(session.sessionId, session);
+      state.sessions.set(session.sessionId, {
+        value: session,
+        expiresAt: Date.now() + sessionTtlSeconds() * 1000,
+      });
     },
     async get(sessionId) {
-      return memory.get(sessionId) ?? null;
+      return live(state.sessions.get(sessionId))?.value ?? null;
     },
     async delete(sessionId) {
-      memory.delete(sessionId);
+      state.sessions.delete(sessionId);
+      state.locks.delete(sessionId);
     },
+    async claim(sessionId) {
+      const lockedUntil = state.locks.get(sessionId) ?? 0;
+      if (lockedUntil > Date.now()) return false;
+      state.locks.set(sessionId, Date.now() + ORDER_LOCK_TTL_SECONDS * 1000);
+      return true;
+    },
+    async release(sessionId) {
+      state.locks.delete(sessionId);
+    },
+    async getPlaced(sessionId) {
+      return live(state.placed.get(sessionId))?.value ?? null;
+    },
+    async setPlaced(sessionId, order) {
+      state.placed.set(sessionId, {
+        value: order,
+        expiresAt: Date.now() + PLACED_ORDER_TTL_SECONDS * 1000,
+      });
+    },
+  };
+}
+
+const SESSION_KEY = 'ec:sess:';
+const LOCK_KEY = 'ec:sess-lock:';
+const PLACED_KEY = 'ec:sess-placed:';
+
+/** Redis-backed store: the source of truth for live checkout sessions. */
+export function createRedisSessionStore(redis: Redis): SessionStore {
+  const guard = async <T>(run: () => Promise<T>): Promise<T> => {
+    try {
+      return await run();
+    } catch (error) {
+      console.error('[EasyCheckout] session store error', (error as Error).message);
+      throw new Error('SESSION_STORE_UNAVAILABLE');
+    }
+  };
+  return {
+    put: (session) =>
+      guard(async () => {
+        await redis.set(
+          SESSION_KEY + session.sessionId,
+          JSON.stringify(session),
+          'EX',
+          sessionTtlSeconds(),
+        );
+      }),
+    get: (sessionId) =>
+      guard(async () => {
+        const raw = await redis.get(SESSION_KEY + sessionId);
+        return raw ? (JSON.parse(raw) as CheckoutSession) : null;
+      }),
+    delete: (sessionId) =>
+      guard(async () => {
+        await redis.del(SESSION_KEY + sessionId, LOCK_KEY + sessionId);
+      }),
+    claim: (sessionId) =>
+      guard(async () => {
+        const result = await redis.set(
+          LOCK_KEY + sessionId,
+          '1',
+          'EX',
+          ORDER_LOCK_TTL_SECONDS,
+          'NX',
+        );
+        return result === 'OK';
+      }),
+    release: (sessionId) =>
+      guard(async () => {
+        await redis.del(LOCK_KEY + sessionId);
+      }),
+    getPlaced: (sessionId) =>
+      guard(async () => {
+        const raw = await redis.get(PLACED_KEY + sessionId);
+        return raw ? (JSON.parse(raw) as PlacedOrder) : null;
+      }),
+    setPlaced: (sessionId, order) =>
+      guard(async () => {
+        await redis.set(
+          PLACED_KEY + sessionId,
+          JSON.stringify(order),
+          'EX',
+          PLACED_ORDER_TTL_SECONDS,
+        );
+      }),
   };
 }
 
 let defaultStore: SessionStore | undefined;
 export function getCheckoutSessionStore(): SessionStore {
-  defaultStore ??= createMemorySessionStore();
+  if (defaultStore) return defaultStore;
+  const redis = process.env['NODE_ENV'] === 'test' ? null : getRedis();
+  if (redis) {
+    defaultStore = createRedisSessionStore(redis);
+  } else {
+    if (process.env['NODE_ENV'] !== 'test') {
+      console.warn('[EasyCheckout] REDIS_URL unset: using in-memory checkout sessions (dev only)');
+    }
+    defaultStore = createMemorySessionStore(sharedMemoryState);
+  }
   return defaultStore;
 }
 
@@ -427,7 +587,13 @@ export async function quoteCheckoutSession(
   return session;
 }
 
+function logStoreError(error: unknown) {
+  console.error('[EasyCheckout] post-order session cleanup failed', (error as Error).message);
+}
+
 export type PlaceCodOrderOptions = {
+  /** Shop from the verified app-proxy request; the session must belong to it. */
+  shop?: string;
   customerId?: string;
   /** Injected in tests — defaults to Shopify Admin orderCreate. */
   createOrder?: typeof import('./shopify-cod-order.server').createCodOrderInShopify;
@@ -438,43 +604,232 @@ export async function placeCodFromSession(
   address: CheckoutAddress,
   store: SessionStore = getCheckoutSessionStore(),
   options: PlaceCodOrderOptions = {},
-) {
-  const session = await patchCheckoutSession(sessionId, { address }, store);
-  if (!session.shipping?.codEnabled) throw new Error('NOT_SERVICEABLE');
-
-  const createOrder =
-    options.createOrder || (await import('./shopify-cod-order.server')).createCodOrderInShopify;
-
-  let shopifyOrder;
-  try {
-    shopifyOrder = await createOrder({
-      shop: session.shop,
-      address,
-      lines: session.lines,
-      totals: session.totals,
-      coupon: session.coupon,
-      ...(options.customerId ? { customerId: options.customerId } : {}),
-    });
-  } catch (error) {
-    const code = error instanceof Error ? error.message : 'ORDER_CREATE_FAILED';
-    if (code === 'ADMIN_TOKEN_MISSING' || code === 'ORDER_CREATE_FAILED' || code === 'EMPTY_CART') {
-      throw new Error(code);
+): Promise<PlacedOrder> {
+  const existing = await store.get(sessionId);
+  if (!existing || (options.shop && existing.shop !== options.shop)) {
+    // Check if it was already placed in a previous session
+    const attempt = await findAttemptBySessionId(options.shop || '', sessionId);
+    if (
+      attempt?.status === 'CONFIRMED' &&
+      attempt.shopifyOrderId &&
+      attempt.shopifyOrderName &&
+      attempt.shopifyOrderGid
+    ) {
+      return {
+        orderId: attempt.shopifyOrderId,
+        orderName: attempt.shopifyOrderName,
+        orderGid: attempt.shopifyOrderGid,
+        status: 'placed',
+        paymentMethod: 'cod',
+        sessionId,
+        source: 'cart',
+        totals: {
+          currency: 'INR',
+          subtotalMinor: attempt.expectedAmountMinor,
+          discountMinor: 0,
+          shippingMinor: 0,
+          codFeeMinor: 0,
+          amountMinor: attempt.expectedAmountMinor,
+        },
+        lines: [],
+        message: `Order ${attempt.shopifyOrderName} placed. Pay cash on delivery.`,
+      };
     }
-    console.error('[EasyCheckout] place COD unexpected error', error);
-    throw new Error('ORDER_CREATE_FAILED');
+    const alreadyPlaced = await store.getPlaced(sessionId);
+    if (alreadyPlaced) return alreadyPlaced;
+    throw new Error('SESSION_NOT_FOUND');
   }
 
-  await store.delete(sessionId);
-  return {
-    orderId: shopifyOrder.orderId,
-    orderName: shopifyOrder.orderName,
-    orderGid: shopifyOrder.orderGid,
-    status: 'placed' as const,
-    paymentMethod: 'cod' as const,
-    sessionId,
-    source: session.source,
-    totals: session.totals,
-    lines: session.lines,
-    message: `Order ${shopifyOrder.orderName} placed. Pay cash on delivery.`,
-  };
+  // Resolve merchant, brand & store context
+  const { resolveMerchantStoreContext } = await import('./merchant-hierarchy.server');
+  const context = await resolveMerchantStoreContext(existing.shop);
+
+  // Validate customer store-specific risk flags if customer identified
+  if (options.customerId) {
+    const { getStoreCustomerProfile } = await import('./universal-customer.server');
+    const storeProfile = await getStoreCustomerProfile(
+      options.customerId,
+      context.store._id,
+      context.merchant._id,
+      context.brand._id,
+    );
+    if (storeProfile.flags.blocked) {
+      throw new Error('CUSTOMER_BLOCKED');
+    }
+    if (storeProfile.flags.codDisabled || storeProfile.flags.prepaidOnly) {
+      throw new Error('NOT_SERVICEABLE');
+    }
+  }
+
+  // Create or retrieve persistent order attempt record
+  const { attempt } = await createOrGetOrderAttempt({
+    shop: existing.shop,
+    checkoutSessionId: sessionId,
+    expectedAmountMinor: existing.totals.amountMinor,
+    customerId: options.customerId,
+    merchantId: context.merchant._id,
+    brandId: context.brand._id,
+    storeId: context.store._id,
+    payload: {
+      shop: existing.shop,
+      address,
+      lines: existing.lines,
+      totals: existing.totals,
+      coupon: existing.coupon,
+    },
+  });
+
+  // If already confirmed in MongoDB, return the confirmed order immediately!
+  if (
+    attempt.status === 'CONFIRMED' &&
+    attempt.shopifyOrderId &&
+    attempt.shopifyOrderName &&
+    attempt.shopifyOrderGid
+  ) {
+    const placed: PlacedOrder = {
+      orderId: attempt.shopifyOrderId,
+      orderName: attempt.shopifyOrderName,
+      orderGid: attempt.shopifyOrderGid,
+      status: 'placed',
+      paymentMethod: 'cod',
+      sessionId,
+      source: existing.source,
+      totals: existing.totals,
+      lines: existing.lines,
+      message: `Order ${attempt.shopifyOrderName} placed. Pay cash on delivery.`,
+    };
+    await store.setPlaced(sessionId, placed).catch(logStoreError);
+    return placed;
+  }
+
+  // If attempt is currently in an unknown/ambiguous state, reconcile against Shopify first!
+  if (attempt.status === 'UNKNOWN' || attempt.status === 'RECONCILING') {
+    const { getShopOfflineAccessToken } = await import('./shopify-cod-order.server');
+    const token = await getShopOfflineAccessToken(existing.shop);
+    if (token) {
+      const recon = await reconcileCheckoutAttempt(existing.shop, token, sessionId);
+      if (recon.status === 'CONFIRMED') {
+        const placed: PlacedOrder = {
+          orderId: recon.order.orderId,
+          orderName: recon.order.orderName,
+          orderGid: recon.order.orderGid,
+          status: 'placed',
+          paymentMethod: 'cod',
+          sessionId,
+          source: existing.source,
+          totals: existing.totals,
+          lines: existing.lines,
+          message: `Order ${recon.order.orderName} placed. Pay cash on delivery.`,
+        };
+        await store.setPlaced(sessionId, placed).catch(logStoreError);
+        return placed;
+      }
+    }
+    throw new OrderReconciliationRequiredError(
+      'Order creation status is ambiguous. Verifying with Shopify.',
+      attempt,
+    );
+  }
+
+  // Atomically claim the attempt in MongoDB (and temp Redis claim)
+  await claimAttemptForCreation(attempt._id);
+  if (!(await store.claim(sessionId))) {
+    throw new OrderInProgressError('ORDER_IN_PROGRESS', 'CREATING');
+  }
+
+  try {
+    const session = await patchCheckoutSession(sessionId, { address }, store);
+    if (!session.shipping?.codEnabled) {
+      await markAttemptFailed(attempt._id, {
+        code: 'NOT_SERVICEABLE',
+        message: 'COD is not serviceable for this address',
+      });
+      throw new Error('NOT_SERVICEABLE');
+    }
+
+    const createOrder =
+      options.createOrder || (await import('./shopify-cod-order.server')).createCodOrderInShopify;
+
+    let shopifyOrder;
+    try {
+      shopifyOrder = await createOrder({
+        shop: session.shop,
+        checkoutSessionId: sessionId,
+        address,
+        lines: session.lines,
+        totals: session.totals,
+        ...(session.coupon ? { coupon: session.coupon } : {}),
+        ...(options.customerId ? { customerId: options.customerId } : {}),
+        shippingTitle: session.shipping?.handleName,
+      });
+    } catch (error) {
+      if (error instanceof AmbiguousShopifyError) {
+        // Ambiguous failure: network timeout / socket drop. Mark UNKNOWN. Do NOT retry!
+        await markAttemptUnknown(attempt._id, {
+          code: 'AMBIGUOUS_EXECUTION',
+          message: error.message,
+        });
+        // Try immediate inline reconciliation
+        const { getShopOfflineAccessToken } = await import('./shopify-cod-order.server');
+        const token = await getShopOfflineAccessToken(session.shop);
+        if (token) {
+          const recon = await reconcileCheckoutAttempt(session.shop, token, sessionId);
+          if (recon.status === 'CONFIRMED') {
+            shopifyOrder = {
+              orderId: recon.order.orderId,
+              orderName: recon.order.orderName,
+              orderGid: recon.order.orderGid,
+            };
+          } else {
+            throw new OrderReconciliationRequiredError(
+              'Order confirmation in progress with Shopify.',
+              attempt,
+            );
+          }
+        } else {
+          throw new OrderReconciliationRequiredError(
+            'Order confirmation in progress with Shopify.',
+            attempt,
+          );
+        }
+      } else {
+        const code = error instanceof Error ? error.message : 'ORDER_CREATE_FAILED';
+        await markAttemptFailed(attempt._id, {
+          code,
+          message: error instanceof Error ? error.message : 'Order create failed',
+        });
+        throw error;
+      }
+    }
+
+    // Mark attempt CONFIRMED durably in MongoDB
+    await markAttemptConfirmed(attempt._id, {
+      shopifyOrderGid: shopifyOrder.orderGid,
+      shopifyOrderId: shopifyOrder.orderId,
+      shopifyOrderName: shopifyOrder.orderName,
+      shopifyOrderTotalMinor: session.totals.amountMinor,
+    });
+
+    const placed: PlacedOrder = {
+      orderId: shopifyOrder.orderId,
+      orderName: shopifyOrder.orderName,
+      orderGid: shopifyOrder.orderGid,
+      status: 'placed',
+      paymentMethod: 'cod',
+      sessionId,
+      source: session.source,
+      totals: session.totals,
+      lines: session.lines,
+      message: `Order ${shopifyOrder.orderName} placed. Pay cash on delivery.`,
+    };
+
+    await store.setPlaced(sessionId, placed).catch(logStoreError);
+    await store.delete(sessionId).catch(logStoreError);
+    return placed;
+  } catch (error) {
+    if (!(error instanceof OrderReconciliationRequiredError)) {
+      await store.release(sessionId).catch(() => undefined);
+    }
+    throw error;
+  }
 }

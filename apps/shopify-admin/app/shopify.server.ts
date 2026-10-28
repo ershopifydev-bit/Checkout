@@ -8,8 +8,8 @@ import { EncryptedMongoSessionStorage } from './session-storage.server';
 const config = readAdminConfig(process.env);
 
 type GlobalDatabase = typeof globalThis & {
-  checkoutMongoClient?: MongoClient;
-  checkoutMongoConnect?: Promise<MongoClient>;
+  checkoutMongoClient?: MongoClient | undefined;
+  checkoutMongoConnect?: Promise<MongoClient> | undefined;
 };
 
 const globalDatabase = globalThis as GlobalDatabase;

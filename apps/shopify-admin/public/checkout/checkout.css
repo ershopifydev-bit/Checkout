@@ -10,9 +10,9 @@ html.ec-lock body {
   background: rgba(17, 17, 17, 0.45);
   display: flex;
   justify-content: center;
-  /* Dock shell to the bottom when there is spare viewport space. */
-  align-items: flex-end;
-  padding: 0 0 0.65em;
+  align-items: stretch;
+  padding: 0;
+  margin: 0;
   box-sizing: border-box;
 }
 
@@ -22,22 +22,23 @@ html.ec-lock body {
 
 .ec-shell {
   position: relative;
-  width: min(480px, 100%);
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   background: #fcfbf9;
   color: #111;
   font-family: 'DM Sans', 'Segoe UI', sans-serif;
   font-size: 16px; /* Dawn html rem is 10px — keep checkout readable */
   display: flex;
   flex-direction: column;
-  height: calc(100dvh - 0.65em);
-  max-height: calc(100dvh - 0.65em);
-  max-width: 100%;
+  height: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
   min-height: 0;
   overflow: hidden;
   border: 0;
+  border-radius: 0;
   box-shadow: none;
-  border-radius: 16px 16px 0 0;
 }
 
 /* Anything with the hidden attribute stays hidden, regardless of display rules */
@@ -57,17 +58,24 @@ html.ec-lock body {
   border: 0;
 }
 
-@media (min-width: 900px) {
+/* Tablet and Laptop / Desktop: center modal with comfortable surrounding space */
+@media (min-width: 641px) {
   .ec-root {
-    padding: 0.75em 1em 1em;
+    padding: 1.5rem 1rem !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(17, 17, 17, 0.5) !important;
   }
 
   .ec-shell {
-    width: min(520px, 100%);
-    height: calc(100dvh - 1.75em);
-    max-height: calc(100dvh - 1.75em);
-    border-radius: 16px;
-    overflow: hidden;
+    width: min(480px, calc(100vw - 2rem)) !important;
+    height: auto !important;
+    max-height: min(92dvh, 880px) !important;
+    margin: auto !important;
+    border-radius: 20px !important;
+    box-shadow:
+      0 20px 45px -10px rgba(0, 0, 0, 0.3),
+      0 0 0 1px rgba(0, 0, 0, 0.08) !important;
   }
 }
 
@@ -83,8 +91,8 @@ html.ec-lock body {
   display: grid;
   grid-template-columns: minmax(2.5em, auto) 1fr minmax(2.5em, auto);
   align-items: center;
-  gap: 0.5em;
-  padding: 0.65em 0.85em 0.35em;
+  gap: 0.4em;
+  padding: 0.55em 0.85em 0.35em;
 }
 
 .ec-brand {
@@ -92,10 +100,13 @@ html.ec-lock body {
   text-align: center;
   font-family: 'DM Sans', 'Segoe UI', sans-serif;
   font-weight: 500;
-  letter-spacing: 0.45em;
-  font-size: 1.2em;
-  padding-left: 0.45em; /* optically re-centre after letter-spacing */
+  letter-spacing: 0.35em;
+  font-size: 1.15em;
+  padding-left: 0.35em; /* optically re-centre after letter-spacing */
   min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ec-brand.is-logo {
@@ -105,6 +116,50 @@ html.ec-lock body {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Logged-in header: brand name or logo sits on left next to the arrow, user card on the right */
+.ec-top-row.is-logged-in,
+.ec-top-row:has(.ec-account:not([hidden])) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6em;
+  padding: 0.55em 0.85em 0.35em;
+}
+
+.ec-top-row.is-logged-in .ec-back,
+.ec-top-row:has(.ec-account:not([hidden])) .ec-back {
+  flex-shrink: 0;
+  padding: 0.25em 0.15em;
+  margin-right: 0.2em;
+}
+
+.ec-top-row.is-logged-in .ec-brand,
+.ec-top-row:has(.ec-account:not([hidden])) .ec-brand {
+  text-align: left;
+  padding-left: 0;
+  letter-spacing: 0.25em;
+  margin-right: auto;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.ec-top-row.is-logged-in .ec-brand.is-logo,
+.ec-top-row:has(.ec-account:not([hidden])) .ec-brand.is-logo {
+  justify-content: flex-start;
+  margin-right: auto;
+}
+
+.ec-top-row.is-logged-in .ec-brand-logo,
+.ec-top-row:has(.ec-account:not([hidden])) .ec-brand-logo {
+  margin: 0;
+}
+
+.ec-top-row.is-logged-in .ec-account,
+.ec-top-row:has(.ec-account:not([hidden])) .ec-account {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .ec-brand-logo {
@@ -128,7 +183,6 @@ html.ec-lock body {
 }
 
 .ec-back,
-.ec-logout,
 .ec-close {
   border: 0;
   background: transparent;
@@ -147,54 +201,121 @@ html.ec-lock body {
   font-size: 1.1em;
 }
 
-/* Logged-in header shows Logout + phone instead of the close button */
+/* Logged-in header shows User Card instead of the close button */
 .ec-account:not([hidden]) ~ .ec-close {
   display: none !important;
 }
 
 .ec-account {
-  display: grid;
-  justify-items: end;
-  gap: 0.1em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  background: #f9fafb;
+  border: 1px solid #f3f4f6;
+  border-radius: 999px;
+  padding: 3px 4px 3px 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  justify-self: end;
   min-width: 0;
+  max-width: 100%;
 }
 
-.ec-logout {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3em;
-  font-size: 0.85em;
-  font-weight: 600;
-  text-decoration: underline;
-  color: #111;
-}
-
-.ec-ico {
-  flex-shrink: 0;
-  display: block;
-}
-
-.ec-section-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4em;
-  margin: 0;
-}
-
-.ec-section-title .ec-ico {
+.ec-account-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e5e7eb;
   color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82em;
+  font-weight: 700;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid #d1d5db;
 }
 
-.ec-ico-offer {
-  color: #111;
+.ec-account-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.ec-account-avatar-initial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.ec-account-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  line-height: 1.25;
+  text-align: left;
+  padding-right: 0.1em;
+}
+
+.ec-account-name {
+  font-size: 0.82em;
+  font-weight: 700;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 85px;
 }
 
 .ec-account-phone {
-  font-size: 0.72em;
+  font-size: 0.7em;
+  font-weight: 500;
   color: #6b7280;
-  font-weight: 600;
-  letter-spacing: 0.01em;
   white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.ec-account-divider {
+  width: 1px;
+  height: 22px;
+  background: #e5e7eb;
+  flex-shrink: 0;
+}
+
+.ec-account-logout {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: #fff1f2;
+  border: 1px solid #ffe4e6;
+  color: #ef4444;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.ec-account-logout:hover {
+  background: #ffe4e6;
+  border-color: #fecdd3;
+  color: #dc2626;
+}
+
+.ec-account-logout:active {
+  transform: scale(0.94);
+}
+
+.ec-logout-ico {
+  display: block;
 }
 
 .ec-account[hidden] {
@@ -699,6 +820,7 @@ html.ec-lock body {
 .ec-phone-input:focus-within {
   border-color: #e3e3e3;
   box-shadow: none;
+  outline: none !important;
 }
 
 .ec-phone-input:has(input:disabled) {
@@ -712,14 +834,38 @@ html.ec-lock body {
   padding: 0 1em;
   font-weight: 600;
   border-right: 1px solid #e3e3e3;
+  outline: none !important;
 }
 
+#ec-login-phone,
+.ec-phone-input input,
 .ec-login-card .ec-phone-input input {
-  border: 0;
+  border: 0 !important;
+  border-left: 0 !important;
   background: transparent;
   padding: 1em;
-  outline: 0;
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
   font-size: 1em;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+#ec-login-phone:focus,
+#ec-login-phone:focus-visible,
+#ec-login-phone:active,
+.ec-phone-input input:focus,
+.ec-phone-input input:focus-visible,
+.ec-phone-input input:active,
+.ec-login-card .ec-phone-input input:focus,
+.ec-login-card .ec-phone-input input:focus-visible,
+.ec-login-card .ec-phone-input input:active {
+  border: 0 !important;
+  border-left: 0 !important;
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
 }
 
 .ec-login-card .ec-phone-input input:disabled {
@@ -857,6 +1003,15 @@ html.ec-lock body {
 .ec-cta:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.ec-cta:focus,
+.ec-cta:focus-visible,
+#ec-login-submit:focus,
+#ec-login-submit:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
 }
 
 .ec-cta.is-loading {
@@ -1224,7 +1379,7 @@ html.ec-lock body {
   border-color: #ececec;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 641px) {
   .ec-shell.is-address-focus .ec-address {
     max-height: calc(100vh - 11em);
   }
@@ -2635,4 +2790,717 @@ html.ec-lock body {
 .ec-bank-option.is-selected {
   border-color: #111;
   background: #f3f4f6;
+}
+
+/* Logout confirmation sheet */
+.ec-logout-sheet {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.ec-logout-actions {
+  display: grid;
+  gap: 0.55em;
+  margin-top: 0.35em;
+}
+
+.ec-logout-actions .ec-place {
+  width: 100%;
+}
+
+.ec-logout-confirm-btn {
+  width: 100%;
+  padding: 0.8em 1em;
+  border-radius: 999px;
+  text-align: center;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.ec-logout-confirm-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+/* ==========================================================================
+   UPI RESPONSIVE REDESIGN (DESKTOP QR / MOBILE APP CARDS)
+   ========================================================================== */
+
+.ec-pay-upi-card {
+  position: relative !important;
+  display: block !important;
+  padding: 0 !important;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: visible !important;
+  cursor: default !important;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.ec-pay-upi-card.is-selected {
+  border-color: #16a34a !important;
+  box-shadow: 0 0 0 1px #16a34a;
+  background: #ffffff !important;
+}
+
+.ec-pay-upi-card.is-selected .ec-pay-dot {
+  border-color: #16a34a;
+  background: radial-gradient(circle at center, #16a34a 0 38%, #fff 42% 100%);
+}
+
+.ec-pay-upi-card.is-selected .ec-pay-icon {
+  background: #dcfce7;
+}
+
+/* Ribbon badges */
+.ec-upi-desk-ribbon-wrap,
+.ec-card-ribbon-wrap {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.ec-upi-badge-ribbon {
+  display: inline-block;
+  position: relative;
+  background: #0da589;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 14px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.ec-upi-badge-ribbon::before,
+.ec-upi-badge-ribbon::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+}
+
+.ec-upi-badge-ribbon::before {
+  left: -4px;
+  border-width: 0 4px 4px 0;
+  border-color: transparent #075f4e transparent transparent;
+}
+
+.ec-upi-badge-ribbon::after {
+  right: -4px;
+  border-width: 0 0 4px 4px;
+  border-color: transparent transparent transparent #075f4e;
+}
+
+.ec-pay-card-row {
+  position: relative !important;
+  overflow: visible !important;
+}
+
+.ec-pay-amount-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ec-pay-chevron {
+  color: #111827;
+  flex-shrink: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Desktop / Tablet UPI View (Min-width: 641px)
+   -------------------------------------------------------------------------- */
+.ec-upi-desktop {
+  display: block;
+  padding: 0.75em 0.85em 1.15em;
+}
+
+.ec-upi-desk-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.ec-upi-brand-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7em;
+  color: #111827;
+}
+
+.ec-upi-title-text {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #111827;
+}
+
+.ec-upi-desk-content {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 0.85rem;
+}
+
+.ec-upi-qr-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ec-upi-qr-box {
+  position: relative;
+  width: 136px;
+  height: 136px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.ec-upi-qr-blurred {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: blur(4px);
+  opacity: 0.65;
+  transform: scale(1.08);
+  user-select: none;
+  pointer-events: none;
+  transition:
+    filter 0.25s ease,
+    opacity 0.25s ease;
+}
+
+.ec-upi-qr-blurred svg {
+  display: block;
+}
+
+.ec-upi-show-qr-btn {
+  position: absolute;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1.5px solid #111827;
+  color: #111827;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  transition:
+    transform 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.ec-upi-show-qr-btn:hover {
+  background: #f9fafb;
+  transform: scale(1.03);
+}
+
+.ec-upi-show-qr-btn:active {
+  transform: scale(0.97);
+}
+
+.ec-upi-qr-real {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+}
+
+.ec-upi-qr-real svg {
+  display: block;
+  width: 124px;
+  height: 124px;
+}
+
+.ec-upi-desk-item-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  width: 100%;
+  max-width: 136px;
+}
+
+.ec-upi-item-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.ec-upi-item-img-wrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ec-upi-item-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ec-upi-item-fallback-img {
+  font-size: 13px;
+}
+
+.ec-upi-item-meta {
+  min-width: 0;
+  flex: 1;
+  text-align: left;
+}
+
+.ec-upi-item-title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ec-upi-item-sub {
+  margin: 0;
+  font-size: 10px;
+  color: #6b7280;
+}
+
+.ec-upi-timer-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: #f1f5f9;
+  color: #1e293b;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ec-upi-timer-badge strong {
+  font-weight: 700;
+}
+
+.ec-upi-desk-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+}
+
+.ec-upi-desk-inst {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+}
+
+.ec-upi-brand-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ec-upi-brand-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1.5px solid #ffffff;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  position: relative;
+}
+
+.ec-upi-brand-pill + .ec-upi-brand-pill {
+  margin-left: -6px;
+}
+
+.ec-upi-brand-pill.ec-upi-brand-paytm {
+  width: 28px;
+  border-radius: 50%;
+  background: #f0f9ff;
+  border-color: #ffffff;
+}
+
+.ec-upi-brand-pill svg {
+  display: block;
+}
+
+/* --------------------------------------------------------------------------
+   Mobile UPI View (Max-width: 640px)
+   -------------------------------------------------------------------------- */
+.ec-upi-mobile {
+  display: none;
+  position: relative;
+  padding: 0.75em 0.85em 1rem;
+}
+
+.ec-upi-mob-badge {
+  position: absolute;
+  top: -10px;
+  left: 14px;
+  background: #059669;
+  color: #ffffff;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 5px;
+  z-index: 3;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.ec-upi-mob-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ec-upi-mob-head-left {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  min-width: 0;
+}
+
+.ec-upi-mob-title {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.ec-upi-mob-sub {
+  display: block;
+  font-size: 11.5px;
+  color: #6b7280;
+  line-height: 1.2;
+}
+
+.ec-upi-mob-head-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.ec-upi-cashback-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #e6f9f0;
+  border: 1px solid #10b981;
+  color: #059669;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 9999px;
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+
+.ec-upi-pct-icon {
+  flex-shrink: 0;
+}
+
+.ec-upi-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #111827;
+  transition: transform 0.2s ease;
+}
+
+.ec-pay-upi-card.is-collapsed .ec-upi-chevron {
+  transform: rotate(180deg);
+}
+
+.ec-pay-upi-card.is-collapsed .ec-upi-mob-body {
+  display: none;
+}
+
+.ec-upi-mob-body {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ec-upi-apps-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.ec-upi-app-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 4px 8px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-height: 74px;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+
+.ec-upi-app-card:hover {
+  background: #f9fafb;
+}
+
+.ec-upi-app-card.is-selected {
+  border-color: #00baf2 !important;
+  background: #f0f9ff !important;
+  box-shadow: 0 0 0 1px #00baf2;
+}
+
+.ec-upi-app-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  min-width: 28px;
+}
+
+.ec-upi-app-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+}
+
+.ec-upi-all-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #f9fafb;
+  border: 1px solid #f3f4f6;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.ec-upi-all-btn:hover {
+  background: #f3f4f6;
+}
+
+.ec-upi-all-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ec-upi-grid-dots {
+  color: #111827;
+  flex-shrink: 0;
+}
+
+.ec-upi-arrow-right {
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.ec-upi-all-drawer {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 8px;
+  border-radius: 10px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+.ec-upi-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #9ca3af;
+  font-size: 11px;
+  font-weight: 600;
+  user-select: none;
+}
+
+.ec-upi-divider-line {
+  flex: 1;
+  height: 1px;
+  background: #e5e7eb;
+}
+
+.ec-upi-divider-text {
+  letter-spacing: 0.05em;
+}
+
+.ec-upi-vpa-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+.ec-upi-vpa-card.is-active {
+  border-color: #00baf2;
+}
+
+.ec-upi-vpa-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 11px 14px;
+  background: none;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
+}
+
+.ec-upi-vpa-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ec-upi-tricolor-icon {
+  flex-shrink: 0;
+}
+
+.ec-upi-vpa-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+  white-space: nowrap;
+}
+
+.ec-upi-vpa-placeholder {
+  font-size: 12px;
+  color: #9ca3af;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ec-upi-vpa-form {
+  padding: 0 14px 12px;
+}
+
+.ec-upi-vpa-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.ec-upi-vpa-input-row input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.ec-upi-vpa-input-row input:focus {
+  border-color: #00baf2;
+}
+
+.ec-upi-vpa-btn {
+  padding: 8px 18px;
+  background: #00baf2;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive Switching
+   -------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .ec-upi-desktop {
+    display: none !important;
+  }
+  .ec-upi-mobile {
+    display: block;
+  }
+}
+
+@media (min-width: 641px) {
+  .ec-upi-desktop {
+    display: block;
+  }
+  .ec-upi-mobile {
+    display: none !important;
+  }
 }

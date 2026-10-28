@@ -5,6 +5,7 @@ import {
   logoutShopper,
   publicShopperView,
 } from '../checkout-auth.server';
+import { guardProxyRequest } from '../proxy-guard.server';
 import { authenticate } from '../shopify.server';
 
 function errorResponse(code: string, message: string, status: number) {
@@ -20,6 +21,8 @@ function tokenFrom(request: Request, body?: Record<string, unknown> | null) {
 
 export async function loader({ request }: LoaderFunctionArgs) {
   await authenticate.public.appProxy(request);
+  const guard = await guardProxyRequest(request, 'customer');
+  if (guard instanceof Response) return guard;
   const shopper = getShopper(tokenFrom(request));
   if (!shopper) return errorResponse('UNAUTHORIZED', 'Login required.', 401);
   return Response.json(publicShopperView(shopper));
@@ -27,6 +30,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 export async function action({ request }: ActionFunctionArgs) {
   await authenticate.public.appProxy(request);
+  const guard = await guardProxyRequest(request, 'customer');
+  if (guard instanceof Response) return guard;
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const token = tokenFrom(request, body);
 

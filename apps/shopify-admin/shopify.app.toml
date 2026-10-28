@@ -1,4 +1,4 @@
-# Development app linked to EasyRewardz; no production deployment is configured.
+# Tezvix Shopify Checkout app; no production deployment is configured.
 client_id = "3e15bd78dccde89f7fafb75ce0ebd43a"
 name = "Checkout Development"
 application_url = "https://example.com"
@@ -25,6 +25,20 @@ uri = "/webhooks/app/uninstalled"
 [[webhooks.subscriptions]]
 topics = ["app/scopes_update"]
 uri = "/webhooks/app/scopes_update"
+
+[[webhooks.subscriptions]]
+topics = [
+  "orders/create",
+  "orders/updated",
+  "orders/cancelled",
+  "orders/paid",
+  "customers/create",
+  "customers/update",
+  "customers/data_request",
+  "customers/redact",
+  "shop/redact",
+]
+uri = "/api/webhooks/shopify"
 
 [app_proxy]
 url = "https://example.com/proxy"
