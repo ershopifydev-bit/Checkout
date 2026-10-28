@@ -1,4 +1,5 @@
 import type { ActionFunctionArgs } from 'react-router';
+import { recordCheckoutEvent } from '../checkout-events.server';
 import { verifyOtp } from '../checkout-auth.server';
 import { guardProxyRequest } from '../proxy-guard.server';
 import { authenticate } from '../shopify.server';
@@ -16,9 +17,22 @@ export async function action({ request }: ActionFunctionArgs) {
   const body = (await request.json().catch(() => null)) as {
     phone?: string;
     code?: string;
+    sessionId?: string;
   } | null;
   try {
     const shopper = await verifyOtp(shop, body?.phone || '', body?.code || '');
+    void recordCheckoutEvent({
+      shop,
+      sessionId: String(body?.sessionId || ''),
+      event: 'logged_in',
+      step: 'login',
+      shopperPhone: shopper.phone,
+      customerId: shopper.customerId,
+      metadata: {
+        isNew: shopper.isNew,
+        hasAddress: Boolean(shopper.address),
+      },
+    });
     return Response.json(shopper);
   } catch (error) {
     const code = error instanceof Error ? error.message : 'INVALID_REQUEST';

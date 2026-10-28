@@ -100,7 +100,7 @@ export default function Overview() {
     <main className="onboard">
       <header className="onboard-hero">
         <div className="onboard-hero-text">
-          <p className="onboard-kicker">EasyCheckout</p>
+          <p className="onboard-kicker">Tezvix</p>
           <h1>Launch your one-page checkout</h1>
           <p className="onboard-lead">
             Three steps: put the embed on your theme, choose what shoppers see, then go live. Every
@@ -377,7 +377,7 @@ export default function Overview() {
                   type="text"
                   maxLength={80}
                   defaultValue={current.loyaltyPartnerName || ''}
-                  placeholder="EasyRewardz"
+                  placeholder="Tezvix"
                 />
                 <label htmlFor="loyaltyPointsBalance">Demo points balance</label>
                 <input
@@ -418,13 +418,13 @@ export default function Overview() {
               <h2>Ops dashboard</h2>
               <p>
                 Optional deeper view for payments and monitoring. Same live settings API — use it
-                when you need the full Checkout OS console.
+                when you need the full Tezvix OS console.
               </p>
             </div>
           </div>
           <div className="onboard-card-actions">
             <Link className="button button-secondary" to="/app/dashboard">
-              Open Checkout OS
+              Open Tezvix OS
             </Link>
           </div>
         </li> */}

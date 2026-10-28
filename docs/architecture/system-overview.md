@@ -50,7 +50,7 @@ flowchart TB
   end
 
   subgraph embed ["Theme extension"]
-    EMB["cod-checkout-embed<br/>hijack + EasyCheckout overlay"]
+    EMB["cod-checkout-embed<br/>hijack + Tezvix overlay"]
   end
 
   D --> C
@@ -140,7 +140,7 @@ Dev: `pnpm dev:api` · Prod-shaped: `pnpm start:api` after `pnpm build`.
 
 **Data stores:**
 
-- **MongoDB** — app sessions, checkout settings (`MONGODB_URI` + `MONGODB_DATABASE`, typically `checkout_development` on port `27028` in local docs).
+- **MongoDB** — app sessions, checkout settings (`MONGODB_URI` + `MONGODB_DATABASE`, typically `checkout_development` on port `27017` in local docs).
 - **Redis** — live checkout sessions (started when the block opens), the one-order-per-session lock, and per-IP rate-limit counters (`REDIS_URL`). See `docs/api/internal-reference.md` §3.
 - **Shopify** — catalog/cart context comes from the storefront; orders are written on place.
 

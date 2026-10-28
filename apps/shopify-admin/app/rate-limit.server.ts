@@ -12,7 +12,8 @@ export type RateLimitName =
   | 'placeOrder'
   | 'otpRequest'
   | 'otpVerify'
-  | 'customer';
+  | 'customer'
+  | 'eventTrack';
 
 export type RateLimitPolicy = { limit: number; windowSeconds: number };
 
@@ -24,6 +25,7 @@ export const DEFAULT_RATE_LIMITS: Record<RateLimitName, RateLimitPolicy> = {
   otpRequest: { limit: 5, windowSeconds: 600 },
   otpVerify: { limit: 10, windowSeconds: 600 },
   customer: { limit: 30, windowSeconds: 60 },
+  eventTrack: { limit: 120, windowSeconds: 60 },
 };
 
 export type RateLimitPolicyResolver = (input: {

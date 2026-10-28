@@ -149,7 +149,7 @@ export function defaultCheckoutSettings(shop: string): CheckoutShopSettings {
     giftVouchersEnabled: true,
     giftVoucherVerifyMode: 'pin',
     loyaltyPartnerEnabled: true,
-    loyaltyPartnerName: 'EasyRewardz',
+    loyaltyPartnerName: 'Tezvix',
     loyaltyPointsBalance: 1250,
     payments: defaultPaymentMethods(),
     upiConfig: defaultUpiConfig(DEFAULT_BRAND_NAME),
@@ -193,7 +193,7 @@ export async function getCheckoutSettings(shop: string): Promise<CheckoutShopSet
     loyaltyPartnerName:
       typeof doc.loyaltyPartnerName === 'string' && doc.loyaltyPartnerName.trim()
         ? doc.loyaltyPartnerName.trim()
-        : 'EasyRewardz',
+        : 'Tezvix',
     loyaltyPointsBalance:
       typeof doc.loyaltyPointsBalance === 'number' && Number.isFinite(doc.loyaltyPointsBalance)
         ? Math.max(0, Math.round(doc.loyaltyPointsBalance))
@@ -268,9 +268,9 @@ export async function saveCheckoutSettings(
         : current.loyaltyPartnerEnabled,
     loyaltyPartnerName:
       input.loyaltyPartnerName !== undefined
-        ? String(input.loyaltyPartnerName || 'EasyRewardz')
+        ? String(input.loyaltyPartnerName || 'Tezvix')
             .trim()
-            .slice(0, 80) || 'EasyRewardz'
+            .slice(0, 80) || 'Tezvix'
         : current.loyaltyPartnerName,
     loyaltyPointsBalance:
       typeof input.loyaltyPointsBalance === 'number' && Number.isFinite(input.loyaltyPointsBalance)

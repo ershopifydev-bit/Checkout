@@ -44,7 +44,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     loyalty:
       settings.loyaltyPartnerEnabled !== false
         ? {
-            partnerName: settings.loyaltyPartnerName || 'EasyRewardz',
+            partnerName: settings.loyaltyPartnerName || 'Tezvix',
             points: Math.max(0, Math.round(settings.loyaltyPointsBalance || 0)),
             // ponytail: 10 points = ₹1 until loyalty partner API drives conversion.
             redeemableMinor: Math.floor(Math.max(0, settings.loyaltyPointsBalance || 0) / 10) * 100,

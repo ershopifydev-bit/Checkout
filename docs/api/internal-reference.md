@@ -37,8 +37,10 @@ React Router config maps URL segments to files under `app/routes/`:
 | ----------------------------------------------------------- | ------------------------------- | --------------------------------- |
 | `route('proxy/v1/sessions', 'routes/proxy.v1.sessions.ts')` | `/proxy/v1/sessions`            | `app/routes/proxy.v1.sessions.ts` |
 | `route('proxy/v1/sessions/:sessionId', …)`                  | `/proxy/v1/sessions/:sessionId` | `proxy.v1.sessions.$sessionId.ts` |
+| `route('proxy/v1/events', 'routes/proxy.v1.events.ts')`     | `/proxy/v1/events`              | `proxy.v1.events.ts`              |
 | `route('proxy/panel.html', 'routes/proxy.panel[.]html.ts')` | `/proxy/panel.html`             | brackets escape the `.`           |
 | `route('api/settings', …)`                                  | `/api/settings`                 | `api.settings.ts`                 |
+| `route('api/analytics', …)`                                 | `/api/analytics`                | `api.analytics.ts`                |
 | `route('app', …, [index, route('dashboard')])`              | `/app`, `/app/dashboard`        | `app.tsx` + children              |
 
 **Convention:**
@@ -63,28 +65,49 @@ Overlay source of truth: `public/checkout/{panel.html,checkout.js,checkout.css}`
 
 All under `apps/shopify-admin/app/` unless noted.
 
-| Module                        | Role                                                               | Used by                             |
-| ----------------------------- | ------------------------------------------------------------------ | ----------------------------------- |
-| `shopify.server.ts`           | Shopify app factory, Mongo client, `authenticate`                  | every authenticated route           |
-| `checkout-session.server.ts`  | Session CRUD, quote, place-COD orchestration, `publicSessionView`  | session proxy routes                |
-| `checkout-auth.server.ts`     | OTP, shopper token, customer create, `x-ec-shopper`                | auth proxy routes, place-cod        |
-| `checkout-settings.server.ts` | Mongo `checkoutSettings`, `publicCheckoutSettings`, payments flags | settings proxy + admin API + offers |
-| `shopify-cod-order.server.ts` | Admin API `orderCreate` COD                                        | place-cod                           |
-| `redis.server.ts`             | Shared Redis client (`REDIS_URL`)                                  | session store, rate limiter         |
-| `rate-limit.server.ts`        | Per-IP limits, per-brand policy resolver                           | `proxy-guard.server.ts`             |
-| `proxy-guard.server.ts`       | Rate limit + live-session/shop check for proxy routes              | every `/proxy/v1/sessions/*`, auth  |
-| `shopify-discount.server.ts`  | Coupon resolve/list via Admin API                                  | session patch, offers               |
-| `demo-checkout.server.ts`     | In-memory fixture sessions                                         | demo proxy routes                   |
-| `session-storage.server.ts`   | Encrypted Shopify OAuth sessions in Mongo                          | install / Admin API token           |
-| `session-crypto.server.ts`    | Encryption helpers for session storage                             | session-storage                     |
-| `config.server.ts`            | Zod-validated env                                                  | shopify.server                      |
+| Module                                    | Role                                                                         | Used by                                       |
+| ----------------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------- |
+| `shopify.server.ts`                       | Shopify app factory, Mongo client, `authenticate`                            | every authenticated route                     |
+| `checkout-session.server.ts`              | Session CRUD, quote, place-COD orchestration, `publicSessionView`            | session proxy routes                          |
+| `money.server.ts`                         | Strict minor-unit currency math, INR validation, Shopify money serialization | order attempt, Shopify COD, sessions          |
+| `checkout-order-attempt.server.ts`        | Durable Mongo `checkoutOrderAttempts` idempotency state machine              | `checkout-session.server.ts`, place-cod       |
+| `shopify-client.server.ts`                | Centralized Shopify GraphQL client, rate limits & cost tracking, timeouts    | `shopify-cod-order.server.ts`, reconciliation |
+| `checkout-order-reconciliation.server.ts` | Reconciles ambiguous orders via `source_identifier` and webhooks             | place-cod, `orders/create` webhook            |
+| `checkout-auth.server.ts`                 | OTP, shopper token, customer create, `x-ec-shopper`                          | auth proxy routes, place-cod                  |
+| `checkout-settings.server.ts`             | Mongo `checkoutSettings`, `publicCheckoutSettings`, payments flags           | settings proxy + admin API + offers           |
+| `checkout-events.server.ts`               | Event tracking, funnel state, drop-off and conversion metrics                | `proxy.v1.events.ts`, `api.analytics.ts`      |
+| `shopify-cod-order.server.ts`             | Admin API `orderCreate` COD                                                  | place-cod                                     |
+| `redis.server.ts`                         | Shared Redis client (`REDIS_URL`)                                            | session store, rate limiter                   |
+| `rate-limit.server.ts`                    | Per-IP limits, per-brand policy resolver                                     | `proxy-guard.server.ts`                       |
+| `proxy-guard.server.ts`                   | Rate limit + live-session/shop check for proxy routes                        | every `/proxy/v1/sessions/*`, auth            |
+| `shopify-discount.server.ts`              | Coupon resolve/list via Admin API                                            | session patch, offers                         |
+| `demo-checkout.server.ts`                 | In-memory fixture sessions                                                   | demo proxy routes                             |
+| `customer-crypto.server.ts`               | Keyed HMAC-SHA256 phone fingerprinting & AES-256-GCM PII encryption          | universal-customer                            |
+| `merchant-hierarchy.server.ts`            | Multi-brand Merchant → Brand → Store hierarchy resolver                      | auth, checkout, store flags, webhooks         |
+| `universal-customer.server.ts`            | Universal customer registry, immutable phone, addresses, store risk flags    | auth, profile/address routes, checkout        |
+| `webhook-inbox.server.ts`                 | Durable Shopify webhook queue, deduplication & async reducers                | webhook routes, reconciliation                |
+| `session-storage.server.ts`               | Encrypted Shopify OAuth sessions in Mongo                                    | install / Admin API token                     |
+| `session-crypto.server.ts`                | Encryption helpers for session storage                                       | session-storage                               |
+| `config.server.ts`                        | Zod-validated env                                                            | shopify.server                                |
 
 **Mongo collections (typical):**
 
-| Collection                           | Contents                                                             |
-| ------------------------------------ | -------------------------------------------------------------------- |
-| Shopify sessions (encrypted storage) | Offline/online tokens for Admin API                                  |
-| `checkoutSettings`                   | Per-shop branding, payments, loyalty, GV flags (`_id` = shop domain) |
+| Collection                           | Contents                                                                                         |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| Shopify sessions (encrypted storage) | Offline/online tokens for Admin API                                                              |
+| `checkoutSettings`                   | Per-shop branding, payments, loyalty, GV flags (`_id` = shop domain)                             |
+| `checkoutOrderAttempts`              | Durable order creation idempotency state machine (`status`, `payloadHash`, `sourceIdentifier`)   |
+| `merchants`                          | Merchant corporate entities (`status`, `country`)                                                |
+| `brands`                             | Brands owned by merchants (`merchantId`, `code`)                                                 |
+| `stores`                             | Online/offline retail channels (`merchantId`, `brandId`, `channel`, `platform`, `shopifyDomain`) |
+| `customerPhoneKeys`                  | Authoritative phone uniqueness gate (`_id` = HMAC-SHA256 fingerprint -> `customerId`)            |
+| `customers`                          | Universal customer profiles with embedded saved addresses (`addresses: []`, max 20)              |
+| `customerStoreProfiles`              | Store-specific risk flags and review state (`customerId + storeId` unique)                       |
+| `storeFlagAudit`                     | Audit trail for store risk flag modifications (`changedBy`, `reason`)                            |
+| `externalCustomerLinks`              | Mapping external store IDs (Shopify/POS) to universal `customerId`                               |
+| `webhookInbox`                       | Durable Shopify webhook queue with delivery deduplication (`shop + webhookId` unique)            |
+| `checkoutEvents`                     | Append-only interaction event stream (`started`, `logged_in`, etc.)                              |
+| `checkoutFunnels`                    | Live funnel and abandonment states (`_id` = sessionId)                                           |
 
 **Redis keys (checkout runtime state, not Mongo):**
 
@@ -255,7 +278,7 @@ Header used after OTP login: `x-ec-shopper: <token>`
   "coupons": [],
   "topCoupons": [],
   "recommendedCode": "",
-  "loyalty": { "partnerName": "EasyRewardz", "points": 1250, "redeemableMinor": 12500 },
+  "loyalty": { "partnerName": "Tezvix", "points": 1250, "redeemableMinor": 12500 },
   "giftVouchersEnabled": true,
   "giftVoucherVerifyMode": "pin"
 }
@@ -294,7 +317,18 @@ Header used after OTP login: `x-ec-shopper: <token>`
 ```
 
 Session is deleted after success; a retry with the same `sessionId` returns the same order for 15 minutes (idempotent).  
-**Errors:** `NOT_FOUND` (no live session, or session belongs to another shop), `ORDER_IN_PROGRESS` (409), `RATE_LIMITED` (429), `SERVICE_UNAVAILABLE` (503, session store down), `NOT_SERVICEABLE`, `ADMIN_TOKEN_MISSING` (503), `ORDER_CREATE_FAILED` (502), `INVALID_ADDRESS`.
+**Errors / Statuses:**
+
+- `409 ORDER_IN_PROGRESS`: Order is actively being created by an in-flight request.
+- `409 IDEMPOTENCY_CONFLICT`: Session payload changed for the same session ID.
+- `202 RECONCILING`: Ambiguous outcome / network timeout; asynchronous verification in progress with Shopify.
+- `422 SHOPIFY_VALIDATION_ERROR`: Shopify returned input user errors (e.g. inventory out of stock).
+- `429 SHOPIFY_THROTTLED`: Shopify API leaky bucket budget exhausted for this merchant.
+- `429 RATE_LIMITED`: IP rate limit exceeded.
+- `404 NOT_FOUND`: No live session, or session belongs to another shop.
+- `503 SERVICE_UNAVAILABLE`: Session store down or missing Admin offline token.
+- `502 ORDER_CREATE_FAILED`: Definite order creation failure in Shopify.
+- `400 NOT_SERVICEABLE` / `INVALID_ADDRESS`: Validation failure.
 
 **Scopes required:** `write_orders` (and install offline session). See `shopify.app.toml` / [shopify-operation-scopes.md](../architecture/shopify-operation-scopes.md).
 
@@ -366,7 +400,7 @@ Session is deleted after success; a retry with the same `sessionId` returns the 
   "giftVouchersEnabled": true,
   "giftVoucherVerifyMode": "pin" | "otp",
   "loyaltyPartnerEnabled": true,
-  "loyaltyPartnerName": "EasyRewardz",
+  "loyaltyPartnerName": "Tezvix",
   "loyaltyPointsBalance": 1250,
   "payments": {
     "cod": true,
@@ -386,7 +420,7 @@ Session is deleted after success; a retry with the same `sessionId` returns the 
 
 **Performance note:** Checkout applies branding + payment visibility from this **single** fetch (`checkout.js` `loadCheckoutSettings` / `applyBrand`). Do not add a second storefront settings round-trip.
 
-**Written by:** admin form (`app-home.tsx`), `PUT /api/settings`, Checkout OS dashboard.
+**Written by:** admin form (`app-home.tsx`), `PUT /api/settings`, Tezvix OS dashboard.
 
 ---
 
@@ -424,7 +458,7 @@ Mirror of foundation demo contracts; still behind app proxy auth when called thr
 | **Auth** | `authenticate.admin`                                                |
 | **Save** | `POST` form → `saveCheckoutSettings` (same Mongo as `/v1/settings`) |
 
-UI steps: enable theme embed → customize checkout → optional Checkout OS.
+UI steps: enable theme embed → customize checkout → optional Tezvix OS.
 
 Theme deep link built with `publicApiKey` + block handle `cod-checkout` (see loader in `app-home.tsx`).
 
@@ -442,7 +476,7 @@ Theme deep link built with `publicApiKey` + block handle `cod-checkout` (see loa
 **GET response:** `{ shop, ...publicCheckoutSettings }`  
 **PUT body:** partial patch — branding, flags, `payments: { cod, upi, card, netbanking }`. Unspecified fields keep current values (`saveCheckoutSettings` merges).
 
-Consumed by: `public/dashboard/index.html` (Checkout OS Settings / Payments pages).
+Consumed by: `public/dashboard/index.html` (Tezvix OS Settings / Payments pages).
 
 ---
 
@@ -451,7 +485,7 @@ Consumed by: `public/dashboard/index.html` (Checkout OS Settings / Payments page
 | Path                    | File                          | Behavior                                             |
 | ----------------------- | ----------------------------- | ---------------------------------------------------- |
 | `/app/dashboard`        | `routes/app.dashboard.tsx`    | Admin auth, then `redirect('/dashboard/index.html')` |
-| `/dashboard/index.html` | `public/dashboard/index.html` | Static Checkout OS UI; calls `/api/settings`         |
+| `/dashboard/index.html` | `public/dashboard/index.html` | Static Tezvix OS UI; calls `/api/settings`           |
 
 ---
 
@@ -532,7 +566,7 @@ Domain decisions: `packages/domain` → `resolveCapabilities()` (foundation / en
 | ---------------- | ----------------------------- | --------------------------------------------- |
 | Overlay runtime  | `public/checkout/checkout.js` | `/v1/sessions*`, `/v1/auth/*`, `/v1/settings` |
 | Theme boot       | `extensions/.../embed.js`     | Loads panel/js/css via `apiBase`              |
-| Checkout OS      | `public/dashboard/index.html` | `/api/settings`                               |
+| Tezvix OS        | `public/dashboard/index.html` | `/api/settings`                               |
 | Admin onboarding | `routes/app-home.tsx`         | Form POST to same route (settings save)       |
 
 Grep tip for a route from the storefront:

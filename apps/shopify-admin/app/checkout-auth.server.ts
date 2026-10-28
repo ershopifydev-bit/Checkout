@@ -15,6 +15,7 @@ export type Shopper = {
   shop: string;
   phone: string;
   customerId?: string;
+  universalCustomerId?: string;
   isNew: boolean;
   fullName?: string;
   address?: ShopperAddress;
@@ -459,8 +460,62 @@ export async function verifyOtp(shop: string, rawPhone: string, code: string) {
   const found = await lookupCustomer(shopNorm, phone);
   const local = profilesByPhone.get(phoneKey(shopNorm, phone));
   const customerId = found.customerId || local?.customerId;
-  const fullName = found.fullName || local?.fullName;
-  const address = found.address || local?.address;
+  let fullName = found.fullName || local?.fullName;
+  let address = found.address || local?.address;
+
+  // Resolve Universal Customer Identity & Multi-Brand Context
+  let universalCustomerId: string | undefined;
+  try {
+    const { resolveMerchantStoreContext } = await import('./merchant-hierarchy.server');
+    const { getOrCreateUniversalCustomer, getStoreCustomerProfile, linkExternalCustomer } =
+      await import('./universal-customer.server');
+
+    const context = await resolveMerchantStoreContext(shopNorm);
+    const { customer: universalCustomer } = await getOrCreateUniversalCustomer({
+      e164Phone: `+91${phone}`,
+      firstName: fullName?.split(' ')[0],
+      lastName: fullName?.split(' ').slice(1).join(' '),
+      primaryStoreId: context.store._id,
+      registrationSource: 'checkout_otp',
+    });
+    universalCustomerId = universalCustomer._id;
+
+    await getStoreCustomerProfile(
+      universalCustomer._id,
+      context.store._id,
+      context.merchant._id,
+      context.brand._id,
+    );
+
+    if (customerId) {
+      await linkExternalCustomer({
+        storeId: context.store._id,
+        platform: 'SHOPIFY',
+        externalCustomerId: customerId,
+        customerId: universalCustomer._id,
+        linkedBy: 'PHONE_VERIFIED',
+      });
+    }
+
+    if (!address && universalCustomer.addresses.length > 0) {
+      const def =
+        universalCustomer.addresses.find((a) => a.isDefault) || universalCustomer.addresses[0];
+      if (def) {
+        address = {
+          phone: def.phone,
+          fullName: def.fullName,
+          addressLine1: def.addressLine1,
+          locality: def.locality || '',
+          region: def.region,
+          postalCode: def.postalCode,
+        };
+        if (!fullName) fullName = def.fullName;
+      }
+    }
+  } catch (err) {
+    console.warn('[EasyCheckout] Universal customer identity sync note:', (err as Error).message);
+  }
+
   const isNew = !customerId && !address;
   const token = `shopper_${randomUUID().replaceAll('-', '')}`;
   const now = Date.now();
@@ -473,6 +528,7 @@ export async function verifyOtp(shop: string, rawPhone: string, code: string) {
     expiresAt: now + SHOPPER_TTL_MS,
   };
   if (customerId) shopper.customerId = customerId;
+  if (universalCustomerId) shopper.universalCustomerId = universalCustomerId;
   if (fullName) shopper.fullName = fullName;
   if (address) shopper.address = address;
   shoppers.set(token, shopper);
@@ -499,6 +555,7 @@ export async function verifyOtp(shop: string, rawPhone: string, code: string) {
     phone,
     isNew,
     customerId: shopper.customerId,
+    universalCustomerId: shopper.universalCustomerId,
     fullName: shopper.fullName,
     address: shopper.address,
     needsAddress: !shopper.address,
@@ -548,6 +605,21 @@ function applyAddress(shopper: Shopper, phone: string, address: ShopperAddress) 
   };
   if (shopper.customerId) profile.customerId = shopper.customerId;
   profilesByPhone.set(phoneKey(shopper.shop, phone), profile);
+
+  if (shopper.universalCustomerId) {
+    void import('./universal-customer.server').then(({ addCustomerAddress }) => {
+      void addCustomerAddress(shopper.universalCustomerId!, {
+        fullName: shopper.fullName || address.fullName,
+        phone: `+91${phone}`,
+        addressLine1: address.addressLine1,
+        locality: address.locality,
+        region: address.region,
+        postalCode: address.postalCode,
+        countryCode: 'IN',
+        isDefault: true,
+      }).catch(() => null);
+    });
+  }
 }
 
 export async function createCustomerWithAddress(

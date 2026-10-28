@@ -2,7 +2,7 @@
 
 The Shopify app lives in `apps/shopify-admin`. Run it with `pnpm dev` (Shopify CLI + tunnel). The Fastify API on port 3000 is a separate local demo only — it is **not** the storefront integration. Shopper COD checkout is injected on the live theme via the **COD Checkout** theme app embed (`extensions/cod-checkout-embed`) and the app proxy path `/apps/easy-checkout`.
 
-The tracked development app is Checkout Development in EasyRewardz Software Services Private Limited (130952356), linked to `codemadi.myshopify.com`. Live installation verification is still pending.
+The tracked development app is Tezvix in Shopify Partner organization (130952356), linked to `codemadi.myshopify.com`. Live installation verification is still pending.
 
 ## First-time setup
 
@@ -11,7 +11,7 @@ The tracked development app is Checkout Development in EasyRewardz Software Serv
 
    ```sh
    mkdir -p tools/runtime/mongodb-install-test
-   mongod --dbpath tools/runtime/mongodb-install-test --bind_ip 127.0.0.1 --port 27028
+   mongod --dbpath tools/runtime/mongodb-install-test --bind_ip 127.0.0.1 --port 27017
    ```
 
    Keep it running in a terminal. `tools/` is ignored. Production needs authenticated MongoDB with TLS and the separately planned durability configuration.

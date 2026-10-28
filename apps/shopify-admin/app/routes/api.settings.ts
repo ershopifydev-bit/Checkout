@@ -101,7 +101,7 @@ function patchFromBody(body: Record<string, unknown>): SettingsPatch {
   return patch;
 }
 
-/** Admin-session JSON API for the Checkout OS dashboard (not on the shopper hot path). */
+/** Admin-session JSON API for the Tezvix OS dashboard (not on the shopper hot path). */
 export async function loader({ request }: LoaderFunctionArgs) {
   const { shop } = await authenticateSettingsRequest(request);
   const settings = await getCheckoutSettings(shop);

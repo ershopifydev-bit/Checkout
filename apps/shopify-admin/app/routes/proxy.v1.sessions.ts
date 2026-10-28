@@ -1,4 +1,5 @@
 import type { ActionFunctionArgs } from 'react-router';
+import { recordCheckoutEvent } from '../checkout-events.server';
 import { createCheckoutSession, publicSessionView } from '../checkout-session.server';
 import { guardProxyRequest, storeUnavailableResponse } from '../proxy-guard.server';
 import { authenticate } from '../shopify.server';
@@ -28,6 +29,24 @@ export async function action({ request }: ActionFunctionArgs) {
       source,
       ...(discountMinor != null ? { discountMinor } : {}),
       lines: lines as never,
+    });
+    void recordCheckoutEvent({
+      shop,
+      sessionId: session.sessionId,
+      event: 'started',
+      step: 'started',
+      source: session.source,
+      cartValueMinor: session.totals.amountMinor,
+      itemCount: session.lines.reduce((sum, l) => sum + (l.quantity || 1), 0),
+      items: session.lines.map((l) => ({
+        title: l.title,
+        quantity: l.quantity,
+        amountMinor: l.unitAmount.amountMinor,
+      })),
+      metadata: {
+        currency: session.currency,
+        subtotalMinor: session.totals.subtotalMinor,
+      },
     });
     return Response.json(publicSessionView(session));
   } catch (error) {

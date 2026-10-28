@@ -21,7 +21,7 @@ describe('checkout settings', () => {
     expect(settings.giftVouchersEnabled).toBe(true);
     expect(settings.giftVoucherVerifyMode).toBe('pin');
     expect(settings.loyaltyPartnerEnabled).toBe(true);
-    expect(settings.loyaltyPartnerName).toBe('EasyRewardz');
+    expect(settings.loyaltyPartnerName).toBe('Tezvix');
     expect(settings.loyaltyPointsBalance).toBe(1250);
     expect(settings.payments).toEqual({
       cod: true,
@@ -49,7 +49,7 @@ describe('checkout settings', () => {
       giftVouchersEnabled: true,
       giftVoucherVerifyMode: 'otp',
       loyaltyPartnerEnabled: true,
-      loyaltyPartnerName: 'EasyRewardz',
+      loyaltyPartnerName: 'Tezvix',
       loyaltyPointsBalance: 250,
       payments: { cod: true, upi: true, card: false, netbanking: false },
       upiConfig: {
@@ -70,7 +70,7 @@ describe('checkout settings', () => {
       giftVouchersEnabled: true,
       giftVoucherVerifyMode: 'otp',
       loyaltyPartnerEnabled: true,
-      loyaltyPartnerName: 'EasyRewardz',
+      loyaltyPartnerName: 'Tezvix',
       loyaltyPointsBalance: 250,
       payments: { cod: true, upi: true, card: false, netbanking: false },
       upiConfig: {

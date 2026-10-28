@@ -87,7 +87,7 @@ Record new public routes or settings fields in `docs/api/internal-reference.md` 
 
 - Shopper-visible flags go on the **existing** `GET /v1/settings` body (`publicCheckoutSettings`). Checkout applies them in the same `loadCheckoutSettings` / `applyBrand` fetch.
 - **Never** add a second storefront settings request. Checkout performance is a hard constraint.
-- Writes: admin form (`app-home.tsx`), `PUT /api/settings` (`api.settings.ts`), Checkout OS (`public/dashboard/index.html`). Same Mongo `checkoutSettings`.
+- Writes: admin form (`app-home.tsx`), `PUT /api/settings` (`api.settings.ts`), Tezvix OS (`public/dashboard/index.html`). Same Mongo `checkoutSettings`.
 - Defaults: COD on; prepaid off. If every payment method is off, keep COD on (`normalizePaymentMethods`).
 
 ### New HTTP
@@ -125,9 +125,9 @@ A task is not done because it “looks right”. Report **actual** command outpu
 | Admin TypeScript routes | `pnpm typecheck:admin` |
 | Broader confidence before push | `pnpm check` (format, lint, typecheck, coverage, runtime, admin typecheck/build) |
 | Overlay UI | Exercise the real flow (open overlay, login/OTP, address, pay rows, place COD). A screenshot is not enough. |
-| Admin / dashboard UI | Load `/app` onboarding and, if settings changed, Checkout OS Settings/Payments save + confirm `/v1/settings` reflects it |
+| Admin / dashboard UI | Load `/app` onboarding and, if settings changed, Tezvix OS Settings/Payments save + confirm `/v1/settings` reflects it |
 
-Local Mongo for admin: typically `MONGODB_URI` port **27028** (not 27017). See `docs/runbooks/shopify-development.md`.
+Local Mongo for admin: typically `MONGODB_URI` port **27017** (not 27017). See `docs/runbooks/shopify-development.md`.
 
 ### Overlay / admin UI
 

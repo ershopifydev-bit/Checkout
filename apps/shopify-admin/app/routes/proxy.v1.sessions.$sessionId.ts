@@ -1,4 +1,5 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router';
+import { recordCheckoutEvent } from '../checkout-events.server';
 import {
   getCheckoutSession,
   patchCheckoutSession,
@@ -63,7 +64,40 @@ export async function action({ request, params }: ActionFunctionArgs) {
     patch.loyaltyRedeemPoints = Number(body['loyaltyRedeemPoints']);
   }
   try {
-    const session = await patchCheckoutSession(String(params['sessionId'] || ''), patch);
+    const sessionId = String(params['sessionId'] || '');
+    const session = await patchCheckoutSession(sessionId, patch);
+
+    if (patch.address) {
+      void recordCheckoutEvent({
+        shop: guard.shop,
+        sessionId,
+        event: 'address_added',
+        step: 'address',
+        shopperPhone: patch.address.phone,
+        address: {
+          locality: patch.address.locality,
+          region: patch.address.region,
+          postalCode: patch.address.postalCode,
+        },
+        cartValueMinor: session.totals.amountMinor,
+        metadata: {
+          fullName: patch.address.fullName,
+        },
+      });
+    }
+
+    if (patch.couponCode) {
+      void recordCheckoutEvent({
+        shop: guard.shop,
+        sessionId,
+        event: 'discount_applied',
+        step: 'discounts',
+        couponCode: patch.couponCode,
+        discountMinor: session.totals.discountMinor,
+        cartValueMinor: session.totals.amountMinor,
+      });
+    }
+
     return Response.json(publicSessionView(session));
   } catch (error) {
     const code = error instanceof Error ? error.message : 'INVALID_REQUEST';

@@ -4,7 +4,7 @@ import { createDashboardToken } from '../dashboard-token.server';
 import { authenticate } from '../shopify.server';
 
 /**
- * Authenticated entry into the Checkout OS dashboard within Shopify Admin.
+ * Authenticated entry into the Tezvix OS dashboard within Shopify Admin.
  */
 export async function loader({ request }: LoaderFunctionArgs) {
   const { session } = await authenticate.admin(request);
@@ -79,7 +79,7 @@ export default function AppDashboard() {
       </header>
       <iframe
         src={dashboardUrl}
-        title="Checkout OS Dashboard"
+        title="Tezvix OS Dashboard"
         style={{
           flex: 1,
           width: '100%',
