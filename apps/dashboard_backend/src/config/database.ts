@@ -73,6 +73,9 @@ export const collections = {
   shopifySessions(): Collection<Record<string, unknown>> {
     return getDb().collection<Record<string, unknown>>('shopifySessions');
   },
+  integrations(): Collection<Record<string, unknown>> {
+    return getDb().collection<Record<string, unknown>>('dashboard_integrations');
+  },
 };
 
 async function ensureIndexes(database: Db): Promise<void> {

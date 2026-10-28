@@ -1467,7 +1467,7 @@
     const saveText = $('ec-save-pill-text');
     if (totalSaved > 0) {
       if (savePill) savePill.hidden = false;
-      if (saveText) saveText.textContent = `${formatInr(totalSaved)} saved so far`;
+      if (saveText) saveText.textContent = `${formatInr(totalSaved)} saved`;
     } else if (savePill) {
       savePill.hidden = true;
     }

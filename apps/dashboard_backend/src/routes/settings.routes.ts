@@ -4,27 +4,57 @@ import { collections } from '../config/database.js';
 export const settingsRouter: Router = Router();
 
 const DEFAULT_SETTINGS = {
-  shop: 'demo.myshopify.com',
+  shop: 'codemadi.myshopify.com',
   brandMode: 'name',
-  brandName: 'Tezvix Store',
+  brandName: 'RARE',
   logoUrl: '',
   requireCodConfirmation: true,
   showUpsell: true,
   giftVouchersEnabled: true,
   giftVoucherVerifyMode: 'pin',
   loyaltyPartnerEnabled: true,
-  loyaltyPartnerName: 'Tezvix Rewards',
+  loyaltyPartnerName: 'Tezvix',
   loyaltyPointsBalance: 1250,
-  payments: { cod: true, upi: false, card: false, netbanking: false },
+  payments: { cod: true, upi: true, card: true, netbanking: true },
 };
+
+async function resolveShop(requestedShop?: string | null): Promise<string> {
+  if (requestedShop && requestedShop !== 'demo.myshopify.com') {
+    return requestedShop;
+  }
+  // Try finding in checkoutSettings
+  const setting = await collections.checkoutSettings().findOne({});
+  if (setting && setting['shop']) {
+    return String(setting['shop']);
+  }
+  // Try finding in shopifySessions
+  const session = await collections.shopifySessions().findOne({});
+  if (session && session['shop']) {
+    return String(session['shop']);
+  }
+  return 'codemadi.myshopify.com';
+}
 
 // GET /api/settings - Fetch store checkout settings
 settingsRouter.get('/', async (req, res, next) => {
   try {
-    const shop = String(req.query['shop'] || 'demo.myshopify.com');
+    const rawShop = req.query['shop'] ? String(req.query['shop']) : undefined;
+    const shop = await resolveShop(rawShop);
     const doc = await collections.checkoutSettings().findOne({ shop });
 
     if (!doc) {
+      // Check if any setting doc exists
+      const anyDoc = await collections.checkoutSettings().findOne({});
+      if (anyDoc) {
+        const { _id: _omitted, ...safeDoc } = anyDoc;
+        res.json({
+          ...DEFAULT_SETTINGS,
+          ...safeDoc,
+          shop: String(anyDoc['shop'] || shop),
+        });
+        return;
+      }
+
       res.json({ ...DEFAULT_SETTINGS, shop });
       return;
     }
@@ -43,7 +73,12 @@ settingsRouter.get('/', async (req, res, next) => {
 // PUT /api/settings - Save store checkout settings
 settingsRouter.put('/', async (req, res, next) => {
   try {
-    const shop = String(req.query['shop'] || req.body['shop'] || 'demo.myshopify.com');
+    const rawShop = req.query['shop']
+      ? String(req.query['shop'])
+      : req.body['shop']
+        ? String(req.body['shop'])
+        : undefined;
+    const shop = await resolveShop(rawShop);
     const patch = req.body;
 
     const updateFields: Record<string, unknown> = {

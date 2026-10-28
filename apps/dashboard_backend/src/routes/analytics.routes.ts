@@ -3,15 +3,30 @@ import { collections } from '../config/database.js';
 
 export const analyticsRouter: Router = Router();
 
+async function resolveShop(requestedShop?: string | null): Promise<string> {
+  if (requestedShop && requestedShop !== 'demo.myshopify.com') {
+    return requestedShop;
+  }
+  const setting = await collections.checkoutSettings().findOne({});
+  if (setting && setting['shop']) {
+    return String(setting['shop']);
+  }
+  const session = await collections.shopifySessions().findOne({});
+  if (session && session['shop']) {
+    return String(session['shop']);
+  }
+  return 'codemadi.myshopify.com';
+}
+
 // GET /api/analytics - Compatibility endpoint for apps/dashboard useLiveAnalytics() hook
 analyticsRouter.get('/', async (req, res, next) => {
   try {
-    const shop = String(req.query['shop'] || 'demo.myshopify.com');
+    const rawShop = req.query['shop'] ? String(req.query['shop']) : undefined;
+    const shop = await resolveShop(rawShop);
     const limit = Math.min(100, Math.max(1, Number(req.query['limit']) || 50));
 
-    // Aggregate funnel events for shop (or all if demo)
-    const matchShop: Record<string, unknown> =
-      shop && shop !== 'demo.myshopify.com' ? { shop } : {};
+    // Match real shop
+    const matchShop: Record<string, unknown> = { shop };
 
     const [
       startedCount,

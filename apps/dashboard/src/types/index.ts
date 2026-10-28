@@ -114,3 +114,17 @@ export interface TeamUserItem {
   createdAt: string;
   lastLoginAt?: string | undefined;
 }
+
+export interface StoreItem {
+  shop: string;
+  brandName: string;
+  brandMode?: string;
+  logoUrl?: string;
+  status: 'Connected' | 'Configured' | 'Offline';
+  hasSession: boolean;
+  eventCount: number;
+  attemptCount: number;
+  confirmedCount: number;
+  themeEmbedHandle?: string;
+  updatedAt?: string;
+}

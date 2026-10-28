@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import type { CheckoutSettings } from '../types';
 
 export const defaultSettings: CheckoutSettings = {
-  shop: 'demo.myshopify.com',
+  shop: 'codemadi.myshopify.com',
   brandMode: 'name',
-  brandName: 'Tezvix Store',
+  brandName: 'RARE',
   logoUrl: '',
   requireCodConfirmation: true,
   showUpsell: true,
