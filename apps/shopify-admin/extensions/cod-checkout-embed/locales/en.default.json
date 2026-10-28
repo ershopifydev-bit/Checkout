@@ -1,0 +1,8 @@
+{
+  "name": "COD Checkout",
+  "settings": {
+    "hijack_checkout": {
+      "label": "Open COD checkout when shoppers click Checkout / Buy now"
+    }
+  }
+}

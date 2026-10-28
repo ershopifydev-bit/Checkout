@@ -6,4 +6,6 @@ Doc/
 tasks/
 tools/
 AGENTS.md
+apps/shopify-admin/public/dashboard/
 .github/workflows/branch-policy.yml
+localDependency/
