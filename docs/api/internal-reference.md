@@ -266,17 +266,24 @@ Header used after OTP login: `x-ec-shopper: <token>`
 Session discount behavior: `couponCode` adds a code to the applied set. Codes combine only
 when both Shopify `combinesWith` rules allow it; incompatible additions return
 `COUPON_COMBINATION_NOT_ALLOWED` without replacing the previous discounts. Supported
-combinations are order discounts (up to five) plus one shipping discount. Product-code
-combinations remain unsupported until line-level eligibility is implemented. Applying an
-already applied code updates it without duplicating it. An empty `couponCode` removes
-all applied codes. `COUPON_LIMIT_REACHED` reports the five-code limit.
+combinations are order discounts (up to five) plus one shipping discount. If a code requires
+a minimum cart amount or item quantity that is not met, `COUPON_MINIMUM_NOT_MET` is returned.
+Product-code combinations remain unsupported until line-level eligibility is implemented.
+Applying an already applied code updates it without duplicating it. An empty `couponCode`
+removes all applied codes. `COUPON_LIMIT_REACHED` reports the five-code limit.
+
+Quote invalidation: Updating address PIN (`postalCode`) immediately re-evaluates shipping
+serviceability and delivery estimates. Line edits or item removals automatically validate
+all applied coupons against the updated subtotal and quantities, dropping any coupons whose
+minimum requirements are no longer satisfied.
 
 Session responses include `coupons: [{ code, kind, summary, discountMinor }]`.
 The existing `coupon` and `couponCode` fields remain as aggregate compatibility fields;
 combined codes are joined with `+`. COD order creation uses the aggregate fixed
 amount because Shopify `orderCreate` accepts one discount input. Shipping savings are
 reflected in the shipping total. Gift voucher and loyalty redemption retain their
-existing replacement behavior.
+existing replacement behavior. Durable multi-node sessions are backed by `createMongoSessionStore`
+or Redis with TTL indexes.
 
 ### 4.5 Offers (coupons + loyalty + GV flags)
 

@@ -120,6 +120,13 @@ export async function action({ request, params }: ActionFunctionArgs) {
     if (code === 'COUPON_LIMIT_REACHED') {
       return errorResponse(code, 'You can apply up to five discount codes.', 400);
     }
+    if (code === 'COUPON_MINIMUM_NOT_MET') {
+      return errorResponse(
+        code,
+        'Your cart does not meet the minimum amount required for this coupon.',
+        400,
+      );
+    }
     if (code === 'COUPON_COMBINATION_NOT_ALLOWED') {
       return errorResponse(
         code,
