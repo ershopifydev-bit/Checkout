@@ -117,7 +117,9 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
             <strong style={{ fontSize: '14px', display: 'block', color: 'var(--ink)' }}>
               All caught up!
             </strong>
-            <span style={{ fontSize: '12px' }}>No unread alerts or notifications at this time.</span>
+            <span style={{ fontSize: '12px' }}>
+              No unread alerts or notifications at this time.
+            </span>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -140,7 +142,14 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   }}
                   onClick={() => handleNotificationClick(n)}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                    }}
+                  >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span
                         style={{

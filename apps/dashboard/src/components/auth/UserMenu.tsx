@@ -151,4 +151,3 @@ export const UserMenu: React.FC<UserMenuProps> = ({ isOpen, onClose }) => {
     </div>
   );
 };
-

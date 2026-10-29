@@ -39,8 +39,7 @@ storesRouter.get('/', async (_req, res, next) => {
         ]);
 
         const brandName =
-          (setting['brandName'] as string) ||
-          shop.replace('.myshopify.com', '').toUpperCase();
+          (setting['brandName'] as string) || shop.replace('.myshopify.com', '').toUpperCase();
 
         return {
           shop,
@@ -66,4 +65,3 @@ storesRouter.get('/', async (_req, res, next) => {
     next(error);
   }
 });
-

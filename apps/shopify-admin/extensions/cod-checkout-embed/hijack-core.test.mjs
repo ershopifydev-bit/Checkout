@@ -88,7 +88,16 @@ describe('EasyCheckoutHijack', () => {
 });
 
 // Shopify theme app extensions reject .html (and anything else not in this set).
-const THEME_ASSET_EXTS = new Set(['.jpg', '.jpeg', '.js', '.css', '.png', '.svg', '.json', '.wasm']);
+const THEME_ASSET_EXTS = new Set([
+  '.jpg',
+  '.jpeg',
+  '.js',
+  '.css',
+  '.png',
+  '.svg',
+  '.json',
+  '.wasm',
+]);
 
 function listFiles(dirPath) {
   const out = [];

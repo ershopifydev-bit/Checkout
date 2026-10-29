@@ -130,9 +130,14 @@ export const LoginModal: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}
+        >
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>
+            <label
+              style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}
+            >
               Work Email
             </label>
             <input
@@ -155,7 +160,9 @@ export const LoginModal: React.FC = () => {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>
+            <label
+              style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}
+            >
               Password
             </label>
             <input

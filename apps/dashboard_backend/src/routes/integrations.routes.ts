@@ -99,4 +99,3 @@ integrationsRouter.delete('/:name', async (req: AuthenticatedRequest, res, next)
     next(error);
   }
 });
-

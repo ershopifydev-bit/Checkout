@@ -23,7 +23,8 @@ export const Header: React.FC<HeaderProps> = ({ shopName }) => {
 
   // Compute live badges strictly from real database records (0 if no items)
   const manualReviewOrdersCount = orders.filter((o) => o.status === 'MANUAL_REVIEW').length;
-  const liveAbandonedCount = analyticsData?.funnel?.totalAbandoned || analyticsData?.abandoned?.length || 0;
+  const liveAbandonedCount =
+    analyticsData?.funnel?.totalAbandoned || analyticsData?.abandoned?.length || 0;
 
   // Real database-driven notifications
   useEffect(() => {
@@ -44,7 +45,8 @@ export const Header: React.FC<HeaderProps> = ({ shopName }) => {
     list.push({
       id: 'notif-store',
       title: 'Store Sync Active',
-      description: 'Connected store codemadi.myshopify.com (RARE) is live with active COD checkout embed.',
+      description:
+        'Connected store codemadi.myshopify.com (RARE) is live with active COD checkout embed.',
       type: 'success',
       time: 'Live',
       read: false,
@@ -54,7 +56,8 @@ export const Header: React.FC<HeaderProps> = ({ shopName }) => {
     list.push({
       id: 'notif-gateways',
       title: 'Payment Gateway Telemetry',
-      description: 'COD checkout active. Prepaid UPI & Netbanking running in secure storefront preview.',
+      description:
+        'COD checkout active. Prepaid UPI & Netbanking running in secure storefront preview.',
       type: 'info',
       time: 'Healthy',
       read: true,
@@ -120,8 +123,20 @@ export const Header: React.FC<HeaderProps> = ({ shopName }) => {
         title="Tezvix OS"
       >
         <span>
-          <img className="tezvix-brand tezvix-brand-light" src="./branding/tezvix-logo.svg" alt="Tezvix" width="112" height="39" />
-          <img className="tezvix-brand tezvix-brand-dark" src="./branding/tezvix-logo-dark.svg" alt="Tezvix" width="112" height="39" />
+          <img
+            className="tezvix-brand tezvix-brand-light"
+            src="./branding/tezvix-logo.svg"
+            alt="Tezvix"
+            width="112"
+            height="39"
+          />
+          <img
+            className="tezvix-brand tezvix-brand-dark"
+            src="./branding/tezvix-logo-dark.svg"
+            alt="Tezvix"
+            width="112"
+            height="39"
+          />
           <small id="who">{portal === 'm' ? brandLabel : 'Internal console'}</small>
         </span>
       </button>
@@ -182,4 +197,3 @@ export const Header: React.FC<HeaderProps> = ({ shopName }) => {
     </header>
   );
 };
-

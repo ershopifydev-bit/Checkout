@@ -273,7 +273,7 @@ all applied codes. `COUPON_LIMIT_REACHED` reports the five-code limit.
 
 Session responses include `coupons: [{ code, kind, summary, discountMinor }]`.
 The existing `coupon` and `couponCode` fields remain as aggregate compatibility fields;
-combined codes are joined with ` + `. COD order creation uses the aggregate fixed
+combined codes are joined with `+`. COD order creation uses the aggregate fixed
 amount because Shopify `orderCreate` accepts one discount input. Shipping savings are
 reflected in the shipping total. Gift voucher and loyalty redemption retain their
 existing replacement behavior.
@@ -519,10 +519,10 @@ Consumed by: `public/dashboard/index.html` (Tezvix OS Settings / Payments pages)
 
 Configured in `shopify.app.toml` → `[webhooks.subscriptions]`.
 
-| Topic               | URI                           | File                       | Action                               |
-| ------------------- | ----------------------------- | -------------------------- | ------------------------------------ |
-| `app/uninstalled`   | `/webhooks/app/uninstalled`   | `routes/uninstalled.tsx`   | Delete shop sessions                 |
-| `app/scopes_update` | `/webhooks/app/scopes_update` | `routes/scopes-update.tsx` | Delete shop sessions (force re-auth) |
+| Topic               | URI                           | File                             | Action                                     |
+| ------------------- | ----------------------------- | -------------------------------- | ------------------------------------------ |
+| `app/uninstalled`   | `/webhooks/app/uninstalled`   | `routes/uninstalled.tsx`         | Delete shop sessions                       |
+| `app/scopes_update` | `/webhooks/app/scopes_update` | `routes/scopes-update.tsx`       | Delete shop sessions (force re-auth)       |
 | GDPR compliance     | `/api/webhooks/shopify`       | `routes/api.webhooks.shopify.ts` | `compliance_topics`: data_request / redact |
 
 Auth: `authenticate.webhook`. API version: `2026-10` (toml).

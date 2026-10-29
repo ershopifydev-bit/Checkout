@@ -322,7 +322,12 @@
           var matched = variants.find(function (v) {
             return v && v.id === vId;
           });
-          if (matched && (!comparePrice || comparePrice <= sellingPrice) && typeof matched.compare_at_price === 'number' && matched.compare_at_price > 0) {
+          if (
+            matched &&
+            (!comparePrice || comparePrice <= sellingPrice) &&
+            typeof matched.compare_at_price === 'number' &&
+            matched.compare_at_price > 0
+          ) {
             var comp = matched.compare_at_price;
             if (comp > (sellingPrice || 0) * 10) comp = comp / 100;
             if (comp > (sellingPrice || 0)) comparePrice = comp;
@@ -434,9 +439,13 @@
         return Promise.all(
           missingHandles.map(function (handle) {
             return fetch('/products/' + handle + '.js', { headers: { accept: 'application/json' } })
-              .then(function (res) { return res.ok ? res.json() : null; })
-              .catch(function () { return null; });
-          })
+              .then(function (res) {
+                return res.ok ? res.json() : null;
+              })
+              .catch(function () {
+                return null;
+              });
+          }),
         ).then(function (prods) {
           var variantMap = {};
           prods.forEach(function (p) {

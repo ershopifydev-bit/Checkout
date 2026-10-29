@@ -1377,7 +1377,11 @@
       if (sessionSource === 'buy_now') {
         const patchRes = await patchSession({
           lineQuantity: {
-            variantId: variantId ? String(variantId) : (match.variantId ? String(match.variantId) : undefined),
+            variantId: variantId
+              ? String(variantId)
+              : match.variantId
+                ? String(match.variantId)
+                : undefined,
             lineKey: lineKey || match.lineKey || undefined,
             quantity: nextQty,
           },
@@ -1428,11 +1432,17 @@
       }
 
       let session = null;
-      if (cartChangeSucceeded && typeof window.EasyCheckout?.refreshSessionFromCart === 'function') {
+      if (
+        cartChangeSucceeded &&
+        typeof window.EasyCheckout?.refreshSessionFromCart === 'function'
+      ) {
         try {
           session = await window.EasyCheckout.refreshSessionFromCart();
         } catch (e) {
-          console.warn('[EasyCheckout] refreshSessionFromCart failed, falling back to patchSession:', e);
+          console.warn(
+            '[EasyCheckout] refreshSessionFromCart failed, falling back to patchSession:',
+            e,
+          );
         }
       }
 
@@ -1440,8 +1450,12 @@
       if (!session) {
         session = await patchSession({
           lineQuantity: {
-            variantId: isNumericVariant ? rawVariantId : (match.variantId ? String(match.variantId) : undefined),
-            lineKey: is32HexLineKey ? rawLineKey : (match.lineKey || undefined),
+            variantId: isNumericVariant
+              ? rawVariantId
+              : match.variantId
+                ? String(match.variantId)
+                : undefined,
+            lineKey: is32HexLineKey ? rawLineKey : match.lineKey || undefined,
             quantity: nextQty,
           },
         });
@@ -1673,12 +1687,18 @@
 
     const coupons = currentSession?.coupons?.length
       ? currentSession.coupons
-      : couponCode ? [{ code: couponCode, discountMinor: couponDisc }] : [];
+      : couponCode
+        ? [{ code: couponCode, discountMinor: couponDisc }]
+        : [];
     for (const coupon of coupons) {
       let label = coupon.code;
       if (label.startsWith('GIFT:')) label = `Gift voucher (${label.slice(5)})`;
       else if (label === 'LOYALTY') label = 'Tezvix Points';
-      breakdown.push({ label, amount: coupon.discountMinor || 0, freeShipping: coupon.kind === 'free_shipping' });
+      breakdown.push({
+        label,
+        amount: coupon.discountMinor || 0,
+        freeShipping: coupon.kind === 'free_shipping',
+      });
     }
 
     if (productDiscountsTotal > 0 && productDiscountsTotal !== couponDisc) {
@@ -1686,7 +1706,9 @@
     }
 
     // Check payment method discount if active
-    const selectedPay = document.querySelector('.ec-pay-row.is-selected, .ec-pay-upi-card.is-selected');
+    const selectedPay = document.querySelector(
+      '.ec-pay-row.is-selected, .ec-pay-upi-card.is-selected',
+    );
     if (selectedPay && selectedPay.getAttribute('data-ec-pay') === 'upi') {
       const upiBadgeText =
         currentUpiConfig?.discountBadge ||
@@ -1705,7 +1727,7 @@
     const totalDiscMinor =
       breakdown.length > 0 ? breakdown.reduce((s, b) => s + b.amount, 0) : discount;
 
-    if (totalDiscMinor > 0 || coupons.some(coupon => coupon.kind === 'free_shipping')) {
+    if (totalDiscMinor > 0 || coupons.some((coupon) => coupon.kind === 'free_shipping')) {
       if (discountRow) discountRow.hidden = false;
       if (discEl) {
         discEl.textContent = totalDiscMinor > 0 ? `−${formatInr(totalDiscMinor)}` : 'Free shipping';
@@ -1713,16 +1735,21 @@
       }
 
       if (discountLabel) {
-        discountLabel.innerHTML = 'Coupons & discounts <span class="ec-caret" aria-hidden="true">▾</span>';
+        discountLabel.innerHTML =
+          'Coupons & discounts <span class="ec-caret" aria-hidden="true">▾</span>';
         discountLabel.setAttribute('aria-expanded', 'false');
         discountLabel.disabled = breakdown.length === 0;
       }
       if (breakdownEl) {
         breakdownEl.hidden = true;
         const items = $('ec-discount-items');
-        if (items) items.innerHTML = breakdown.map(item =>
-          `<div class="ec-discount-subrow"><dt>${escHtml(item.label)}</dt><dd>${item.freeShipping ? 'Free shipping' : `−${formatInr(item.amount)}`}</dd></div>`,
-        ).join('');
+        if (items)
+          items.innerHTML = breakdown
+            .map(
+              (item) =>
+                `<div class="ec-discount-subrow"><dt>${escHtml(item.label)}</dt><dd>${item.freeShipping ? 'Free shipping' : `−${formatInr(item.amount)}`}</dd></div>`,
+            )
+            .join('');
       }
     } else {
       if (discountRow) discountRow.hidden = true;
@@ -2363,7 +2390,7 @@
 
   function openCouponsSheet(selectedCode) {
     offersSheetMode = 'coupons';
-    const selected = (currentSession?.coupons || []).map(c => c.code.toUpperCase());
+    const selected = (currentSession?.coupons || []).map((c) => c.code.toUpperCase());
     if (!selected.length) selected.push((selectedCode || currentCouponCode()).toUpperCase());
     const tabMeta =
       SHEET_OFFER_TABS.find((t) => t.id === sheetOfferCategory) || SHEET_OFFER_TABS[0];
@@ -2616,7 +2643,13 @@
     }
 
     appliedCouponCode = session.coupon?.code || '';
+    if (session.coupon?.code === 'LOYALTY') {
+      loyaltyAppliedPoints = Math.round(((session.coupon.discountMinor || 0) / 100) * 10);
+    } else {
+      loyaltyAppliedPoints = 0;
+    }
     syncCouponApplyVisibility();
+    syncLoyaltyUi(offersCache?.loyalty);
     if (!sessionLines.length) {
       renderLines([]);
       applyTotals(session.totals || {}, []);
@@ -3739,15 +3772,17 @@
       if (target.closest('#ec-sheet-coupons-clear')) {
         const button = target.closest('#ec-sheet-coupons-clear');
         button.disabled = true;
-        void patchSession({ couponCode: '' }).then(session => {
-          // Do not auto-apply an offer immediately after an explicit removal.
-          offersAutoApplied = true;
-          applySession(session);
-          openCouponsSheet();
-        }).catch(error => {
-          showErr('ec-sheet-coupon-error', error?.message || 'Could not remove discounts.');
-          button.disabled = false;
-        });
+        void patchSession({ couponCode: '' })
+          .then((session) => {
+            // Do not auto-apply an offer immediately after an explicit removal.
+            offersAutoApplied = true;
+            applySession(session);
+            openCouponsSheet();
+          })
+          .catch((error) => {
+            showErr('ec-sheet-coupon-error', error?.message || 'Could not remove discounts.');
+            button.disabled = false;
+          });
         return;
       }
       if (target.closest('#ec-sheet-coupon-apply')) {

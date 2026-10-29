@@ -3098,7 +3098,9 @@ html.ec-lock body {
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  transition: opacity 0.15s ease, background 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease;
 }
 
 .ec-top-alert-close:hover {
