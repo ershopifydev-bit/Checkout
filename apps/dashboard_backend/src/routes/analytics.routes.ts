@@ -1,7 +1,10 @@
+import { authenticate } from '../middleware/auth.js';
+import { requireStoreAccess, requestStoreFilter } from '../middleware/store-access.js';
 import { Router } from 'express';
 import { collections } from '../config/database.js';
 
 export const analyticsRouter: Router = Router();
+analyticsRouter.use(authenticate, requireStoreAccess);
 
 // GET /api/analytics - Compatibility endpoint for apps/dashboard useLiveAnalytics() hook
 analyticsRouter.get('/', async (req, res, next) => {
@@ -10,8 +13,7 @@ analyticsRouter.get('/', async (req, res, next) => {
     const limit = Math.min(100, Math.max(1, Number(req.query['limit']) || 50));
 
     // Aggregate funnel events for shop (or all if demo)
-    const matchShop: Record<string, unknown> =
-      shop && shop !== 'demo.myshopify.com' ? { shop } : {};
+    const matchShop = requestStoreFilter(req);
 
     const [
       startedCount,

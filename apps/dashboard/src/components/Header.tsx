@@ -5,6 +5,7 @@ import { useLiveOrders } from '../hooks/useLiveOrders';
 import { useLiveAnalytics } from '../hooks/useLiveAnalytics';
 import { NotificationCenter } from './notifications/NotificationCenter';
 import { UserMenu } from './auth/UserMenu';
+import { NavigationIcon } from '../templates/NavigationIcon';
 import type { NavItem, NotificationItem } from '../types';
 
 interface HeaderProps {
@@ -17,6 +18,7 @@ export const Header: React.FC<HeaderProps> = ({ shopName }) => {
   const { orders } = useLiveOrders();
   const { data: analyticsData } = useLiveAnalytics();
 
+  const [navigationOpen, setNavigationOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -116,7 +118,14 @@ export const Header: React.FC<HeaderProps> = ({ shopName }) => {
   const userInitials = user?.name ? user.name.slice(0, 2).toUpperCase() : 'TX';
 
   return (
-    <header style={{ position: 'relative' }}>
+    <header
+      className="dashboard-header"
+      data-navigation-open={navigationOpen}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') setNavigationOpen(false);
+      }}
+      style={{ position: 'relative' }}
+    >
       <button
         className="logo"
         onClick={() => setTab(portal === 'm' ? 'Dashboard' : 'Overview')}
@@ -141,9 +150,38 @@ export const Header: React.FC<HeaderProps> = ({ shopName }) => {
         </span>
       </button>
 
+      <button
+        type="button"
+        className="dashboard-menu-toggle"
+        aria-controls="nav"
+        aria-expanded={navigationOpen}
+        onClick={() => setNavigationOpen(!navigationOpen)}
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          aria-hidden="true"
+        >
+          <path d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+        Menu
+      </button>
       <nav id="nav" aria-label="Sections">
         {navList.map(([name, count]) => (
-          <button key={name} className={tab === name ? 'on' : ''} onClick={() => setTab(name)}>
+          <button
+            key={name}
+            className={tab === name ? 'on' : ''}
+            aria-current={tab === name ? 'page' : undefined}
+            onClick={() => {
+              setTab(name);
+              setNavigationOpen(false);
+            }}
+          >
+            <NavigationIcon name={name} />
             {name}
             {count > 0 && <span className="bd">{count}</span>}
           </button>
@@ -152,84 +190,86 @@ export const Header: React.FC<HeaderProps> = ({ shopName }) => {
 
       <div className="sp1" />
 
-      <div className="seg" id="portal">
-        <button className={portal === 'm' ? 'on' : ''} onClick={() => setPortal('m')}>
-          Merchant
-        </button>
-        <button className={portal === 'i' ? 'on' : ''} onClick={() => setPortal('i')}>
-          In-house team
-        </button>
-      </div>
+      <div className="dashboard-header-actions">
+        <div className="seg" id="portal">
+          <button className={portal === 'm' ? 'on' : ''} onClick={() => setPortal('m')}>
+            Merchant
+          </button>
+          <button className={portal === 'i' ? 'on' : ''} onClick={() => setPortal('i')}>
+            In-house team
+          </button>
+        </div>
 
-      <div
-        className="ic"
-        title="Notifications"
-        onClick={() => {
-          setIsUserMenuOpen(false);
-          setIsNotifOpen((prev) => !prev);
-        }}
-      >
-        🔔
-        {unreadCount > 0 && <i />}
-      </div>
-
-      <div
-        className="av"
-        title={user ? `${user.name} (${user.role})` : 'Account profile / Sign in'}
-        onClick={() => {
-          setIsNotifOpen(false);
-          setIsUserMenuOpen((prev) => !prev);
-        }}
-        style={{ cursor: 'pointer' }}
-      >
-        {userInitials}
-      </div>
-
-      {user ? (
-        <button
-          className="btn l"
-          id="btn-header-logout"
+        <div
+          className="ic"
+          title="Notifications"
           onClick={() => {
-            logout();
-            showToast('Signed out successfully');
+            setIsUserMenuOpen(false);
+            setIsNotifOpen((prev) => !prev);
           }}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '5px',
-            fontSize: '12px',
-            fontWeight: 600,
-            padding: '5px 12px',
-            borderRadius: '6px',
-            color: 'var(--red, #ef4444)',
-            border: '1px solid rgba(239, 68, 68, 0.35)',
-            background: 'rgba(239, 68, 68, 0.08)',
-            cursor: 'pointer',
-          }}
-          title={`Log out of ${user.name} (${user.role})`}
         >
-          🚪 Logout
-        </button>
-      ) : (
-        <button
-          className="btn"
-          id="btn-header-login"
-          onClick={openLoginModal}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '5px',
-            fontSize: '12px',
-            fontWeight: 600,
-            padding: '5px 12px',
-            borderRadius: '6px',
-            cursor: 'pointer',
+          🔔
+          {unreadCount > 0 && <i />}
+        </div>
+
+        <div
+          className="av"
+          title={user ? `${user.name} (${user.role})` : 'Account profile / Sign in'}
+          onClick={() => {
+            setIsNotifOpen(false);
+            setIsUserMenuOpen((prev) => !prev);
           }}
-          title="Sign in to Tezvix OS"
+          style={{ cursor: 'pointer' }}
         >
-          🔑 Sign In
-        </button>
-      )}
+          {userInitials}
+        </div>
+
+        {user ? (
+          <button
+            className="btn l"
+            id="btn-header-logout"
+            onClick={() => {
+              logout();
+              showToast('Signed out successfully');
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              fontSize: '12px',
+              fontWeight: 600,
+              padding: '5px 12px',
+              borderRadius: '6px',
+              color: 'var(--red, #ef4444)',
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+              background: 'rgba(239, 68, 68, 0.08)',
+              cursor: 'pointer',
+            }}
+            title={`Log out of ${user.name} (${user.role})`}
+          >
+            🚪 Logout
+          </button>
+        ) : (
+          <button
+            className="btn"
+            id="btn-header-login"
+            onClick={openLoginModal}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              fontSize: '12px',
+              fontWeight: 600,
+              padding: '5px 12px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+            }}
+            title="Sign in to Tezvix OS"
+          >
+            🔑 Sign In
+          </button>
+        )}
+      </div>
 
       <NotificationCenter
         isOpen={isNotifOpen}

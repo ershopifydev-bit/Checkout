@@ -8,6 +8,8 @@ import { Rail } from './components/Rail';
 import { Toast } from './components/Toast';
 import { LoginModal } from './components/auth/LoginModal';
 import { LoginView } from './views/LoginView';
+import { TemplateSwitcher } from './templates/TemplateSwitcher';
+import { useDashboardTemplate } from './templates/useDashboardTemplate';
 
 import { DashboardView } from './views/DashboardView';
 import { OrdersView } from './views/OrdersView';
@@ -31,6 +33,7 @@ import { ReportRequestsView } from './views/admin/ReportRequestsView';
 export const App: React.FC = () => {
   const { user, isLoading } = useAuth();
   const [guestMode, setGuestMode] = useState(false);
+  const { template, selectTemplate } = useDashboardTemplate(!isLoading && (!!user || guestMode));
   const { tab, portal, showToast } = useDashboard();
   const { settings, error, saveSettings, reloadSettings } = useLiveSettings();
 
@@ -140,9 +143,18 @@ export const App: React.FC = () => {
     <>
       <Rail />
       <div className="wrap">
+        <TemplateSwitcher
+          selected={template}
+          onSelect={(id) => {
+            if (!selectTemplate(id))
+              showToast('Layout changed for this visit. Browser storage is unavailable.');
+          }}
+        />
         <Header shopName={settings.shop} />
         <TopBar shopName={settings.shop} />
-        <main id="view">{renderActiveView()}</main>
+        <main id="view" data-view={tab}>
+          {renderActiveView()}
+        </main>
       </div>
       <Toast />
       <LoginModal />

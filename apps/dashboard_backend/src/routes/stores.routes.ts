@@ -1,17 +1,18 @@
+import { storeFilter } from '../middleware/store-access.js';
 import { Router } from 'express';
 import { collections } from '../config/database.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, type AuthenticatedRequest } from '../middleware/auth.js';
 
 export const storesRouter: Router = Router();
 
 storesRouter.use(authenticate);
 
 // GET /api/stores - List all connected Shopify stores from shopifySessions & checkoutSettings
-storesRouter.get('/', async (_req, res, next) => {
+storesRouter.get('/', async (req: AuthenticatedRequest, res, next) => {
   try {
     const [sessions, settingsList] = await Promise.all([
-      collections.shopifySessions().find({}).toArray(),
-      collections.checkoutSettings().find({}).toArray(),
+      collections.shopifySessions().find(storeFilter(req.user!)).toArray(),
+      collections.checkoutSettings().find(storeFilter(req.user!)).toArray(),
     ]);
 
     const shopSet = new Set<string>();
@@ -20,11 +21,6 @@ storesRouter.get('/', async (_req, res, next) => {
     }
     for (const s of settingsList) {
       if (s['shop']) shopSet.add(String(s['shop']));
-    }
-
-    // If no stores in DB yet, fallback to default shop
-    if (shopSet.size === 0) {
-      shopSet.add('codemadi.myshopify.com');
     }
 
     const stores = await Promise.all(

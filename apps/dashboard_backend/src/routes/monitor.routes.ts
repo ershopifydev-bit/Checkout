@@ -1,16 +1,18 @@
+import { requireStoreAccess, requestStoreFilter } from '../middleware/store-access.js';
 import { Router } from 'express';
 import { authenticate, type AuthenticatedRequest } from '../middleware/auth.js';
-import { requirePermission } from '../middleware/rbac.js';
+import { requirePermission, requireRole } from '../middleware/rbac.js';
 import { getDb, pingDatabase, collections } from '../config/database.js';
 
 export const monitorRouter: Router = Router();
 
-monitorRouter.use(authenticate);
+monitorRouter.use(authenticate, requireStoreAccess);
 monitorRouter.use(requirePermission('monitor:read'));
 
 // GET /api/monitor/overview - Comprehensive database health and operational overview
-monitorRouter.get('/overview', async (_req: AuthenticatedRequest, res, next) => {
+monitorRouter.get('/overview', async (req: AuthenticatedRequest, res, next) => {
   try {
+    const filter = requestStoreFilter(req);
     const db = getDb();
     const ping = await pingDatabase();
 
@@ -28,49 +30,51 @@ monitorRouter.get('/overview', async (_req: AuthenticatedRequest, res, next) => 
       recentEvents,
       recentAttempts,
     ] = await Promise.all([
-      db.stats().catch(() => ({})),
-      db
-        .listCollections()
-        .toArray()
-        .catch(() => []),
+      req.user?.role === 'SUPER_ADMIN' ? db.stats().catch(() => ({})) : Promise.resolve({}),
+      req.user?.role === 'SUPER_ADMIN'
+        ? db
+            .listCollections()
+            .toArray()
+            .catch(() => [])
+        : Promise.resolve([]),
       collections
         .checkoutOrderAttempts()
-        .countDocuments()
+        .countDocuments(filter)
         .catch(() => 0),
       collections
         .checkoutOrderAttempts()
-        .countDocuments({ status: 'CONFIRMED' })
+        .countDocuments({ ...filter, status: 'CONFIRMED' })
         .catch(() => 0),
       collections
         .checkoutOrderAttempts()
-        .countDocuments({ status: 'FAILED' })
+        .countDocuments({ ...filter, status: 'FAILED' })
         .catch(() => 0),
       collections
         .checkoutOrderAttempts()
-        .countDocuments({ status: 'MANUAL_REVIEW' })
+        .countDocuments({ ...filter, status: 'MANUAL_REVIEW' })
         .catch(() => 0),
       collections
         .checkoutFunnels()
-        .countDocuments()
+        .countDocuments(filter)
         .catch(() => 0),
       collections
         .checkoutFunnels()
-        .countDocuments({ status: 'checkout_abandoned' })
+        .countDocuments({ ...filter, status: 'checkout_abandoned' })
         .catch(() => 0),
       collections
         .checkoutEvents()
-        .countDocuments()
+        .countDocuments(filter)
         .catch(() => 0),
       collections
         .checkoutEvents()
-        .find({})
+        .find(filter)
         .sort({ timestamp: -1 })
         .limit(10)
         .toArray()
         .catch(() => []),
       collections
         .checkoutOrderAttempts()
-        .find({})
+        .find(filter)
         .sort({ createdAt: -1 })
         .limit(5)
         .toArray()
@@ -83,7 +87,7 @@ monitorRouter.get('/overview', async (_req: AuthenticatedRequest, res, next) => 
     const revenueAgg = await collections
       .checkoutOrderAttempts()
       .aggregate<{ _id: null; totalMinor: number }>([
-        { $match: { status: 'CONFIRMED' } },
+        { $match: { ...filter, status: 'CONFIRMED' } },
         { $group: { _id: null, totalMinor: { $sum: '$expectedAmountMinor' } } },
       ])
       .toArray()
@@ -142,7 +146,7 @@ monitorRouter.get('/overview', async (_req: AuthenticatedRequest, res, next) => 
 });
 
 // GET /api/monitor/stats - Detailed MongoDB server & database metrics
-monitorRouter.get('/stats', async (_req, res, next) => {
+monitorRouter.get('/stats', requireRole('SUPER_ADMIN'), async (_req, res, next) => {
   try {
     const db = getDb();
     const [rawDbStats, rawServerStatus] = await Promise.all([
@@ -172,7 +176,7 @@ monitorRouter.get('/stats', async (_req, res, next) => {
 });
 
 // GET /api/monitor/collections - Real-time inspection of all database collections
-monitorRouter.get('/collections', async (_req, res, next) => {
+monitorRouter.get('/collections', requireRole('SUPER_ADMIN'), async (_req, res, next) => {
   try {
     const db = getDb();
     const cols = await db.listCollections().toArray();
@@ -209,7 +213,7 @@ monitorRouter.get('/collections', async (_req, res, next) => {
 });
 
 // GET /api/monitor/collections/:name - Inspect specific collection documents & schema
-monitorRouter.get('/collections/:name', async (req, res, next) => {
+monitorRouter.get('/collections/:name', requireRole('SUPER_ADMIN'), async (req, res, next) => {
   try {
     const { name } = req.params;
     const limit = Math.min(100, Math.max(1, Number(req.query['limit']) || 20));
@@ -250,12 +254,9 @@ monitorRouter.get('/live-events', async (req, res, next) => {
     const limit = Math.min(200, Math.max(1, Number(req.query['limit']) || 50));
     const skip = Math.max(0, Number(req.query['skip']) || 0);
 
-    const filter: Record<string, unknown> = {};
+    const filter = requestStoreFilter(req);
     if (typeof event === 'string' && event.trim()) {
       filter['event'] = event.trim();
-    }
-    if (typeof shop === 'string' && shop.trim()) {
-      filter['shop'] = shop.trim();
     }
 
     const [events, total] = await Promise.all([

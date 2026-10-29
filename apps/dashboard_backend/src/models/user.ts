@@ -37,6 +37,7 @@ export interface User {
   passwordHash: string;
   name: string;
   role: UserRole;
+  shops?: string[];
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

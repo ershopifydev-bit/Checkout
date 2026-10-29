@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
-import { requirePermission } from '../middleware/rbac.js';
+import { requireRole } from '../middleware/rbac.js';
 import { collections } from '../config/database.js';
 
 export const auditRouter: Router = Router();
 
 auditRouter.use(authenticate);
-auditRouter.use(requirePermission('audit:read'));
+auditRouter.use(requireRole('SUPER_ADMIN'));
 
 // GET /api/audit-logs
 auditRouter.get('/', async (req, res, next) => {
