@@ -80,7 +80,7 @@ Record new public routes or settings fields in `docs/api/internal-reference.md` 
 
 1. Edit `apps/shopify-admin/public/checkout/{panel.html,checkout.js,checkout.css}` first.
 2. Proxy already serves those files (`routes/proxy.panel[.]html.ts`, `proxy.checkout[.]js.ts`, `proxy.checkout[.]css.ts`) with `no-store`.
-3. Copy to `extensions/cod-checkout-embed/assets/` only when that copy is still used as fallback.
+3. Copy `checkout.js` / `checkout.css` / SVGs to `extensions/cod-checkout-embed/assets/` only when that copy is still a fallback. Never copy `panel.html` — Shopify theme assets reject `.html`; the overlay fetches the panel from the app proxy.
 4. Bump `assetVersion` in `extensions/cod-checkout-embed/blocks/cod-checkout.liquid` when embed-boot files change so the theme does not keep a stale CDN.
 
 ### Settings / visibility

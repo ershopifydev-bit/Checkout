@@ -57,7 +57,7 @@ React Router config maps URL segments to files under `app/routes/`:
 
 Liquid config: `extensions/cod-checkout-embed/blocks/cod-checkout.liquid`  
 Boot JS: `extensions/cod-checkout-embed/assets/embed.js`  
-Overlay source of truth: `public/checkout/{panel.html,checkout.js,checkout.css}` (proxy serves these live; CDN assets in the extension can lag).
+Overlay source of truth: `public/checkout/{panel.html,checkout.js,checkout.css}` (proxy serves these live; CDN assets in the extension can lag). Do not put `panel.html` in the theme extension `assets/` folder — Shopify rejects `.html` there.
 
 ---
 
