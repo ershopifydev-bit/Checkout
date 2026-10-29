@@ -100,7 +100,13 @@ export default function Overview() {
     <main className="onboard">
       <header className="onboard-hero">
         <div className="onboard-hero-text">
-          <p className="onboard-kicker">Tezvix</p>
+          <img
+            className="tezvix-brand-logo"
+            src="/branding/tezvix-logo.svg"
+            alt="Tezvix"
+            width="144"
+            height="50"
+          />
           <h1>Launch your one-page checkout</h1>
           <p className="onboard-lead">
             Three steps: put the embed on your theme, choose what shoppers see, then go live. Every

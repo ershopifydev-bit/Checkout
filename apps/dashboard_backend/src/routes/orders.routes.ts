@@ -17,10 +17,10 @@ ordersRouter.get('/', requirePermission('orders:read'), async (req, res, next) =
     const skip = Math.max(0, Number(req.query['skip']) || 0);
 
     const filter: Record<string, unknown> = {};
-    if (typeof status === 'string' && status.trim()) {
+    if (typeof status === 'string' && status.trim() && status.trim().toUpperCase() !== 'ALL') {
       filter['status'] = status.trim().toUpperCase();
     }
-    if (typeof shop === 'string' && shop.trim()) {
+    if (typeof shop === 'string' && shop.trim() && shop.trim() !== 'demo.myshopify.com') {
       filter['shop'] = shop.trim();
     }
 

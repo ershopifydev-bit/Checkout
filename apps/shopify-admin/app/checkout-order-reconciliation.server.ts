@@ -12,6 +12,7 @@ export interface ReconciledOrder {
   orderId: string;
   orderName: string;
   totalMinor: number;
+  statusUrl?: string | undefined;
 }
 
 export type ReconciliationResult =
@@ -25,6 +26,7 @@ interface ShopifyOrderNode {
   name: string;
   legacyResourceId?: string | null | undefined;
   sourceIdentifier?: string | null | undefined;
+  statusPageUrl?: string | null | undefined;
   currentTotalPriceSet?:
     | {
         shopMoney?:
@@ -35,7 +37,7 @@ interface ShopifyOrderNode {
           | undefined;
       }
     | undefined;
-  financialStatus?: string | undefined;
+  displayFinancialStatus?: string | undefined;
   createdAt?: string | undefined;
 }
 
@@ -47,13 +49,14 @@ const RECONCILIATION_QUERY = `
         name
         legacyResourceId
         sourceIdentifier
+        statusPageUrl
         currentTotalPriceSet {
           shopMoney {
             amount
             currencyCode
           }
         }
-        financialStatus
+        displayFinancialStatus
         createdAt
       }
     }
@@ -88,6 +91,7 @@ export async function reconcileCheckoutAttempt(
         orderId: attempt.shopifyOrderId,
         orderName: attempt.shopifyOrderName,
         totalMinor: attempt.shopifyOrderTotalMinor ?? attempt.expectedAmountMinor,
+        statusUrl: attempt.shopifyOrderStatusUrl || undefined,
       },
     };
   }
@@ -136,6 +140,7 @@ export async function reconcileCheckoutAttempt(
         shopifyOrderId: orderId,
         shopifyOrderName: node.name,
         shopifyOrderTotalMinor: orderTotalMinor,
+        shopifyOrderStatusUrl: node.statusPageUrl || undefined,
       });
 
       return {
@@ -145,6 +150,7 @@ export async function reconcileCheckoutAttempt(
           orderId,
           orderName: node.name,
           totalMinor: orderTotalMinor,
+          statusUrl: node.statusPageUrl || undefined,
         },
       };
     }

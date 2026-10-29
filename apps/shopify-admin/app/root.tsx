@@ -10,7 +10,10 @@ import {
 import stylesheet from './styles.css?url';
 
 export function links() {
-  return [{ rel: 'stylesheet', href: stylesheet }];
+  return [
+    { rel: 'stylesheet', href: stylesheet },
+    { rel: 'icon', type: 'image/svg+xml', href: '/branding/tezvix-symbol.svg' },
+  ];
 }
 export default function Root() {
   return (

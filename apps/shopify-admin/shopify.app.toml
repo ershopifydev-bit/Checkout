@@ -34,10 +34,11 @@ topics = [
   "orders/paid",
   "customers/create",
   "customers/update",
-  "customers/data_request",
-  "customers/redact",
-  "shop/redact",
 ]
+uri = "/api/webhooks/shopify"
+
+[[webhooks.subscriptions]]
+compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
 uri = "/api/webhooks/shopify"
 
 [app_proxy]

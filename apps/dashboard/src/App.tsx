@@ -1,10 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDashboard } from './context/DashboardContext';
+import { useAuth } from './context/AuthContext';
 import { useLiveSettings } from './hooks/useLiveSettings';
 import { Header } from './components/Header';
 import { TopBar } from './components/TopBar';
 import { Rail } from './components/Rail';
 import { Toast } from './components/Toast';
+import { LoginModal } from './components/auth/LoginModal';
+import { LoginView } from './views/LoginView';
 
 import { DashboardView } from './views/DashboardView';
 import { OrdersView } from './views/OrdersView';
@@ -26,6 +29,8 @@ import { OnboardingView } from './views/admin/OnboardingView';
 import { ReportRequestsView } from './views/admin/ReportRequestsView';
 
 export const App: React.FC = () => {
+  const { user, isLoading } = useAuth();
+  const [guestMode, setGuestMode] = useState(false);
   const { tab, portal, showToast } = useDashboard();
   const { settings, error, saveSettings, reloadSettings } = useLiveSettings();
 
@@ -104,6 +109,33 @@ export const App: React.FC = () => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          display: 'grid',
+          placeItems: 'center',
+          height: '100vh',
+          background: 'var(--bg)',
+          color: 'var(--mut)',
+          fontSize: '14px',
+        }}
+      >
+        Initializing Tezvix OS...
+      </div>
+    );
+  }
+
+  // When not logged in and not explicitly browsing as guest, show the Login Screen directly!
+  if (!user && !guestMode) {
+    return (
+      <>
+        <LoginView onExploreGuest={() => setGuestMode(true)} />
+        <Toast />
+      </>
+    );
+  }
+
   return (
     <>
       <Rail />
@@ -113,6 +145,7 @@ export const App: React.FC = () => {
         <main id="view">{renderActiveView()}</main>
       </div>
       <Toast />
+      <LoginModal />
     </>
   );
 };

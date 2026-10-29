@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, extname, join } from 'node:path';
 
 const dir = dirname(fileURLToPath(import.meta.url));
 const code = readFileSync(join(dir, 'assets/hijack-core.js'), 'utf8');
@@ -84,5 +84,37 @@ describe('EasyCheckoutHijack', () => {
       }),
       false,
     );
+  });
+});
+
+// Shopify theme app extensions reject .html (and anything else not in this set).
+const THEME_ASSET_EXTS = new Set([
+  '.jpg',
+  '.jpeg',
+  '.js',
+  '.css',
+  '.png',
+  '.svg',
+  '.json',
+  '.wasm',
+]);
+
+function listFiles(dirPath) {
+  const out = [];
+  for (const entry of readdirSync(dirPath, { withFileTypes: true })) {
+    const full = join(dirPath, entry.name);
+    if (entry.isDirectory()) out.push(...listFiles(full));
+    else out.push(full);
+  }
+  return out;
+}
+
+describe('cod-checkout-embed assets', () => {
+  it('only uses Shopify-allowed theme asset extensions', () => {
+    const assetsDir = join(dir, 'assets');
+    const rejected = listFiles(assetsDir).filter(
+      (file) => !THEME_ASSET_EXTS.has(extname(file).toLowerCase()),
+    );
+    assert.deepEqual(rejected, []);
   });
 });

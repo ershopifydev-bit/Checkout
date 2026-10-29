@@ -13,6 +13,7 @@ export type CodOrderResult = {
   orderId: string;
   orderName: string;
   totalMinor?: number | undefined;
+  statusUrl?: string | undefined;
 };
 
 /**
@@ -86,13 +87,14 @@ const ORDER_CREATE_MUTATION = `
         name
         legacyResourceId
         sourceIdentifier
+        statusPageUrl
         currentTotalPriceSet {
           shopMoney {
             amount
             currencyCode
           }
         }
-        financialStatus
+        displayFinancialStatus
       }
       userErrors {
         field
@@ -250,6 +252,7 @@ export async function createCodOrderInShopify(input: {
         name: string;
         legacyResourceId?: string | null;
         sourceIdentifier?: string | null;
+        statusPageUrl?: string | null;
         currentTotalPriceSet?: {
           shopMoney?: {
             amount?: string;
@@ -315,5 +318,6 @@ export async function createCodOrderInShopify(input: {
     orderId: String(order.legacyResourceId || order.id),
     orderName: order.name,
     totalMinor: returnedTotalMinor ?? totalAmountMinor,
+    statusUrl: order.statusPageUrl || undefined,
   };
 }

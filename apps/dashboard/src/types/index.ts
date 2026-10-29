@@ -114,3 +114,29 @@ export interface TeamUserItem {
   createdAt: string;
   lastLoginAt?: string | undefined;
 }
+
+export type AuthUser = TeamUserItem;
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  description: string;
+  type: 'info' | 'warning' | 'success' | 'alert';
+  time: string;
+  read: boolean;
+  tabTarget?: string;
+}
+
+export interface StoreItem {
+  shop: string;
+  brandName: string;
+  brandMode?: string;
+  logoUrl?: string;
+  status: 'Connected' | 'Configured' | 'Offline';
+  hasSession: boolean;
+  eventCount: number;
+  attemptCount: number;
+  confirmedCount: number;
+  themeEmbedHandle?: string;
+  updatedAt?: string;
+}

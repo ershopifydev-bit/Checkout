@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Redis } from 'ioredis';
+import type { Collection, Db } from 'mongodb';
 import {
   claimAttemptForCreation,
   createOrGetOrderAttempt,
@@ -57,13 +58,7 @@ export type ShippingHandle = {
   etdText?: string;
 };
 
-export type SessionCoupon = {
-  code: string;
-  kind: 'percentage' | 'fixed' | 'free_shipping';
-  value: number;
-  discountMinor: number;
-  summary: string;
-};
+export type SessionCoupon = ResolvedCoupon;
 
 export type CheckoutSession = {
   sessionId: string;
@@ -86,6 +81,7 @@ export type CheckoutSession = {
   cartDiscountMinor: number;
   couponCode?: string;
   coupon?: SessionCoupon;
+  coupons?: SessionCoupon[];
   createdAt: string;
   updatedAt: string;
 };
@@ -126,6 +122,7 @@ export type PlacedOrder = {
   totals: CheckoutSession['totals'];
   lines: CheckoutLine[];
   message: string;
+  statusUrl?: string | undefined;
 };
 
 export type SessionStore = {
@@ -274,6 +271,131 @@ export function createRedisSessionStore(redis: Redis): SessionStore {
   };
 }
 
+export interface MongoCheckoutSessionDoc {
+  _id: string; // sessionId
+  shop: string;
+  session: CheckoutSession;
+  expiresAt: Date;
+  updatedAt: Date;
+  orderLockUntil?: Date | undefined;
+  placedOrder?: PlacedOrder | undefined;
+  placedExpiresAt?: Date | undefined;
+}
+
+export type MongoDatabaseLike = {
+  collection(name: string): {
+    createIndex(spec: Record<string, unknown>, options?: Record<string, unknown>): Promise<string>;
+    updateOne(
+      filter: Record<string, unknown>,
+      update: Record<string, unknown>,
+      options?: { upsert?: boolean },
+    ): Promise<{ matchedCount: number; modifiedCount?: number }>;
+    findOne(filter: Record<string, unknown>): Promise<MongoCheckoutSessionDoc | null>;
+    deleteOne(filter: Record<string, unknown>): Promise<{ deletedCount: number }>;
+  };
+};
+
+let mongoSessionIndexesEnsured = false;
+async function ensureMongoSessionIndexes(
+  col: ReturnType<MongoDatabaseLike['collection']>,
+): Promise<void> {
+  if (mongoSessionIndexesEnsured) return;
+  mongoSessionIndexesEnsured = true;
+  try {
+    await col.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: 'ttl_sessions' });
+    await col.createIndex({ shop: 1, _id: 1 }, { name: 'idx_shop_sessionId' });
+  } catch (err) {
+    console.warn('[MongoSessionStore] Index creation note:', (err as Error).message);
+  }
+}
+
+/** MongoDB-backed store: durable session storage across application restarts and cluster nodes. */
+export function createMongoSessionStore(db: MongoDatabaseLike): SessionStore {
+  const col = db.collection('checkoutSessions');
+  void ensureMongoSessionIndexes(col);
+
+  const guard = async <T>(run: () => Promise<T>): Promise<T> => {
+    try {
+      return await run();
+    } catch (error) {
+      console.error('[EasyCheckout] mongo session store error', (error as Error).message);
+      throw new Error('SESSION_STORE_UNAVAILABLE');
+    }
+  };
+
+  return {
+    put: (session) =>
+      guard(async () => {
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + sessionTtlSeconds() * 1000);
+        await col.updateOne(
+          { _id: session.sessionId },
+          {
+            $set: {
+              shop: session.shop,
+              session,
+              expiresAt,
+              updatedAt: now,
+            },
+          },
+          { upsert: true },
+        );
+      }),
+    get: (sessionId) =>
+      guard(async () => {
+        const now = new Date();
+        const doc = await col.findOne({ _id: sessionId, expiresAt: { $gt: now } });
+        return doc ? doc.session : null;
+      }),
+    delete: (sessionId) =>
+      guard(async () => {
+        await col.deleteOne({ _id: sessionId });
+      }),
+    claim: (sessionId) =>
+      guard(async () => {
+        const now = new Date();
+        const lockUntil = new Date(now.getTime() + ORDER_LOCK_TTL_SECONDS * 1000);
+        const res = await col.updateOne(
+          {
+            _id: sessionId,
+            $or: [{ orderLockUntil: { $exists: false } }, { orderLockUntil: { $lte: now } }],
+          },
+          { $set: { orderLockUntil: lockUntil } },
+        );
+        return res.matchedCount > 0;
+      }),
+    release: (sessionId) =>
+      guard(async () => {
+        await col.updateOne({ _id: sessionId }, { $unset: { orderLockUntil: '' } });
+      }),
+    getPlaced: (sessionId) =>
+      guard(async () => {
+        const now = new Date();
+        const doc = await col.findOne({
+          _id: sessionId,
+          placedExpiresAt: { $gt: now },
+        });
+        return doc?.placedOrder ?? null;
+      }),
+    setPlaced: (sessionId, order) =>
+      guard(async () => {
+        const now = new Date();
+        const placedExpiresAt = new Date(now.getTime() + PLACED_ORDER_TTL_SECONDS * 1000);
+        await col.updateOne(
+          { _id: sessionId },
+          {
+            $set: {
+              placedOrder: order,
+              placedExpiresAt,
+              updatedAt: now,
+            },
+          },
+          { upsert: true },
+        );
+      }),
+  };
+}
+
 let defaultStore: SessionStore | undefined;
 export function getCheckoutSessionStore(): SessionStore {
   if (defaultStore) return defaultStore;
@@ -337,8 +459,68 @@ function subtotalOf(session: CheckoutSession): number {
 }
 
 function refreshCouponAmount(session: CheckoutSession) {
-  if (!session.coupon) return;
-  session.coupon.discountMinor = computeCouponDiscountMinor(session.coupon, subtotalOf(session));
+  const subtotal = subtotalOf(session);
+  const totalQty = session.lines.reduce((sum, l) => sum + (l.quantity || 1), 0);
+
+  if (!session.coupons?.length) {
+    if (session.coupon) {
+      if (
+        (session.coupon.minSubtotalMinor && subtotal < session.coupon.minSubtotalMinor) ||
+        (session.coupon.minQuantity && totalQty < session.coupon.minQuantity)
+      ) {
+        delete session.coupon;
+        delete session.couponCode;
+        return;
+      }
+      session.coupon.discountMinor = computeCouponDiscountMinor(session.coupon, subtotal);
+    }
+    return;
+  }
+
+  // Filter out any coupons whose minimum requirement is no longer met
+  session.coupons = session.coupons.filter((c) => {
+    if (c.minSubtotalMinor && subtotal < c.minSubtotalMinor) return false;
+    if (c.minQuantity && totalQty < c.minQuantity) return false;
+    return true;
+  });
+
+  if (!session.coupons.length) {
+    delete session.couponCode;
+    delete session.coupon;
+    delete session.coupons;
+    return;
+  }
+
+  let remaining = subtotal;
+  for (const coupon of session.coupons) {
+    coupon.discountMinor = Math.min(remaining, computeCouponDiscountMinor(coupon, subtotal));
+    remaining -= coupon.discountMinor;
+  }
+  const discountMinor = subtotal - remaining;
+  session.couponCode = session.coupons.map((c) => c.code).join(' + ');
+  session.coupon =
+    session.coupons.length === 1
+      ? { ...session.coupons[0]! }
+      : {
+          code: session.couponCode,
+          kind: 'fixed',
+          value: discountMinor,
+          discountMinor,
+          summary: session.coupons.map((c) => c.summary).join(' + '),
+        };
+}
+
+function couponsCombine(a: SessionCoupon, b: SessionCoupon): boolean {
+  const keys = {
+    ORDER: 'orderDiscounts',
+    PRODUCT: 'productDiscounts',
+    SHIPPING: 'shippingDiscounts',
+  } as const;
+  if (!a.discountClass || !b.discountClass) return false;
+  // Product combinations need line-level eligibility/allocation support.
+  if (a.discountClass === 'PRODUCT' || b.discountClass === 'PRODUCT') return false;
+  if (a.discountClass === 'SHIPPING' && b.discountClass === 'SHIPPING') return false;
+  return !!a.combinesWith?.[keys[b.discountClass]] && !!b.combinesWith?.[keys[a.discountClass]];
 }
 
 function recomputeTotals(session: CheckoutSession): CheckoutSession['totals'] {
@@ -348,7 +530,11 @@ function recomputeTotals(session: CheckoutSession): CheckoutSession['totals'] {
   const couponDiscount = Math.max(0, Math.round(session.coupon?.discountMinor || 0));
   const discountMinor = Math.min(subtotalMinor, cartDiscount + couponDiscount);
   let shippingMinor = session.shipping?.priceMinor ?? 0;
-  if (session.coupon?.kind === 'free_shipping') shippingMinor = 0;
+  if (
+    session.coupon?.kind === 'free_shipping' ||
+    session.coupons?.some((c) => c.kind === 'free_shipping')
+  )
+    shippingMinor = 0;
   const codFeeMinor = session.shipping?.codExtraMinor ?? 0;
   return {
     currency: 'INR',
@@ -370,6 +556,9 @@ export function publicSessionView(session: CheckoutSession) {
     totals: session.totals,
     address: session.address,
     shipping: session.shipping,
+    coupons: (session.coupons || (session.coupon ? [session.coupon] : [])).map(
+      ({ code, kind, summary, discountMinor }) => ({ code, kind, summary, discountMinor }),
+    ),
     couponCode: session.couponCode || session.coupon?.code || '',
     coupon: session.coupon
       ? {
@@ -462,6 +651,11 @@ export async function patchCheckoutSession(
     giftVoucher?: { code?: string; pin?: string };
     /** ponytail: points→INR until loyalty partner API drives conversion (10 pts = ₹1). */
     loyaltyRedeemPoints?: number;
+    lineQuantity?: {
+      variantId?: string;
+      lineKey?: string;
+      quantity: number;
+    };
   },
   store: SessionStore = getCheckoutSessionStore(),
   options: PatchCheckoutSessionOptions = {},
@@ -482,6 +676,7 @@ export async function patchCheckoutSession(
     ) {
       throw new Error('INVALID_ADDRESS');
     }
+    const pinChanged = !session.address || session.address.postalCode !== patch.address.postalCode;
     const nextAddress: CheckoutAddress = {
       phone: patch.address.phone,
       fullName: patch.address.fullName.slice(0, 80),
@@ -492,12 +687,28 @@ export async function patchCheckoutSession(
     };
     if (patch.address.email) nextAddress.email = patch.address.email.slice(0, 120);
     session.address = nextAddress;
+
+    // Invalidate prior shipping quote and re-evaluate COD delivery serviceability if PIN changed
+    if (pinChanged && nextAddress.postalCode) {
+      const pin = nextAddress.postalCode;
+      const serviceable = /^[1-9]\d{5}$/.test(pin);
+      session.shipping = {
+        id: 'standard',
+        handleName: 'Standard',
+        priceMinor: 0,
+        codEnabled: serviceable,
+        codExtraMinor: 0,
+        selected: true,
+        etdText: serviceable ? 'Quick delivery to your PIN' : 'Not serviceable for COD',
+      };
+    }
   }
   if (typeof patch.couponCode === 'string') {
     const code = patch.couponCode.trim().slice(0, 40);
     if (!code) {
       delete session.couponCode;
       delete session.coupon;
+      delete session.coupons;
     } else {
       const resolve = options.resolveCoupon || resolveShopifyCoupon;
       const resolved = await resolve({
@@ -505,14 +716,25 @@ export async function patchCheckoutSession(
         code,
         subtotalMinor: subtotalOf(session),
       });
-      session.couponCode = resolved.code;
-      session.coupon = {
-        code: resolved.code,
-        kind: resolved.kind,
-        value: resolved.value,
-        discountMinor: resolved.discountMinor,
-        summary: resolved.summary,
-      };
+      const existing = session.coupons || (session.coupon ? [session.coupon] : []);
+      const others = existing.filter((c) => c.code.toUpperCase() !== resolved.code.toUpperCase());
+      // Refresh the saved rules too, so merchant changes are respected on the next apply.
+      const refreshed = await Promise.all(
+        others.map((c) =>
+          resolve({
+            shop: session.shop,
+            code: c.code,
+            subtotalMinor: subtotalOf(session),
+          }),
+        ),
+      );
+      if (refreshed.some((c) => !couponsCombine(c, resolved))) {
+        throw new Error('COUPON_COMBINATION_NOT_ALLOWED');
+      }
+      if ([...refreshed, resolved].filter((c) => c.kind !== 'free_shipping').length > 5) {
+        throw new Error('COUPON_LIMIT_REACHED');
+      }
+      session.coupons = [...refreshed, resolved];
     }
   }
 
@@ -527,6 +749,7 @@ export async function patchCheckoutSession(
     // ponytail: demo balance ₹500 until Gift Card Admin API is wired.
     const balanceMinor = 50000;
     const discountMinor = Math.min(subtotalOf(session), balanceMinor);
+    delete session.coupons;
     session.couponCode = `GIFT:${code}`;
     session.coupon = {
       code: `GIFT:${code}`,
@@ -542,6 +765,7 @@ export async function patchCheckoutSession(
     if (points < 10) throw new Error('INVALID_LOYALTY_POINTS');
     const discountMinor = Math.min(subtotalOf(session), Math.floor(points / 10) * 100);
     if (discountMinor <= 0) throw new Error('INVALID_LOYALTY_POINTS');
+    delete session.coupons;
     session.couponCode = 'LOYALTY';
     session.coupon = {
       code: 'LOYALTY',
@@ -550,6 +774,28 @@ export async function patchCheckoutSession(
       discountMinor,
       summary: `${points} loyalty points`,
     };
+  }
+
+  if (patch.lineQuantity) {
+    const { variantId, lineKey, quantity } = patch.lineQuantity;
+    const match = session.lines.find(
+      (l) =>
+        (lineKey && l.lineKey === lineKey) ||
+        (variantId && String(l.variantId) === String(variantId)) ||
+        (variantId &&
+          l.variantId &&
+          String(l.variantId).replace(/\D/g, '') !== '' &&
+          String(l.variantId).replace(/\D/g, '') === String(variantId).replace(/\D/g, '')),
+    );
+    if (match) {
+      if (quantity <= 0) {
+        if (session.lines.length > 1) {
+          session.lines = session.lines.filter((l) => l !== match);
+        }
+      } else {
+        match.quantity = Math.max(1, Math.min(99, quantity));
+      }
+    }
   }
 
   session.updatedAt = new Date().toISOString();
@@ -632,6 +878,7 @@ export async function placeCodFromSession(
           amountMinor: attempt.expectedAmountMinor,
         },
         lines: [],
+        statusUrl: attempt.shopifyOrderStatusUrl || undefined,
         message: `Order ${attempt.shopifyOrderName} placed. Pay cash on delivery.`,
       };
     }
@@ -696,6 +943,7 @@ export async function placeCodFromSession(
       source: existing.source,
       totals: existing.totals,
       lines: existing.lines,
+      statusUrl: attempt.shopifyOrderStatusUrl || undefined,
       message: `Order ${attempt.shopifyOrderName} placed. Pay cash on delivery.`,
     };
     await store.setPlaced(sessionId, placed).catch(logStoreError);
@@ -719,6 +967,7 @@ export async function placeCodFromSession(
           source: existing.source,
           totals: existing.totals,
           lines: existing.lines,
+          statusUrl: recon.order.statusUrl || attempt.shopifyOrderStatusUrl || undefined,
           message: `Order ${recon.order.orderName} placed. Pay cash on delivery.`,
         };
         await store.setPlaced(sessionId, placed).catch(logStoreError);
@@ -808,6 +1057,7 @@ export async function placeCodFromSession(
       shopifyOrderId: shopifyOrder.orderId,
       shopifyOrderName: shopifyOrder.orderName,
       shopifyOrderTotalMinor: session.totals.amountMinor,
+      shopifyOrderStatusUrl: shopifyOrder.statusUrl,
     });
 
     const placed: PlacedOrder = {
@@ -820,6 +1070,7 @@ export async function placeCodFromSession(
       source: session.source,
       totals: session.totals,
       lines: session.lines,
+      statusUrl: shopifyOrder.statusUrl,
       message: `Order ${shopifyOrder.orderName} placed. Pay cash on delivery.`,
     };
 

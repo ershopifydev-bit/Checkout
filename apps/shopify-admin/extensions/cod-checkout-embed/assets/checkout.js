@@ -1,4 +1,6 @@
 (function () {
+  const CARD_UI_VERSION = '20261029-card-2';
+  console.info('[Easy Checkout] script loaded', { version: CARD_UI_VERSION });
   let apiBase = '';
   let activeSessionId = '';
   let shopper = null;
@@ -13,6 +15,7 @@
   let addressFocus = false;
   let cartBusy = false;
   let sessionLines = [];
+  let currentSession = null;
   /** 'cart' | 'buy_now' — only clear Shopify cart after place when checkout started from cart. */
   let sessionSource = 'cart';
   let upsellItems = [];
@@ -154,9 +157,57 @@
     }).format((Number(amountMinor) || 0) / 100);
   }
 
+  function parsePriceMajor(text) {
+    if (!text) return 0;
+    const cleaned = String(text).replace(/,/g, '');
+    const match = cleaned.match(/(\d+(?:\.\d+)?)/);
+    return match ? parseFloat(match[1]) : 0;
+  }
+
+  function sanitizeShopperError(msg) {
+    if (!msg || typeof msg !== 'string') return 'Something went wrong. Please try again.';
+    const lower = msg.toLowerCase();
+    if (
+      lower.includes('(?-mix:') ||
+      lower.includes('expected integer') ||
+      lower.includes('bad_request') ||
+      lower.includes('syntaxerror')
+    ) {
+      return 'Unable to update item quantity. Please try again.';
+    }
+    return msg;
+  }
+
+  let errorDismissTimer = null;
   function showErr(id, message) {
     const el = $(id);
     if (!el) return;
+    if (id === 'ec-error') {
+      if (errorDismissTimer) {
+        clearTimeout(errorDismissTimer);
+        errorDismissTimer = null;
+      }
+      const textEl = $('ec-error-text') || el;
+      if (!message) {
+        el.hidden = true;
+        el.classList.remove('is-visible');
+        if (textEl !== el) textEl.textContent = '';
+        return;
+      }
+      const cleanMsg = sanitizeShopperError(message);
+      if (textEl !== el) {
+        textEl.textContent = cleanMsg;
+      } else {
+        el.textContent = cleanMsg;
+      }
+      el.hidden = false;
+      el.classList.add('is-visible');
+      errorDismissTimer = setTimeout(() => {
+        el.hidden = true;
+        el.classList.remove('is-visible');
+      }, 8000);
+      return;
+    }
     el.hidden = !message;
     el.textContent = message || '';
   }
@@ -236,13 +287,6 @@
     const section =
       boundRoot?.querySelector?.('.ec-upsell') || document.querySelector('.ec-upsell');
     if (section) section.hidden = !showUpsell;
-  }
-
-  function syncTrustRef(sessionId) {
-    const el = $('ec-trust-ref');
-    if (!el) return;
-    const id = String(sessionId || activeSessionId || '').replace(/[^a-zA-Z0-9]/g, '');
-    el.textContent = id ? id.slice(-8).toLowerCase() : '';
   }
 
   function applyPaymentMethods(payments) {
@@ -580,12 +624,19 @@
       iosScheme: 'credpay://pay',
       logo: `<svg viewBox="0 0 32 32" width="26" height="26"><rect width="32" height="32" rx="6" fill="#0F172A"/><path d="M16 6L7 11v8c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12v-8l-9-5z" stroke="#FFFFFF" stroke-width="2" fill="none"/></svg>`,
     },
-    generic: {
-      id: 'generic',
-      name: 'Other UPI',
+    all: {
+      id: 'all',
+      name: 'All UPI Apps',
       androidPackage: '',
       iosScheme: 'upi://pay',
-      logo: `<span style="font-size:18px;">⚡</span>`,
+      logo: `<svg class="ec-upi-grid-dots" width="22" height="22" viewBox="0 0 24 24" fill="#4f46e5" aria-hidden="true"><circle cx="5" cy="5" r="2.2" /><circle cx="12" cy="5" r="2.2" /><circle cx="19" cy="5" r="2.2" /><circle cx="5" cy="12" r="2.2" /><circle cx="12" cy="12" r="2.2" /><circle cx="19" cy="12" r="2.2" /><circle cx="5" cy="19" r="2.2" /><circle cx="12" cy="19" r="2.2" /><circle cx="19" cy="19" r="2.2" /></svg>`,
+    },
+    generic: {
+      id: 'generic',
+      name: 'All UPI Apps',
+      androidPackage: '',
+      iosScheme: 'upi://pay',
+      logo: `<svg class="ec-upi-grid-dots" width="22" height="22" viewBox="0 0 24 24" fill="#4f46e5" aria-hidden="true"><circle cx="5" cy="5" r="2.2" /><circle cx="12" cy="5" r="2.2" /><circle cx="19" cy="5" r="2.2" /><circle cx="5" cy="12" r="2.2" /><circle cx="12" cy="12" r="2.2" /><circle cx="19" cy="12" r="2.2" /><circle cx="5" cy="19" r="2.2" /><circle cx="12" cy="19" r="2.2" /><circle cx="19" cy="19" r="2.2" /></svg>`,
     },
   };
 
@@ -658,19 +709,16 @@
 
   function renderMobileUpiApps(settings) {
     const grid = $('ec-upi-apps-grid');
-    const drawer = $('ec-upi-all-drawer');
     if (!grid) return;
 
     const configured =
       Array.isArray(settings?.upiConfig?.apps) && settings.upiConfig.apps.length > 0
         ? settings.upiConfig.apps
-        : ['paytm', 'phonepe', 'gpay', 'amazonpay', 'bhim', 'cred'];
+        : ['paytm', 'phonepe', 'gpay', 'amazonpay'];
 
     grid.replaceChildren();
-    if (drawer) drawer.replaceChildren();
 
-    const topApps = configured.slice(0, 4);
-    const extraApps = configured.slice(4);
+    const topApps = configured.filter((a) => a !== 'generic' && a !== 'all').slice(0, 4);
 
     topApps.forEach((appId, index) => {
       const item = UPI_APP_TARGETS[appId] || {
@@ -688,25 +736,16 @@
       grid.appendChild(btn);
     });
 
-    if (drawer) {
-      extraApps.forEach((appId) => {
-        const item = UPI_APP_TARGETS[appId] || {
-          id: appId,
-          name: appId.toUpperCase(),
-          logo: '📱',
-        };
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'ec-upi-app-card';
-        btn.setAttribute('data-ec-upi-app', item.id);
-        btn.setAttribute('role', 'radio');
-        btn.setAttribute('aria-checked', 'false');
-        btn.innerHTML = `<span class="ec-upi-app-logo">${item.logo}</span><span class="ec-upi-app-name">${item.name}</span>`;
-        drawer.appendChild(btn);
-      });
-      const allBtn = $('ec-upi-all-btn');
-      if (allBtn) allBtn.hidden = extraApps.length === 0;
-    }
+    // Add one more card at the end of the payment apps: "All UPI Apps"
+    const allItem = UPI_APP_TARGETS.all;
+    const allBtn = document.createElement('button');
+    allBtn.type = 'button';
+    allBtn.className = 'ec-upi-app-card';
+    allBtn.setAttribute('data-ec-upi-app', allItem.id);
+    allBtn.setAttribute('role', 'radio');
+    allBtn.setAttribute('aria-checked', 'false');
+    allBtn.innerHTML = `<span class="ec-upi-app-logo">${allItem.logo}</span><span class="ec-upi-app-name">${allItem.name}</span>`;
+    grid.appendChild(allBtn);
   }
 
   function applyUpiSettings(settings) {
@@ -765,6 +804,8 @@
     }
     if (blurredEl) blurredEl.hidden = true;
     if (showBtn) showBtn.hidden = true;
+    const timerBadge = $('ec-upi-timer-badge');
+    if (timerBadge) timerBadge.hidden = false;
 
     startUpiQrCountdown(540);
   }
@@ -926,10 +967,12 @@
     if (open) {
       // Reset so newly opened bag starts from the top.
       panel.scrollTop = 0;
+      const lines = $('ec-lines');
+      if (lines) lines.scrollTop = 0;
     }
   }
 
-  /** Scrim covers the lower screen while items are open — forward pans/wheels into the panel. */
+  /** Scrim covers the lower screen while items are open — forward pans/wheels into the lines list. */
   function bindSummaryScrimScroll() {
     const scrim = $('ec-summary-scrim');
     const panel = $('ec-summary-panel');
@@ -950,7 +993,8 @@
       (event) => {
         if (panel.hidden || lastY == null || !event.touches[0]) return;
         const y = event.touches[0].clientY;
-        panel.scrollTop += lastY - y;
+        const target = $('ec-lines') || panel;
+        target.scrollTop += lastY - y;
         lastY = y;
         event.preventDefault();
       },
@@ -974,7 +1018,8 @@
       'wheel',
       (event) => {
         if (panel.hidden) return;
-        panel.scrollTop += event.deltaY;
+        const target = $('ec-lines') || panel;
+        target.scrollTop += event.deltaY;
         event.preventDefault();
       },
       { passive: false },
@@ -1085,7 +1130,7 @@
       if (hint) {
         const masked =
           phone.length === 10 ? `+91 ${phone.slice(0, 2)}XXXXXX${phone.slice(-2)}` : '+91';
-        hint.textContent = `We sent a 4-digit code to ${masked}`;
+        hint.innerHTML = `We sent a 4-digit code to <span class="ec-otp-phone-wrapper"><strong class="ec-otp-phone-display">${masked}</strong><button type="button" class="ec-phone-edit-icon" id="ec-phone-edit" title="Change number" aria-label="Change number"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button></span>`;
       }
       syncLoginUi();
       otpInputs()[0]?.focus();
@@ -1117,15 +1162,23 @@
     const root = $('ec-lines');
     if (!root) return;
     root.replaceChildren();
+
+    const totalCouponDisc =
+      currentSession?.coupon?.discountMinor ||
+      (appliedCouponCode ? currentSession?.totals?.discountMinor || 0 : 0);
+    const totalLinesCount = (lines || []).length;
+    const couponCode = currentSession?.coupon?.code || appliedCouponCode || '';
+
     for (const line of lines || []) {
       const row = document.createElement('article');
-      row.className = lineHasDeal(line) ? 'ec-line has-deal' : 'ec-line';
+      row.className = 'ec-line';
+
       const thumb = document.createElement('div');
       thumb.className = 'ec-thumb';
       if (line.imageUrl) {
         const img = document.createElement('img');
         img.src = line.imageUrl;
-        img.alt = '';
+        img.alt = line.title || '';
         img.loading = 'lazy';
         thumb.appendChild(img);
       } else {
@@ -1134,37 +1187,100 @@
         fallback.setAttribute('aria-hidden', 'true');
         thumb.appendChild(fallback);
       }
+
       const meta = document.createElement('div');
       meta.className = 'ec-line-meta';
-      const titleRow = document.createElement('div');
-      titleRow.className = 'ec-line-title-row';
+
+      const head = document.createElement('div');
+      head.className = 'ec-line-head';
       const title = document.createElement('strong');
+      title.className = 'ec-line-title';
       title.textContent = line.title || 'Item';
-      titleRow.appendChild(title);
-      if (lineHasDeal(line)) {
-        const unit = lineUnitMinor(line);
-        const saveUnit = line.compareAtAmountMinor - unit;
-        const pct = Math.max(1, Math.round((saveUnit / line.compareAtAmountMinor) * 100));
-        const badge = document.createElement('span');
-        badge.className = 'ec-deal-badge';
-        badge.textContent = `${pct}% OFF`;
-        titleRow.appendChild(badge);
+      head.appendChild(title);
+
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'ec-line-delete';
+      delBtn.setAttribute('aria-label', 'Remove item');
+      if (line.variantId) delBtn.dataset.ecVariantId = String(line.variantId);
+      if (line.lineKey) delBtn.dataset.ecLineKey = String(line.lineKey);
+      delBtn.innerHTML =
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
+      if (totalLinesCount <= 1) {
+        delBtn.disabled = true;
       }
-      meta.appendChild(titleRow);
+      head.appendChild(delBtn);
+      meta.appendChild(head);
+
       if (line.variantTitle && line.variantTitle !== 'Default Title') {
-        const variant = document.createElement('span');
-        variant.className = 'ec-variant';
-        variant.textContent = line.variantTitle;
+        const variant = document.createElement('div');
+        variant.className = 'ec-line-variant';
+        variant.textContent = line.variantTitle.replace(/\s*\/\s*/g, ' · ');
         meta.appendChild(variant);
       }
-      if (line.sku) {
-        const sku = document.createElement('span');
-        sku.className = 'ec-sku';
-        sku.textContent = `SKU ${line.sku}`;
-        meta.appendChild(sku);
+
+      const qty = line.quantity || 1;
+      const unit = lineUnitMinor(line);
+      const todayOfferTotal = unit * qty;
+
+      const hasCompare =
+        typeof line.compareAtAmountMinor === 'number' && line.compareAtAmountMinor > unit;
+      const mrpTotal = (hasCompare ? line.compareAtAmountMinor : unit) * qty;
+
+      let lineExtraDisc =
+        typeof line.lineDiscountMinor === 'number' && line.lineDiscountMinor > 0
+          ? line.lineDiscountMinor
+          : 0;
+      if (!lineExtraDisc && totalCouponDisc > 0) {
+        if (totalLinesCount === 1) {
+          lineExtraDisc = totalCouponDisc;
+        } else {
+          const totalSub = (lines || []).reduce(
+            (s, l) => s + lineUnitMinor(l) * (l.quantity || 1),
+            0,
+          );
+          lineExtraDisc =
+            totalSub > 0 ? Math.round((todayOfferTotal / totalSub) * totalCouponDisc) : 0;
+        }
       }
+
+      const pricingRow = document.createElement('div');
+      pricingRow.className = 'ec-line-pricing';
+
+      if (hasCompare && mrpTotal > todayOfferTotal) {
+        const mrpStrike = document.createElement('span');
+        mrpStrike.className = 'ec-mrp-strike';
+        mrpStrike.textContent = formatInr(mrpTotal);
+        pricingRow.appendChild(mrpStrike);
+
+        const pct = Math.max(1, Math.round(((mrpTotal - todayOfferTotal) / mrpTotal) * 100));
+        const pctSpan = document.createElement('span');
+        pctSpan.className = 'ec-mrp-pct';
+        pctSpan.textContent = `(${pct}% OFF)`;
+        pricingRow.appendChild(pctSpan);
+      }
+
+      const offerWrap = document.createElement('span');
+      offerWrap.className = 'ec-offer-wrap';
+      const offerPrice = document.createElement('strong');
+      offerPrice.className = 'ec-offer-price';
+      offerPrice.textContent = formatInr(todayOfferTotal);
+      offerWrap.appendChild(offerPrice);
+      pricingRow.appendChild(offerWrap);
+
+      meta.appendChild(pricingRow);
+
+      if (lineExtraDisc > 0) {
+        const couponTag = document.createElement('div');
+        couponTag.className = 'ec-line-coupon-tag';
+        const withCode = couponCode ? ` with ${couponCode}` : '';
+        couponTag.innerHTML = `<span class="ec-ticket-icon" aria-hidden="true">🎟️</span><span>EXTRA ${formatInr(lineExtraDisc)} OFF${withCode}</span>`;
+        meta.appendChild(couponTag);
+      }
+
       const foot = document.createElement('div');
       foot.className = 'ec-line-foot';
+
       const stepper = document.createElement('div');
       stepper.className = 'ec-qty-stepper';
       const dec = document.createElement('button');
@@ -1175,9 +1291,11 @@
       if (line.lineKey) dec.dataset.ecLineKey = String(line.lineKey);
       dec.setAttribute('aria-label', 'Decrease quantity');
       dec.textContent = '−';
-      const qty = document.createElement('span');
-      qty.className = 'ec-qty-value';
-      qty.textContent = String(line.quantity || 1);
+
+      const qtySpan = document.createElement('span');
+      qtySpan.className = 'ec-qty-value';
+      qtySpan.textContent = String(qty);
+
       const inc = document.createElement('button');
       inc.type = 'button';
       inc.className = 'ec-qty-btn';
@@ -1186,45 +1304,48 @@
       if (line.lineKey) inc.dataset.ecLineKey = String(line.lineKey);
       inc.setAttribute('aria-label', 'Increase quantity');
       inc.textContent = '+';
+
       if (!line.variantId && !line.lineKey) {
         dec.disabled = true;
         inc.disabled = true;
       }
-      // Cannot remove the only remaining unit in checkout.
-      if ((line.quantity || 1) <= 1 && (lines || []).length === 1) {
+      if (qty <= 1 && totalLinesCount <= 1) {
         dec.disabled = true;
       }
-      stepper.append(dec, qty, inc);
+      stepper.append(dec, qtySpan, inc);
       foot.appendChild(stepper);
-      if (lineHasDeal(line)) {
-        const disc = document.createElement('span');
-        disc.className = 'ec-line-discount';
-        const saveLine = (line.compareAtAmountMinor - lineUnitMinor(line)) * (line.quantity || 1);
-        disc.textContent = `−${formatInr(saveLine)} off`;
-        foot.appendChild(disc);
-      } else if (line.lineDiscountMinor > 0) {
-        const disc = document.createElement('span');
-        disc.className = 'ec-line-discount';
-        disc.textContent = `−${formatInr(line.lineDiscountMinor)} off`;
-        foot.appendChild(disc);
-      }
-      const prices = document.createElement('span');
-      prices.className = 'ec-line-prices';
-      const lineTotal = lineUnitMinor(line) * (line.quantity || 1);
-      if (lineHasDeal(line)) {
-        const compare = document.createElement('span');
-        compare.className = 'ec-compare';
-        compare.textContent = formatInr(line.compareAtAmountMinor * (line.quantity || 1));
-        prices.appendChild(compare);
-      }
-      const price = document.createElement('strong');
-      price.textContent = formatInr(lineTotal);
-      prices.appendChild(price);
-      foot.appendChild(prices);
+
+      const finalPriceCol = document.createElement('div');
+      finalPriceCol.className = 'ec-line-final-price';
+      const finalLbl = document.createElement('span');
+      finalLbl.className = 'ec-final-label';
+      finalLbl.textContent = 'Final Price';
+
+      const finalAmount = Math.max(0, todayOfferTotal - lineExtraDisc);
+      const finalAmt = document.createElement('strong');
+      finalAmt.className = 'ec-final-amount';
+      finalAmt.textContent = formatInr(finalAmount);
+
+      finalPriceCol.append(finalLbl, finalAmt);
+      foot.appendChild(finalPriceCol);
+
       meta.appendChild(foot);
       row.append(thumb, meta);
       root.appendChild(row);
     }
+
+    requestAnimationFrame(() => {
+      const card = root.querySelector('.ec-line');
+      const cssVersion = card
+        ? getComputedStyle(card).getPropertyValue('--ec-card-ui-version').trim()
+        : '';
+      console.info('[Easy Checkout] item-card sync', {
+        scriptVersion: CARD_UI_VERSION,
+        cssVersion: cssVersion || (card ? 'missing / old CSS' : 'no items to check'),
+        cssSynced: card ? cssVersion === CARD_UI_VERSION : null,
+        cardDisplay: card ? getComputedStyle(card).display : null,
+      });
+    });
   }
 
   async function changeLineQuantity(variantId, lineKey, delta) {
@@ -1232,7 +1353,10 @@
     const match = sessionLines.find(
       (line) =>
         (lineKey && line.lineKey === lineKey) ||
-        (variantId && String(line.variantId) === String(variantId)),
+        (variantId && String(line.variantId) === String(variantId)) ||
+        (variantId &&
+          line.variantId &&
+          String(line.variantId).replace(/\D/g, '') === String(variantId).replace(/\D/g, '')),
     );
     if (!match) return;
     // Last remaining unit in the bag — ignore minus (no loading / no cart call).
@@ -1246,25 +1370,97 @@
     if (text) text.textContent = nextQty === 0 ? 'Removing item…' : 'Updating quantity…';
     if (sub) sub.textContent = 'Refreshing your bag — please wait';
     try {
-      const payload = lineKey
-        ? { id: lineKey, quantity: nextQty }
-        : { id: Number(variantId), quantity: nextQty };
-      const changeRes = await fetch('/cart/change.js', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'content-type': 'application/json', accept: 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!changeRes.ok) {
-        const err = await changeRes.json().catch(() => null);
-        throw new Error(err?.description || err?.message || 'Could not update quantity');
+      showErr('ec-error', '');
+
+      // 1. Buy Now session: update directly via patchSession.
+      // Buy Now lines do not exist in Shopify's /cart.js cookie, so /cart/change.js cannot be used.
+      if (sessionSource === 'buy_now') {
+        const patchRes = await patchSession({
+          lineQuantity: {
+            variantId: variantId
+              ? String(variantId)
+              : match.variantId
+                ? String(match.variantId)
+                : undefined,
+            lineKey: lineKey || match.lineKey || undefined,
+            quantity: nextQty,
+          },
+        });
+        if (!patchRes?.lines?.length) {
+          showErr('ec-error', 'Your bag is empty. Add items to continue checkout.');
+          applySession({ ...patchRes, lines: [], totals: patchRes.totals });
+          return;
+        }
+        applySession(patchRes);
+        collapseSummary(true);
+        return;
       }
-      let session;
-      if (typeof window.EasyCheckout?.refreshSessionFromCart === 'function') {
-        session = await window.EasyCheckout.refreshSessionFromCart();
-      } else {
-        throw new Error('Could not refresh checkout after quantity change.');
+
+      // 2. Standard cart session:
+      // Shopify /cart/change.js requires id to be an integer variant ID (\A\d+\z) or line key (\A\d+:[a-f0-9]{32}\z).
+      const rawLineKey = String(lineKey || match.lineKey || '').trim();
+      const is32HexLineKey = /^\d+:[a-f0-9]{32}$/i.test(rawLineKey);
+
+      const rawVariantId = String(variantId || match.variantId || '').replace(/\D/g, '');
+      const isNumericVariant = /^\d+$/.test(rawVariantId);
+
+      let cartItemId = null;
+      if (is32HexLineKey) {
+        cartItemId = rawLineKey;
+      } else if (isNumericVariant) {
+        cartItemId = Number(rawVariantId);
       }
+
+      let cartChangeSucceeded = false;
+      if (cartItemId != null) {
+        try {
+          const payload = { id: cartItemId, quantity: nextQty };
+          const changeRes = await fetch('/cart/change.js', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'content-type': 'application/json', accept: 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          if (changeRes.ok) {
+            cartChangeSucceeded = true;
+          } else {
+            console.warn('[EasyCheckout] /cart/change.js returned status:', changeRes.status);
+          }
+        } catch (e) {
+          console.warn('[EasyCheckout] /cart/change.js fetch failed:', e);
+        }
+      }
+
+      let session = null;
+      if (
+        cartChangeSucceeded &&
+        typeof window.EasyCheckout?.refreshSessionFromCart === 'function'
+      ) {
+        try {
+          session = await window.EasyCheckout.refreshSessionFromCart();
+        } catch (e) {
+          console.warn(
+            '[EasyCheckout] refreshSessionFromCart failed, falling back to patchSession:',
+            e,
+          );
+        }
+      }
+
+      // If /cart/change.js was skipped, failed, or refreshSessionFromCart failed, update session directly via patchSession
+      if (!session) {
+        session = await patchSession({
+          lineQuantity: {
+            variantId: isNumericVariant
+              ? rawVariantId
+              : match.variantId
+                ? String(match.variantId)
+                : undefined,
+            lineKey: is32HexLineKey ? rawLineKey : match.lineKey || undefined,
+            quantity: nextQty,
+          },
+        });
+      }
+
       if (!session?.lines?.length) {
         showErr('ec-error', 'Your bag is empty. Add items to continue checkout.');
         applySession({ ...session, lines: [], totals: session.totals });
@@ -1302,12 +1498,22 @@
     updatePayableDisplay();
   }
 
+  let updatingPayable = false;
   function updatePayableDisplay() {
-    const selected = document.querySelector(`[data-ec-pay="${selectedPay}"]`);
-    const payable = selected ? payAmountForMethod(selected, basePayMinor) : basePayMinor;
-    $('ec-total-header').textContent = formatInr(payable);
-    $('ec-total').textContent = formatInr(payable);
-    $('ec-total-mobile').textContent = formatInr(payable);
+    if (updatingPayable) return;
+    updatingPayable = true;
+    try {
+      const selected = document.querySelector(`[data-ec-pay="${selectedPay}"]`);
+      const payable = selected ? payAmountForMethod(selected, basePayMinor) : basePayMinor;
+      $('ec-total-header').textContent = formatInr(payable);
+      $('ec-total').textContent = formatInr(payable);
+      $('ec-total-mobile').textContent = formatInr(payable);
+      if (currentSession && sessionLines.length) {
+        applyTotals(currentSession.totals, sessionLines);
+      }
+    } finally {
+      updatingPayable = false;
+    }
   }
 
   function hidePaySheet() {
@@ -1439,13 +1645,16 @@
       const compare =
         typeof line.compareAtAmountMinor === 'number' && line.compareAtAmountMinor > unit
           ? line.compareAtAmountMinor
-          : unit;
+          : line.lineDiscountMinor > 0
+            ? unit + Math.round(line.lineDiscountMinor / qty)
+            : unit;
       mrpMinor += compare * qty;
     }
     const mrpDiscount = Math.max(0, mrpMinor - subtotal);
     const showMrp = mrpMinor > subtotal;
     const mrpRow = $('ec-mrp-row');
     const mrpEl = $('ec-mrp');
+    const subtotalRow = $('ec-subtotal-row');
     if (mrpRow) mrpRow.hidden = !showMrp;
     if (mrpEl && showMrp) mrpEl.textContent = formatInr(mrpMinor);
     const mrpDiscRow = $('ec-mrp-discount-row');
@@ -1456,30 +1665,130 @@
       mrpDiscEl.classList.add('ec-green');
     }
 
+    if (subtotalRow) subtotalRow.hidden = showMrp;
     $('ec-subtotal').textContent = formatInr(subtotal);
+
+    // Discount bifurcation
+    const discountRow = $('ec-discount-row');
+    const discountLabel = $('ec-discount-label');
     const discEl = $('ec-discount');
-    discEl.textContent = discount > 0 ? `−${formatInr(discount)}` : '—';
-    discEl.classList.toggle('ec-green', discount > 0);
+    const breakdownEl = $('ec-discount-breakdown');
+
+    const breakdown = [];
+    const couponDisc = currentSession?.coupon?.discountMinor || (appliedCouponCode ? discount : 0);
+    const couponCode = currentSession?.coupon?.code || appliedCouponCode;
+
+    let productDiscountsTotal = 0;
+    for (const l of lines || []) {
+      if (typeof l.lineDiscountMinor === 'number' && l.lineDiscountMinor > 0) {
+        productDiscountsTotal += l.lineDiscountMinor;
+      }
+    }
+
+    const coupons = currentSession?.coupons?.length
+      ? currentSession.coupons
+      : couponCode
+        ? [{ code: couponCode, discountMinor: couponDisc }]
+        : [];
+    for (const coupon of coupons) {
+      let label = coupon.code;
+      if (label.startsWith('GIFT:')) label = `Gift voucher (${label.slice(5)})`;
+      else if (label === 'LOYALTY') label = 'Tezvix Points';
+      breakdown.push({
+        label,
+        amount: coupon.discountMinor || 0,
+        freeShipping: coupon.kind === 'free_shipping',
+      });
+    }
+
+    if (productDiscountsTotal > 0 && productDiscountsTotal !== couponDisc) {
+      breakdown.push({ label: 'Product Discount', amount: productDiscountsTotal });
+    }
+
+    // Check payment method discount if active
+    const selectedPay = document.querySelector(
+      '.ec-pay-row.is-selected, .ec-pay-upi-card.is-selected',
+    );
+    if (selectedPay && selectedPay.getAttribute('data-ec-pay') === 'upi') {
+      const upiBadgeText =
+        currentUpiConfig?.discountBadge ||
+        $('ec-upi-desk-discount-badge')?.textContent ||
+        $('ec-upi-mob-discount-badge')?.textContent ||
+        '';
+      const match = upiBadgeText.match(/\d+/);
+      if (match) {
+        const upiValMinor = parseInt(match[0], 10) * 100;
+        if (upiValMinor > 0) {
+          breakdown.push({ label: 'Prepaid Discount', amount: upiValMinor });
+        }
+      }
+    }
+
+    const totalDiscMinor =
+      breakdown.length > 0 ? breakdown.reduce((s, b) => s + b.amount, 0) : discount;
+
+    if (totalDiscMinor > 0 || coupons.some((coupon) => coupon.kind === 'free_shipping')) {
+      if (discountRow) discountRow.hidden = false;
+      if (discEl) {
+        discEl.textContent = totalDiscMinor > 0 ? `−${formatInr(totalDiscMinor)}` : 'Free shipping';
+        discEl.classList.add('ec-green');
+      }
+
+      if (discountLabel) {
+        discountLabel.innerHTML =
+          'Coupons & discounts <span class="ec-caret" aria-hidden="true">▾</span>';
+        discountLabel.setAttribute('aria-expanded', 'false');
+        discountLabel.disabled = breakdown.length === 0;
+      }
+      if (breakdownEl) {
+        breakdownEl.hidden = true;
+        const items = $('ec-discount-items');
+        if (items)
+          items.innerHTML = breakdown
+            .map(
+              (item) =>
+                `<div class="ec-discount-subrow"><dt>${escHtml(item.label)}</dt><dd>${item.freeShipping ? 'Free shipping' : `−${formatInr(item.amount)}`}</dd></div>`,
+            )
+            .join('');
+      }
+    } else {
+      if (discountRow) discountRow.hidden = true;
+      if (breakdownEl) breakdownEl.hidden = true;
+      $('ec-discount-items')?.replaceChildren();
+      discountLabel?.setAttribute('aria-expanded', 'false');
+    }
+
     $('ec-shipping').textContent = shipping > 0 ? formatInr(shipping) : 'FREE';
     syncFreeShippingBadge(shipping);
-    const totalSaved = mrpDiscount + discount;
+
+    const finalAmount = Math.max(0, subtotal - totalDiscMinor + shipping);
+    basePayMinor = finalAmount;
+    $('ec-total').textContent = formatInr(finalAmount);
+    $('ec-total-header').textContent = formatInr(finalAmount);
+    $('ec-total-mobile').textContent = formatInr(finalAmount);
+
+    const totalSaved = mrpDiscount + totalDiscMinor;
     const savePill = $('ec-save-pill');
     const saveText = $('ec-save-pill-text');
     if (totalSaved > 0) {
       if (savePill) savePill.hidden = false;
-      if (saveText) saveText.textContent = `${formatInr(totalSaved)} saved so far`;
+      if (saveText) saveText.textContent = `You're saving ${formatInr(totalSaved)}`;
     } else if (savePill) {
       savePill.hidden = true;
     }
+    const payLabel = $('ec-header-pay-label');
+    if (payLabel) {
+      payLabel.textContent = totalSaved > 0 ? 'Total Savings' : 'Total Payable';
+    }
     const compareMinor =
-      mrpMinor > amount
+      mrpMinor > finalAmount
         ? mrpMinor
-        : discount > 0
-          ? amount + discount
-          : subtotal > amount
+        : totalDiscMinor > 0
+          ? finalAmount + totalDiscMinor
+          : subtotal > finalAmount
             ? subtotal
             : 0;
-    setCompareDisplay(compareMinor, amount);
+    setCompareDisplay(compareMinor, finalAmount);
     refreshPaymentAmounts();
   }
 
@@ -1982,6 +2291,14 @@
       applyBtn.textContent = 'Apply';
       applyBtn.classList.remove('is-remove');
     }
+    checkLoyaltyRowSpace();
+  }
+
+  function checkLoyaltyRowSpace() {
+    const row = document.querySelector('.ec-loyalty-redeem-row');
+    if (!row) return;
+    const isConstrained = row.clientWidth > 0 && row.clientWidth < 380;
+    row.classList.toggle('is-compact', isConstrained);
   }
 
   function syncGiftUi(enabled) {
@@ -2030,11 +2347,7 @@
       showErr(sheetErr, '');
       if (input && !codeOverride) input.value = '';
       syncCouponApplyVisibility();
-      if (keepSheet || offersSheetMode === 'coupons') {
-        openCouponsSheet(session.coupon?.code || code);
-      } else {
-        hideOffersSheet();
-      }
+      hideOffersSheet();
     } catch (error) {
       const msg = error?.message || 'Could not apply that coupon.';
       if (keepSheet || offersSheetMode === 'coupons') showErr(sheetErr, msg);
@@ -2077,7 +2390,8 @@
 
   function openCouponsSheet(selectedCode) {
     offersSheetMode = 'coupons';
-    const selected = selectedCode || currentCouponCode();
+    const selected = (currentSession?.coupons || []).map((c) => c.code.toUpperCase());
+    if (!selected.length) selected.push((selectedCode || currentCouponCode()).toUpperCase());
     const tabMeta =
       SHEET_OFFER_TABS.find((t) => t.id === sheetOfferCategory) || SHEET_OFFER_TABS[0];
     const filtered = taggedOfferCoupons(offersCache?.coupons || []).filter(
@@ -2094,7 +2408,7 @@
     const cards = filtered.length
       ? filtered
           .map((c) => {
-            const applied = c.code === selected;
+            const applied = selected.includes(c.code.toUpperCase());
             const saveLine =
               c.discountMinor > 0 ? `Save ${formatInr(c.discountMinor)}` : c.summary || '';
             const hint = c.recommended
@@ -2107,8 +2421,8 @@
               <div class="ec-coupon-card-row">
                 <span class="ec-coupon-card-icon" aria-hidden="true">%</span>
                 <div class="ec-coupon-card-main">
+                  <strong class="ec-coupon-saving">${escHtml(saveLine)}</strong>
                   <span class="ec-coupon-code-box">${escHtml(c.code)}</span>
-                  <small>${escHtml(saveLine)}</small>
                 </div>
                 <button type="button" class="ec-coupon-card-apply" data-ec-coupon-code="${escHtml(c.code)}" ${applied ? 'disabled' : ''}>${applied ? 'Applied' : 'Apply'}</button>
               </div>
@@ -2120,6 +2434,8 @@
     showOffersSheet(
       'Coupons & Offers',
       `<div class="ec-coupons-sheet-inner">
+        <p class="ec-coupon-intro">Choose an offer for your order. Eligible codes can be combined.</p>
+        ${currentSession?.coupon ? `<div class="ec-coupon-applied-summary"><span>Applied: <strong>${escHtml(currentSession.coupon.code)}</strong></span><button type="button" id="ec-sheet-coupons-clear">Remove all</button></div>` : ''}
         <div class="ec-sheet-coupon-field">
           <input id="ec-sheet-coupon-input" type="text" maxlength="40" autocomplete="off" autocapitalize="characters" placeholder="Enter coupon code" aria-label="Coupon code" />
           <button type="button" class="ec-sheet-coupon-apply" id="ec-sheet-coupon-apply">Apply</button>
@@ -2236,14 +2552,104 @@
   }
 
   function applySession(session) {
+    currentSession = session;
     activeSessionId = session.sessionId;
     const sessionField = $('ec-sessionId');
     if (sessionField) sessionField.value = session.sessionId;
-    syncTrustRef(session.sessionId);
     sessionSource = session.source === 'buy_now' ? 'buy_now' : 'cart';
     sessionLines = Array.isArray(session.lines) ? session.lines : [];
+
+    // Fallback: If single line lacks compareAtAmountMinor or variantTitle, check page DOM and product JSON
+    if (sessionLines.length === 1) {
+      const line = sessionLines[0];
+      const unit = lineUnitMinor(line);
+      if (!line.compareAtAmountMinor || line.compareAtAmountMinor <= unit) {
+        const compEls = document.querySelectorAll(
+          '.price--on-sale .price__sale .price-item--regular, .price--on-sale s.price-item--regular, s.price-item--regular, .price__sale s, .price-item--regular, [data-compare-at-price], .price--compare, s.money, del.price-item--regular, [data-compare-price]',
+        );
+        for (const el of compEls) {
+          const parsed = parsePriceMajor(el.textContent);
+          if (parsed > 0 && Math.round(parsed * 100) > unit) {
+            line.compareAtAmountMinor = Math.round(parsed * 100);
+            break;
+          }
+        }
+      }
+      if (!line.variantTitle || line.variantTitle === 'Default Title') {
+        const checkedOpts = Array.from(
+          document.querySelectorAll(
+            'fieldset.js-product-form__input input:checked, variant-radios input:checked, .product-form__input input[type="radio"]:checked, [data-variant-radio]:checked',
+          ),
+        )
+          .map((el) => (el.value || '').trim())
+          .filter((v) => v && v !== 'Default Title');
+        if (checkedOpts.length) {
+          line.variantTitle = checkedOpts.join(' · ');
+        } else {
+          const selectedOpts = Array.from(
+            document.querySelectorAll('variant-selects select, .product-form__input select'),
+          )
+            .map((el) => (el.value || '').trim())
+            .filter((v) => v && v !== 'Default Title');
+          if (selectedOpts.length) {
+            line.variantTitle = selectedOpts.join(' · ');
+          }
+        }
+      }
+      if (typeof window !== 'undefined' && window.location.pathname.includes('/products/')) {
+        const handle = window.location.pathname
+          .split('/products/')[1]
+          ?.split('?')[0]
+          ?.replace(/\/$/, '');
+        if (handle) {
+          fetch(`/products/${handle}.js`, { headers: { accept: 'application/json' } })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((prod) => {
+              if (!prod || !Array.isArray(prod.variants)) return;
+              const matched = line.variantId
+                ? prod.variants.find((v) => String(v.id) === String(line.variantId))
+                : prod.variants[0];
+              let changed = false;
+              if (matched) {
+                if (
+                  typeof matched.compare_at_price === 'number' &&
+                  matched.compare_at_price > unit
+                ) {
+                  if (
+                    !line.compareAtAmountMinor ||
+                    line.compareAtAmountMinor !== matched.compare_at_price
+                  ) {
+                    line.compareAtAmountMinor = matched.compare_at_price;
+                    changed = true;
+                  }
+                }
+                if (
+                  matched.title &&
+                  matched.title !== 'Default Title' &&
+                  (!line.variantTitle || line.variantTitle === 'Default Title')
+                ) {
+                  line.variantTitle = matched.title.replace(/\s*\/\s*/g, ' · ');
+                  changed = true;
+                }
+              }
+              if (changed) {
+                renderLines(sessionLines);
+                applyTotals(currentSession.totals, sessionLines);
+              }
+            })
+            .catch(() => {});
+        }
+      }
+    }
+
     appliedCouponCode = session.coupon?.code || '';
+    if (session.coupon?.code === 'LOYALTY') {
+      loyaltyAppliedPoints = Math.round(((session.coupon.discountMinor || 0) / 100) * 10);
+    } else {
+      loyaltyAppliedPoints = 0;
+    }
     syncCouponApplyVisibility();
+    syncLoyaltyUi(offersCache?.loyalty);
     if (!sessionLines.length) {
       renderLines([]);
       applyTotals(session.totals || {}, []);
@@ -2909,14 +3315,42 @@
       activeSessionId = '';
       // Cart checkout: clear bag so purchased lines don't linger.
       // Buy now: leave the cart alone — other items may still be in it.
-      if (sessionSource === 'cart') {
-        await fetch('/cart/clear.js', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { accept: 'application/json' },
-        }).catch(() => null);
+      const isCart = (body && body.source === 'cart') || sessionSource === 'cart';
+      if (isCart) {
+        try {
+          await fetch('/cart/clear.js', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+              'content-type': 'application/json',
+              accept: 'application/json',
+            },
+          });
+          try {
+            document.dispatchEvent(new CustomEvent('cart:cleared'));
+            document.dispatchEvent(new CustomEvent('cart:refresh'));
+          } catch {}
+        } catch (e) {
+          console.warn('[EasyCheckout] cart clear error:', e);
+        }
       }
+
       showOrderSuccess(body);
+
+      const redirectUrl = body?.statusUrl;
+      if (redirectUrl) {
+        const message = $('ec-success-message');
+        if (message) {
+          message.textContent = `Order ${body?.orderName || ''} confirmed! Redirecting to order status…`;
+        }
+        setTimeout(() => {
+          try {
+            (window.top || window).location.href = redirectUrl;
+          } catch {
+            window.location.href = redirectUrl;
+          }
+        }, 750);
+      }
     } finally {
       setCartBusy(false);
     }
@@ -3044,6 +3478,15 @@
         confirmLeaveCheckout();
         return;
       }
+      if (target.closest('#ec-discount-label')) {
+        const breakdownEl = $('ec-discount-breakdown');
+        const toggle = $('ec-discount-label');
+        if (breakdownEl && $('ec-discount-items')?.children.length > 0) {
+          breakdownEl.hidden = !breakdownEl.hidden;
+          toggle?.setAttribute('aria-expanded', String(!breakdownEl.hidden));
+        }
+        return;
+      }
       if (target.closest('[data-ec-close]') && window.EasyCheckout) {
         if (!orderCompleted && activeSessionId) {
           trackCheckoutEvent('checkout_abandoned', {
@@ -3052,6 +3495,10 @@
           });
         }
         window.EasyCheckout.close();
+        return;
+      }
+      if (target.closest('#ec-error-close') || target.closest('[data-ec-error-close]')) {
+        showErr('ec-error', '');
         return;
       }
       if (target.closest('#ec-pay-sheet-close')) {
@@ -3071,7 +3518,11 @@
         return;
       }
       // UPI-specific interactions
-      if (target.closest('#ec-upi-show-qr-btn')) {
+      if (
+        target.closest('#ec-upi-show-qr-btn') ||
+        target.closest('#ec-upi-qr-box') ||
+        target.closest('#ec-upi-qr-blurred')
+      ) {
         handleShowUpiQr();
         return;
       }
@@ -3102,11 +3553,6 @@
         handleUpiAppSelect(upiAppBtn);
         return;
       }
-      if (target.closest('#ec-upi-all-btn')) {
-        const drawer = $('ec-upi-all-drawer');
-        if (drawer) drawer.hidden = !drawer.hidden;
-        return;
-      }
       if (target.closest('#ec-upi-vpa-toggle')) {
         const form = $('ec-upi-vpa-form');
         const card = target.closest('.ec-upi-vpa-card');
@@ -3135,9 +3581,7 @@
 
         if (selectedPay === 'upi') {
           const isMobile = window.innerWidth <= 640;
-          if (!isMobile) {
-            handleShowUpiQr();
-          } else {
+          if (isMobile) {
             const upiCard =
               target.closest('.ec-pay-upi-card') || document.querySelector('.ec-pay-upi-card');
             if (upiCard) upiCard.classList.remove('is-collapsed');
@@ -3157,6 +3601,20 @@
           qtyBtn.getAttribute('data-ec-line-key') || '',
           delta,
         );
+        return;
+      }
+      const delBtn = target.closest('.ec-line-delete');
+      if (delBtn) {
+        const variantId = delBtn.getAttribute('data-ec-variant-id') || '';
+        const lineKey = delBtn.getAttribute('data-ec-line-key') || '';
+        const match = sessionLines.find(
+          (line) =>
+            (lineKey && line.lineKey === lineKey) ||
+            (variantId && String(line.variantId) === String(variantId)),
+        );
+        if (match) {
+          void changeLineQuantity(variantId, lineKey, -(match.quantity || 1));
+        }
         return;
       }
       const upsellAdd = target.closest('[data-ec-upsell-add]');
@@ -3311,6 +3769,22 @@
         void applyCouponCode();
         return;
       }
+      if (target.closest('#ec-sheet-coupons-clear')) {
+        const button = target.closest('#ec-sheet-coupons-clear');
+        button.disabled = true;
+        void patchSession({ couponCode: '' })
+          .then((session) => {
+            // Do not auto-apply an offer immediately after an explicit removal.
+            offersAutoApplied = true;
+            applySession(session);
+            openCouponsSheet();
+          })
+          .catch((error) => {
+            showErr('ec-sheet-coupon-error', error?.message || 'Could not remove discounts.');
+            button.disabled = false;
+          });
+        return;
+      }
       if (target.closest('#ec-sheet-coupon-apply')) {
         void applyCouponCode(undefined, { keepSheet: true });
         return;
@@ -3447,6 +3921,8 @@
       if (readOtp().length === 4) void verifyOtp();
     });
   }
+
+  window.addEventListener('resize', checkLoyaltyRowSpace);
 
   window.addEventListener('beforeunload', () => {
     if (!orderCompleted && activeSessionId && boundRoot && !boundRoot.hidden) {

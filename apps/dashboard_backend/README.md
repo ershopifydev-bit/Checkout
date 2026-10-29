@@ -44,14 +44,18 @@ npm run dev
 
 The server starts on `http://localhost:3001` (default) and connects to MongoDB.
 
-### 3. Default Credentials
+### 3. Default Demo Accounts
 
-On first launch, an initial `SUPER_ADMIN` account is seeded automatically:
+On server launch, initial role accounts are seeded automatically if not present:
 
-- **Email:** `admin@tezvix.internal`
-- **Password:** `Admin@123456`
+| Role          | Email                      | Password          | Scope & Description                                |
+| ------------- | -------------------------- | ----------------- | -------------------------------------------------- |
+| `SUPER_ADMIN` | `admin@tezvix.internal`    | `Admin@123456`    | Full platform privileges (`*`) & team provisioning |
+| `ADMIN`       | `manager@tezvix.internal`  | `Manager@123456`  | Store configuration, settings & customer flags     |
+| `OPERATOR`    | `operator@tezvix.internal` | `Operator@123456` | Live order processing & telemetry review           |
+| `VIEWER`      | `viewer@tezvix.internal`   | `Viewer@123456`   | Read-only analytics & database audit telemetry     |
 
-_(Configure via `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` in `.env`)_
+_(Super admin email and password can also be configured via `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` in `.env`)_
 
 ---
 

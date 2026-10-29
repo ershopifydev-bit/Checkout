@@ -2,7 +2,6 @@ import type { Request, Response, NextFunction } from 'express';
 import { verifyToken, type TokenPayload } from '../utils/jwt.js';
 import { collections } from '../config/database.js';
 import { toSafeUser, type SafeUser } from '../models/user.js';
-import { env } from '../config/env.js';
 import { ObjectId } from 'mongodb';
 
 export interface AuthenticatedRequest extends Request {
@@ -19,18 +18,6 @@ export async function authenticate(
     const authHeader = req.headers['authorization'] || req.headers['x-access-token'];
 
     if (!authHeader || typeof authHeader !== 'string') {
-      // In development / standalone dashboard preview, fallback to seeded admin user
-      if (env.NODE_ENV !== 'production') {
-        const admin = await collections
-          .users()
-          .findOne({ email: env.INITIAL_ADMIN_EMAIL.toLowerCase().trim() });
-        if (admin) {
-          req.user = toSafeUser(admin);
-          next();
-          return;
-        }
-      }
-
       res.status(401).json({
         error: { code: 'UNAUTHORIZED', message: 'Authentication required. Missing token.' },
       });

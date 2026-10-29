@@ -10,7 +10,12 @@ export function useLiveMonitor() {
     setLoading(true);
     try {
       const p = new URLSearchParams(window.location.search);
-      const token = p.get('token') || '';
+      const token =
+        p.get('token') ||
+        (typeof window !== 'undefined'
+          ? window.localStorage.getItem('tezvix_dashboard_token')
+          : null) ||
+        '';
       const headers: Record<string, string> = { accept: 'application/json' };
       if (token) headers['authorization'] = `Bearer ${token}`;
 

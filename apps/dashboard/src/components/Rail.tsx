@@ -1,8 +1,10 @@
 import React from 'react';
 import { useDashboard } from '../context/DashboardContext';
+import { useAuth } from '../context/AuthContext';
 
 export const Rail: React.FC = () => {
   const { toggleTheme, setTab, setPortal, showToast } = useDashboard();
+  const { user, logout, openLoginModal } = useAuth();
 
   return (
     <div className="rail" aria-label="Quick actions">
@@ -29,6 +31,25 @@ export const Rail: React.FC = () => {
         onClick={() => showToast('Help centre opens here')}
       >
         ?
+      </button>
+
+      <button
+        title={user ? `Logout (${user.name} – ${user.role})` : 'Sign in to Tezvix OS'}
+        id="rl"
+        onClick={() => {
+          if (user) {
+            logout();
+            showToast('Signed out successfully');
+          } else {
+            openLoginModal();
+          }
+        }}
+        style={{
+          marginTop: 'auto',
+          color: user ? 'var(--red, #ef4444)' : 'var(--blue, #3b82f6)',
+        }}
+      >
+        {user ? '🚪' : '🔑'}
       </button>
     </div>
   );

@@ -1,4 +1,9 @@
-export type ResolvedCoupon = {
+export type DiscountCombination = {
+  discountClass?: 'ORDER' | 'PRODUCT' | 'SHIPPING';
+  combinesWith?: { orderDiscounts: boolean; productDiscounts: boolean; shippingDiscounts: boolean };
+};
+
+export type ResolvedCoupon = DiscountCombination & {
   code: string;
   kind: 'percentage' | 'fixed' | 'free_shipping';
   /** Percentage 0–100, or fixed amount in minor units. */
@@ -6,13 +11,17 @@ export type ResolvedCoupon = {
   /** Applied product discount in minor units (0 for free-shipping-only). */
   discountMinor: number;
   summary: string;
+  minSubtotalMinor?: number | undefined;
+  minQuantity?: number | undefined;
 };
 
-type DiscountLookup = {
+type DiscountLookup = DiscountCombination & {
   kind: 'percentage' | 'fixed' | 'free_shipping';
   value: number;
   summary: string;
   status: string;
+  minSubtotalMinor?: number | undefined;
+  minQuantity?: number | undefined;
 };
 
 async function offlineAccessToken(shop: string): Promise<string | null> {
@@ -67,16 +76,42 @@ async function lookupDiscountCode(shop: string, code: string): Promise<DiscountL
             ... on DiscountCodeBasic {
               status
               shortSummary
+              discountClasses
+              combinesWith { orderDiscounts productDiscounts shippingDiscounts }
               customerGets {
                 value {
                   ... on DiscountPercentage { percentage }
                   ... on DiscountAmount { amount { amount } }
                 }
               }
+              minimumRequirement {
+                __typename
+                ... on DiscountMinimumSubtotal {
+                  greaterThanOrEqualToSubtotal {
+                    amount
+                  }
+                }
+                ... on DiscountMinimumQuantity {
+                  greaterThanOrEqualToQuantity
+                }
+              }
             }
             ... on DiscountCodeFreeShipping {
               status
               shortSummary
+              discountClasses
+              combinesWith { orderDiscounts productDiscounts shippingDiscounts }
+              minimumRequirement {
+                __typename
+                ... on DiscountMinimumSubtotal {
+                  greaterThanOrEqualToSubtotal {
+                    amount
+                  }
+                }
+                ... on DiscountMinimumQuantity {
+                  greaterThanOrEqualToQuantity
+                }
+              }
             }
           }
         }
@@ -98,6 +133,8 @@ async function lookupDiscountCode(shop: string, code: string): Promise<DiscountL
           __typename?: string;
           status?: string;
           shortSummary?: string | null;
+          discountClasses?: Array<'ORDER' | 'PRODUCT' | 'SHIPPING'>;
+          combinesWith?: NonNullable<DiscountCombination['combinesWith']>;
           customerGets?: {
             value?: {
               percentage?: number | null;
@@ -123,13 +160,44 @@ async function lookupDiscountCode(shop: string, code: string): Promise<DiscountL
   const status = String(discount.status || '').toUpperCase();
   if (status && status !== 'ACTIVE') throw new Error('COUPON_INACTIVE');
 
+  const combination: DiscountCombination = {
+    ...(discount.discountClasses?.[0] ? { discountClass: discount.discountClasses[0] } : {}),
+    ...(discount.combinesWith ? { combinesWith: discount.combinesWith } : {}),
+  };
+
+  let minSubtotalMinor: number | undefined;
+  let minQuantity: number | undefined;
+  const minReq = (
+    discount as {
+      minimumRequirement?: {
+        __typename?: string;
+        greaterThanOrEqualToSubtotal?: { amount?: string | null };
+        greaterThanOrEqualToQuantity?: string | null;
+      } | null;
+    }
+  ).minimumRequirement;
+  if (
+    minReq?.__typename === 'DiscountMinimumSubtotal' &&
+    minReq.greaterThanOrEqualToSubtotal?.amount != null
+  ) {
+    minSubtotalMinor = moneyToMinor(minReq.greaterThanOrEqualToSubtotal.amount);
+  } else if (
+    minReq?.__typename === 'DiscountMinimumQuantity' &&
+    minReq.greaterThanOrEqualToQuantity != null
+  ) {
+    minQuantity = Math.max(1, Number(minReq.greaterThanOrEqualToQuantity) || 1);
+  }
+
   const typename = discount.__typename || '';
   if (typename === 'DiscountCodeFreeShipping') {
     return {
+      ...combination,
       kind: 'free_shipping',
       value: 0,
       summary: discount.shortSummary || 'Free shipping',
       status,
+      minSubtotalMinor,
+      minQuantity,
     };
   }
 
@@ -140,20 +208,26 @@ async function lookupDiscountCode(shop: string, code: string): Promise<DiscountL
   const value = discount.customerGets?.value;
   if (value && typeof value.percentage === 'number' && value.percentage > 0) {
     return {
+      ...combination,
       kind: 'percentage',
-      value: value.percentage,
-      summary: discount.shortSummary || `${value.percentage}% off`,
+      value: value.percentage * 100,
+      summary: discount.shortSummary || `${value.percentage * 100}% off`,
       status,
+      minSubtotalMinor,
+      minQuantity,
     };
   }
   if (value?.amount?.amount != null) {
     const minor = moneyToMinor(value.amount.amount);
     if (minor <= 0) throw new Error('INVALID_COUPON');
     return {
+      ...combination,
       kind: 'fixed',
       value: minor,
       summary: discount.shortSummary || `₹${(minor / 100).toFixed(0)} off`,
       status,
+      minSubtotalMinor,
+      minQuantity,
     };
   }
 
@@ -168,13 +242,19 @@ export async function resolveShopifyCoupon(input: {
   const code = input.code.trim().slice(0, 40);
   if (!code) throw new Error('INVALID_COUPON');
   const lookup = await lookupDiscountCode(input.shop.trim().toLowerCase(), code);
+  if (lookup.minSubtotalMinor && input.subtotalMinor < lookup.minSubtotalMinor) {
+    throw new Error('COUPON_MINIMUM_NOT_MET');
+  }
   const discountMinor = computeCouponDiscountMinor(lookup, input.subtotalMinor);
   return {
+    ...lookup,
     code,
     kind: lookup.kind,
     value: lookup.value,
     discountMinor,
     summary: lookup.summary,
+    minSubtotalMinor: lookup.minSubtotalMinor,
+    minQuantity: lookup.minQuantity,
   };
 }
 
@@ -205,6 +285,8 @@ export async function listShopifyCoupons(input: {
               ... on DiscountCodeBasic {
                 status
                 shortSummary
+              discountClasses
+              combinesWith { orderDiscounts productDiscounts shippingDiscounts }
                 codes(first: 1) { nodes { code } }
                 customerGets {
                   value {
@@ -216,6 +298,8 @@ export async function listShopifyCoupons(input: {
               ... on DiscountCodeFreeShipping {
                 status
                 shortSummary
+              discountClasses
+              combinesWith { orderDiscounts productDiscounts shippingDiscounts }
                 codes(first: 1) { nodes { code } }
               }
             }
@@ -234,6 +318,8 @@ export async function listShopifyCoupons(input: {
             __typename?: string;
             status?: string;
             shortSummary?: string | null;
+            discountClasses?: Array<'ORDER' | 'PRODUCT' | 'SHIPPING'>;
+            combinesWith?: NonNullable<DiscountCombination['combinesWith']>;
             codes?: { nodes?: Array<{ code?: string | null }> | null } | null;
             customerGets?: {
               value?: {
@@ -271,7 +357,7 @@ export async function listShopifyCoupons(input: {
       const v = discount.customerGets?.value;
       if (v && typeof v.percentage === 'number' && v.percentage > 0) {
         kind = 'percentage';
-        value = v.percentage;
+        value = v.percentage * 100;
       } else if (v?.amount?.amount != null) {
         kind = 'fixed';
         value = moneyToMinor(v.amount.amount);
