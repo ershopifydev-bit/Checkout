@@ -13,7 +13,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ shopName }) => {
   const { portal, setPortal, tab, setTab, showToast } = useDashboard();
-  const { user } = useAuth();
+  const { user, logout, openLoginModal } = useAuth();
   const { orders } = useLiveOrders();
   const { data: analyticsData } = useLiveAnalytics();
 
@@ -184,6 +184,52 @@ export const Header: React.FC<HeaderProps> = ({ shopName }) => {
       >
         {userInitials}
       </div>
+
+      {user ? (
+        <button
+          className="btn l"
+          id="btn-header-logout"
+          onClick={() => {
+            logout();
+            showToast('Signed out successfully');
+          }}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px',
+            fontSize: '12px',
+            fontWeight: 600,
+            padding: '5px 12px',
+            borderRadius: '6px',
+            color: 'var(--red, #ef4444)',
+            border: '1px solid rgba(239, 68, 68, 0.35)',
+            background: 'rgba(239, 68, 68, 0.08)',
+            cursor: 'pointer',
+          }}
+          title={`Log out of ${user.name} (${user.role})`}
+        >
+          🚪 Logout
+        </button>
+      ) : (
+        <button
+          className="btn"
+          id="btn-header-login"
+          onClick={openLoginModal}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px',
+            fontSize: '12px',
+            fontWeight: 600,
+            padding: '5px 12px',
+            borderRadius: '6px',
+            cursor: 'pointer',
+          }}
+          title="Sign in to Tezvix OS"
+        >
+          🔑 Sign In
+        </button>
+      )}
 
       <NotificationCenter
         isOpen={isNotifOpen}

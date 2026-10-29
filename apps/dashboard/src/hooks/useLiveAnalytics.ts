@@ -44,7 +44,12 @@ export function useLiveAnalytics() {
     setLoading(true);
     try {
       const p = new URLSearchParams(window.location.search);
-      const token = p.get('token') || '';
+      const token =
+        p.get('token') ||
+        (typeof window !== 'undefined'
+          ? window.localStorage.getItem('tezvix_dashboard_token')
+          : null) ||
+        '';
       const shop = p.get('shop') || '';
       const q =
         token && shop

@@ -32,7 +32,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token');
+    const stored = window.localStorage.getItem(TOKEN_KEY);
+    return !urlToken && !stored;
+  });
 
   const fetchCurrentUser = useCallback(async (jwt: string) => {
     try {
@@ -63,18 +69,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (token) {
       void fetchCurrentUser(token);
     } else {
-      // In dev environment, check if default admin is active
-      fetch('/api/auth/me', {
-        headers: { Accept: 'application/json' },
-      })
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data?.user) {
-            setUser(data.user);
-          }
-        })
-        .catch(() => {})
-        .finally(() => setIsLoading(false));
+      setUser(null);
+      setIsLoading(false);
     }
   }, [token, fetchCurrentUser]);
 
@@ -110,6 +106,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setUser(null);
+    try {
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('token')) {
+          url.searchParams.delete('token');
+          window.history.replaceState({}, document.title, url.toString());
+        }
+      }
+    } catch {
+      // safe fallback
+    }
+    setIsLoginModalOpen(true);
   };
 
   return (

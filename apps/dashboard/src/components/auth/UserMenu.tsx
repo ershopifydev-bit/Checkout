@@ -61,8 +61,8 @@ export const UserMenu: React.FC<UserMenuProps> = ({ isOpen, onClose }) => {
             width: '40px',
             height: '40px',
             borderRadius: '50%',
-            background: 'var(--gs, #e0f2fe)',
-            color: 'var(--gr, #0369a1)',
+            background: user ? 'var(--gs, #e0f2fe)' : 'var(--bg, #f1f5f9)',
+            color: user ? 'var(--gr, #0369a1)' : 'var(--mut, #64748b)',
             fontWeight: 'bold',
             display: 'grid',
             placeItems: 'center',
@@ -93,7 +93,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({ isOpen, onClose }) => {
               textOverflow: 'ellipsis',
             }}
           >
-            {user ? user.email : 'admin@tezvix.internal'}
+            {user ? user.email : 'Not signed in'}
           </div>
         </div>
       </div>
@@ -111,8 +111,11 @@ export const UserMenu: React.FC<UserMenuProps> = ({ isOpen, onClose }) => {
         }}
       >
         <span style={{ color: 'var(--mut)' }}>Access Role</span>
-        <span className="pill b" style={{ fontSize: '11px', textTransform: 'uppercase' }}>
-          {user?.role || 'SUPER_ADMIN'}
+        <span
+          className={`pill ${user ? 'b' : 'n'}`}
+          style={{ fontSize: '11px', textTransform: 'uppercase' }}
+        >
+          {user ? user.role : 'GUEST'}
         </span>
       </div>
 

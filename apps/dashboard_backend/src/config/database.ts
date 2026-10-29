@@ -1,7 +1,7 @@
 import { MongoClient, type Db, type Collection, ObjectId } from 'mongodb';
 import { env } from './env.js';
 import { logger } from '../utils/logger.js';
-import type { User } from '../models/user.js';
+import type { User, UserRole } from '../models/user.js';
 import type { AuditLog } from '../models/audit-log.js';
 import { hashPassword } from '../utils/password.js';
 
@@ -31,8 +31,8 @@ export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db
   // Ensure necessary indexes
   await ensureIndexes(newDb);
 
-  // Seed default super admin user if empty
-  await seedInitialSuperAdmin(newDb);
+  // Seed default demo & role accounts if not present
+  await seedInitialUsers(newDb);
 
   return { client: newClient, db: newDb };
 }
@@ -106,30 +106,64 @@ async function ensureIndexes(database: Db): Promise<void> {
   }
 }
 
-async function seedInitialSuperAdmin(database: Db): Promise<void> {
+interface SeedAccount {
+  email: string;
+  name: string;
+  role: UserRole;
+  password: string;
+}
+
+const DEFAULT_SEED_ACCOUNTS: SeedAccount[] = [
+  {
+    email: env.INITIAL_ADMIN_EMAIL.toLowerCase().trim(),
+    name: 'System Super Admin',
+    role: 'SUPER_ADMIN',
+    password: env.INITIAL_ADMIN_PASSWORD,
+  },
+  {
+    email: 'manager@tezvix.internal',
+    name: 'Store Manager',
+    role: 'ADMIN',
+    password: 'Manager@123456',
+  },
+  {
+    email: 'operator@tezvix.internal',
+    name: 'Operations Lead',
+    role: 'OPERATOR',
+    password: 'Operator@123456',
+  },
+  {
+    email: 'viewer@tezvix.internal',
+    name: 'Data Analyst',
+    role: 'VIEWER',
+    password: 'Viewer@123456',
+  },
+];
+
+async function seedInitialUsers(database: Db): Promise<void> {
   try {
     const usersCol = database.collection<User>('dashboard_users');
-    const existingCount = await usersCol.countDocuments();
 
-    if (existingCount === 0) {
-      const passwordHash = await hashPassword(env.INITIAL_ADMIN_PASSWORD);
-      const initialUser: User = {
-        _id: new ObjectId(),
-        email: env.INITIAL_ADMIN_EMAIL.toLowerCase().trim(),
-        name: 'System Super Admin',
-        role: 'SUPER_ADMIN',
-        isActive: true,
-        passwordHash,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      await usersCol.insertOne(initialUser);
-      logger.info(
-        `Seeded initial SUPER_ADMIN user: ${initialUser.email} (default credentials set from env)`,
-      );
+    for (const acc of DEFAULT_SEED_ACCOUNTS) {
+      const existing = await usersCol.findOne({ email: acc.email });
+      if (!existing) {
+        const passwordHash = await hashPassword(acc.password);
+        const newUser: User = {
+          _id: new ObjectId(),
+          email: acc.email,
+          name: acc.name,
+          role: acc.role,
+          isActive: true,
+          passwordHash,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        await usersCol.insertOne(newUser);
+        logger.info(`Seeded demo ${acc.role} user: ${acc.email}`);
+      }
     }
   } catch (error) {
-    logger.error('Failed to seed initial super admin:', error);
+    logger.error('Failed to seed initial demo accounts:', error);
   }
 }
 
